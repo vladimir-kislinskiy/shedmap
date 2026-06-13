@@ -76,7 +76,8 @@ function performDrop(stackEl, target, clientY, dragContext) {
 	const targetContainer = target.container;
 	const isleId = targetContainer.dataset?.isle;
 
-	if (dragContext.mode === "isle" && isleId) {
+	if (dragContext.mode === "isle") {
+		if (!isleId) return false;
 		applyIsleLayout(stackEl, isleId, dragContext.bayStack);
 	}
 
@@ -101,6 +102,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (state?.longPressTimer) clearTimeout(state.longPressTimer);
 		if (state?.ghost) state.ghost.remove();
 		stackEl.classList.remove("hay-stack--dragging");
+		stackEl.style.pointerEvents = "";
 		clearDropHighlights();
 		document.body.classList.remove("page--dragging");
 		document.removeEventListener("pointermove", onPointerMove);
@@ -130,6 +132,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		};
 
 		stackEl.classList.add("hay-stack--dragging");
+		stackEl.style.pointerEvents = "none";
 		document.body.classList.add("page--dragging");
 		moveGhost(state.ghost, clientX, clientY, state.offsetX, state.offsetY);
 		document.addEventListener("pointermove", onPointerMove);

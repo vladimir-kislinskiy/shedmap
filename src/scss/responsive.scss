@@ -27,6 +27,26 @@
 
 	.shed__bay {
 		flex: 0 0 100px;
+		min-width: 100px;
+	}
+
+	.shed__bay-stack {
+		display: flex;
+		flex-direction: column;
+	}
+
+	.shed__isles {
+		display: flex;
+		flex-direction: row;
+		flex-wrap: nowrap;
+		width: 100%;
+	}
+
+	.shed__isle {
+		display: flex;
+		flex-direction: column;
+		flex: 1 1 0;
+		min-width: 0;
 	}
 }
 
@@ -58,8 +78,8 @@
 	}
 
 	.shed__bay {
-		min-width: 60px;
-		flex: 0 0 auto;
+		min-width: 72px;
+		flex: 0 0 72px;
 	}
 
 	.inventory__form {

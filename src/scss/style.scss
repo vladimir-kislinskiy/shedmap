@@ -384,7 +384,9 @@ body.page--view-only .inventory__form {
 
 .shed__isles {
 	display: flex;
-	flex: 0 1 auto;
+	flex: 0 0 auto;
+	flex-direction: row;
+	flex-wrap: nowrap;
 	width: 100%;
 	min-height: 0;
 	align-items: flex-start;
@@ -393,7 +395,7 @@ body.page--view-only .inventory__form {
 }
 
 .shed__isle {
-	flex: 1;
+	flex: 1 1 0;
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;

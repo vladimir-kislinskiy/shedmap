@@ -124,6 +124,7 @@ export function refreshAllStackHeights() {
 }
 
 export function syncAllShedLayouts() {
+	repairAllBayLayouts();
 	refreshAllStackHeights();
 
 	let maxHeight = getBaseColumnHeight();
@@ -158,8 +159,57 @@ export function applyIsleLayout(stackEl, isle, bayStackEl) {
 	isleEl?.appendChild(stackEl);
 }
 
+function getStackIsle(stackEl) {
+	const isle = stackEl.dataset.isle;
+	if (isle === "1" || isle === "2") return isle;
+	return "both";
+}
+
+export function repairBayLayout(bayStackEl) {
+	const islesRow = bayStackEl.querySelector(".shed__isles");
+	if (!islesRow) return;
+
+	const ordered = [...bayStackEl.querySelectorAll(".hay-stack")];
+	const groups = { both: [], "1": [], "2": [] };
+
+	ordered.forEach((stack) => {
+		groups[getStackIsle(stack)].push(stack);
+	});
+
+	groups.both.forEach((stack) => {
+		stack.dataset.isle = "both";
+		stack.classList.remove("hay-stack--isle-1", "hay-stack--isle-2");
+		stack.classList.add("hay-stack--full");
+		bayStackEl.insertBefore(stack, islesRow);
+	});
+
+	["1", "2"].forEach((isleNum) => {
+		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
+		if (!isleEl) return;
+
+		groups[isleNum].forEach((stack) => {
+			stack.dataset.isle = isleNum;
+			stack.classList.remove("hay-stack--full", "hay-stack--isle-1", "hay-stack--isle-2");
+			stack.classList.add(`hay-stack--isle-${isleNum}`);
+			isleEl.appendChild(stack);
+		});
+	});
+}
+
+export function repairAllBayLayouts() {
+	document.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
+}
+
 export function placeStackInContainer(stackEl, container, beforeStack, clientY) {
 	if (!container) return false;
+
+	const isle = getStackIsle(stackEl);
+	const isIsleContainer = container.classList.contains("shed__isle");
+	const isBayStack = container.classList.contains("shed__bay-stack");
+
+	if (isle !== "both" && !isIsleContainer) return false;
+	if (isle === "both" && isIsleContainer) return false;
+	if (isle === "both" && !isBayStack) return false;
 
 	if (beforeStack && beforeStack !== stackEl && beforeStack.parentElement === container) {
 		const rect = beforeStack.getBoundingClientRect();

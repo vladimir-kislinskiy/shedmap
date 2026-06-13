@@ -35,6 +35,62 @@ const MAX_BALES_PER_ISLE = 1000;
 const SHEDS = ["north", "west", "east"];
 const BAY_COUNT = 10;
 
+function buildEmptyShedState() {
+	const sheds = {};
+
+	SHEDS.forEach((shed) => {
+		const colsData = {};
+		for (let i = 0; i < BAY_COUNT; i++) {
+			colsData[`${shed}-col-${i}`] = [];
+		}
+		sheds[shed] = colsData;
+	});
+
+	return { changeLog: [], sheds };
+}
+
+function clearAllBaysUI() {
+	SHEDS.forEach((shed) => {
+		for (let i = 0; i < BAY_COUNT; i++) {
+			const colEl = document.getElementById(`${shed}-col-${i}`);
+			if (!colEl) continue;
+			colEl.querySelectorAll(".hay-stack").forEach((stack) => stack.remove());
+			updateBayStats(colEl);
+		}
+	});
+
+	changeLog.length = 0;
+	updateLogTable();
+	syncAllShedLayouts();
+}
+
+async function resetAllBays({ confirm = true } = {}) {
+	if (!isEditMode) {
+		alert("Sign in to reset all bays.");
+		return false;
+	}
+
+	if (confirm && !window.confirm("Clear all bays in every shed and the change log?")) {
+		return false;
+	}
+
+	clearAllBaysUI();
+
+	try {
+		await set(ref(db, "hayShedState"), buildEmptyShedState());
+		if (location.search.includes("reset=all")) {
+			history.replaceState(null, "", location.pathname);
+		}
+		return true;
+	} catch (err) {
+		console.error("Error resetting state:", err);
+		alert("Failed to save cleared state.");
+		return false;
+	}
+}
+
+let pendingResetAll = new URLSearchParams(location.search).get("reset") === "all";
+
 const changeLog = [];
 let isEditMode = false;
 let currentPerson = null;
@@ -368,6 +424,11 @@ function setEditMode(enabled, person = null) {
 function handleAuthChange(authenticated, person) {
 	setEditMode(authenticated, person);
 	updateAuthUI(authenticated, person);
+
+	if (authenticated && pendingResetAll) {
+		pendingResetAll = false;
+		resetAllBays({ confirm: false });
+	}
 }
 
 function updateAuthUI(authenticated, person) {
@@ -502,6 +563,8 @@ function initInventoryForm() {
 	setInventoryControlsOpen(false);
 }
 
+window.resetAllBays = resetAllBays;
+
 window.addEventListener("load", () => {
 	initGrabToScroll();
 	initAuthUI();
@@ -510,6 +573,8 @@ window.addEventListener("load", () => {
 	syncAllShedLayouts();
 });
 
+let resizeTimer;
 window.addEventListener("resize", () => {
-	syncAllShedLayouts();
+	clearTimeout(resizeTimer);
+	resizeTimer = setTimeout(() => syncAllShedLayouts(), 150);
 });
