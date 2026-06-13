@@ -153,7 +153,18 @@ h1 {
 	width: 100%;
 }
 
-.controls.hidden {
+.controls.hidden,
+.controls.controls--hidden,
+.controls[hidden] {
+	display: none !important;
+}
+
+.controls-toggle-wrapper[hidden],
+body.view-only .controls-toggle-wrapper {
+	display: none !important;
+}
+
+body.view-only #inventoryControls {
 	display: none !important;
 }
 

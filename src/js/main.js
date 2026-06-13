@@ -551,9 +551,14 @@ function setEditMode(enabled, person = null) {
 	if (toggleWrapper) {
 		toggleWrapper.hidden = !enabled;
 	}
+
+	if (!enabled) {
 		const controls = document.getElementById("inventoryControls");
 		const toggleBtn = document.getElementById("toggleControls");
-		if (controls) controls.classList.add("hidden");
+		if (controls) {
+			controls.classList.add("hidden");
+			controls.hidden = true;
+		}
 		if (toggleBtn) {
 			toggleBtn.classList.remove("active");
 			const label = toggleBtn.querySelector("span");
@@ -697,19 +702,24 @@ window.addEventListener("load", () => {
 	const controls = document.getElementById("inventoryControls");
 	if (toggleBtn && controls) {
 		toggleBtn.addEventListener("click", () => {
+			if (!isEditMode) return;
+
 			const isHidden = controls.classList.contains("hidden");
 			if (isHidden) {
 				controls.classList.remove("hidden");
+				controls.hidden = false;
 				toggleBtn.classList.add("active");
 				toggleBtn.querySelector("span").innerText = "Close Management";
 			} else {
 				controls.classList.add("hidden");
+				controls.hidden = true;
 				toggleBtn.classList.remove("active");
 				toggleBtn.querySelector("span").innerText = "Manage Inventory";
 			}
 		});
-		
+
 		// Set initial state
 		controls.classList.add("hidden");
+		controls.hidden = true;
 	}
 });

@@ -27,7 +27,8 @@ export function initAuth(app, onAuthChange) {
 
 	onAuthStateChanged(auth, (user) => {
 		if (user) {
-			onAuthChange(true, getPersonFromEmail(user.email));
+			const person = getPersonFromEmail(user.email);
+			onAuthChange(!!person, person);
 		} else {
 			onAuthChange(false, null);
 		}
