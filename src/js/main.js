@@ -13,6 +13,7 @@ import {
 	getStackType,
 	restoreHayStack,
 	sumBalesInContainer,
+	syncAllShedLayouts,
 	updateHayStack,
 } from "./dom.js";
 
@@ -132,6 +133,7 @@ function makeStackDraggable(stackEl) {
 		canDrag: () => isEditMode,
 		onReorder: () => {
 			updateBayStats(stackEl.closest(".shed__bay-stack"));
+			syncAllShedLayouts();
 			saveState();
 		},
 	});
@@ -205,23 +207,24 @@ function handleHay() {
 	}
 
 	if (action === "remove") {
-		let foundStack = null;
-		getBayStacks(bayStackEl).forEach((stack) => {
-			const contractPart = (stack.dataset.stackKey || "").split("-").slice(1).join("-");
-			if (contractPart === contract) foundStack = stack;
-		});
+		const isle = getSelectedIsle();
+		if (!isle) return;
+
+		const targetContainer = getIsleContainer(bayStackEl, isle);
+		const foundStack = findStackInContainer(targetContainer, stackKey);
 
 		if (!foundStack) {
-			alert("Please double-check the contract number you are trying to remove.");
+			alert("No matching stack found in the selected isle. Check contract, hay type, and isle selection.");
 			return;
 		}
 
 		const foundType = getStackType(foundStack);
 		const foundIsle = foundStack.dataset.isle || "both";
-		const newCount = parseInt(foundStack.dataset.bales, 10) - baleCount;
+		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
+		const newCount = currentBales - baleCount;
 
 		if (newCount < 0) {
-			alert("Cannot remove more bales than are in the stack.");
+			alert(`Cannot remove more than ${currentBales} bales from this stack.`);
 			return;
 		}
 
@@ -235,6 +238,7 @@ function handleHay() {
 	}
 
 	updateBayStats(bayStackEl);
+	syncAllShedLayouts();
 	saveState();
 	document.getElementById("contractNumber").value = "";
 	document.getElementById("baleCount").value = "";
@@ -328,6 +332,7 @@ onValue(ref(db, "hayShedState"), (snapshot) => {
 					updateBayStats(colEl);
 				}
 			});
+			syncAllShedLayouts();
 		}
 	} catch (e) {
 		console.error("Error syncing state:", e);
@@ -502,4 +507,9 @@ window.addEventListener("load", () => {
 	initAuthUI();
 	initTabs();
 	initInventoryForm();
+	syncAllShedLayouts();
+});
+
+window.addEventListener("resize", () => {
+	syncAllShedLayouts();
 });

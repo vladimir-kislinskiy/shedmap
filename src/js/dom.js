@@ -6,9 +6,128 @@ export function getIsleMaxBales(isle) {
 	return isle === "both" ? 2000 : 1000;
 }
 
+const LAYOUT = {
+	stackGap: 6,
+	stackPadding: 12,
+	bayChrome: 60,
+	minStack: 44,
+};
+
+export function getBaseColumnHeight() {
+	return window.matchMedia("(max-width: 768px)").matches ? 320 : 380;
+}
+
+function getBaseStackAreaHeight() {
+	return getBaseColumnHeight() - LAYOUT.bayChrome;
+}
+
+export function getStackHeightPx(baleCount, maxBales) {
+	const proportional = (baleCount / maxBales) * getBaseStackAreaHeight();
+	return Math.max(LAYOUT.minStack, Math.round(proportional));
+}
+
+function getDirectStacks(container) {
+	if (!container) return [];
+	return [...container.children].filter((el) => el.classList.contains("hay-stack"));
+}
+
+function getContainerMaxBales(container) {
+	if (!container) return 2000;
+	if (container.classList.contains("shed__isle")) return 1000;
+	return 2000;
+}
+
+function computeContainerStackHeight(container) {
+	const stacks = getDirectStacks(container);
+	if (!stacks.length) return 0;
+
+	const totalBales = stacks.reduce((sum, s) => sum + (parseInt(s.dataset.bales, 10) || 0), 0);
+	if (!totalBales) return 0;
+
+	const maxBales = getContainerMaxBales(container);
+	const baseHeight = getBaseStackAreaHeight();
+	const gaps = (stacks.length - 1) * LAYOUT.stackGap;
+	const proportionalHeight = (totalBales / maxBales) * baseHeight;
+	const minRequired = stacks.length * LAYOUT.minStack + gaps;
+
+	return Math.max(proportionalHeight, minRequired);
+}
+
+function distributeContainerStackHeights(container) {
+	const stacks = getDirectStacks(container);
+	if (!stacks.length) return 0;
+
+	const totalBales = stacks.reduce((sum, s) => sum + (parseInt(s.dataset.bales, 10) || 0), 0);
+	if (!totalBales) return 0;
+
+	const containerHeight = computeContainerStackHeight(container);
+	const gaps = (stacks.length - 1) * LAYOUT.stackGap;
+	const usable = containerHeight - gaps;
+
+	stacks.forEach((stack) => {
+		const bales = parseInt(stack.dataset.bales, 10) || 0;
+		const px = Math.max(LAYOUT.minStack, Math.round((bales / totalBales) * usable));
+		stack.style.setProperty("--stack-height", `${px}px`);
+	});
+
+	return containerHeight;
+}
+
+function sumStacksHeight(stacks) {
+	if (!stacks.length) return 0;
+	const container = stacks[0].parentElement;
+	return computeContainerStackHeight(container);
+}
+
+export function measureBayStackContent(bayStackEl) {
+	if (!bayStackEl) return 0;
+
+	const fullStacks = getDirectStacks(bayStackEl);
+	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
+	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
+
+	const fullHeight = sumStacksHeight(fullStacks);
+	const islesHeight = Math.max(sumStacksHeight(isle1Stacks), sumStacksHeight(isle2Stacks));
+
+	if (!fullHeight && !islesHeight) return 0;
+
+	let total = fullHeight + islesHeight;
+	if (fullHeight && islesHeight) total += LAYOUT.stackGap;
+	return total + LAYOUT.stackPadding;
+}
+
+function measureBayColumnHeight(bayEl) {
+	const baseHeight = getBaseColumnHeight();
+	const stackContent = measureBayStackContent(bayEl.querySelector(".shed__bay-stack"));
+	if (!stackContent) return baseHeight;
+	return Math.max(baseHeight, stackContent + LAYOUT.bayChrome);
+}
+
+export function refreshAllStackHeights() {
+	document.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		distributeContainerStackHeights(bayStack);
+		distributeContainerStackHeights(bayStack.querySelector(".shed__isle--1"));
+		distributeContainerStackHeights(bayStack.querySelector(".shed__isle--2"));
+	});
+}
+
+export function syncAllShedLayouts() {
+	refreshAllStackHeights();
+
+	let maxHeight = getBaseColumnHeight();
+
+	document.querySelectorAll(".shed__bay").forEach((bay) => {
+		maxHeight = Math.max(maxHeight, measureBayColumnHeight(bay));
+	});
+
+	document.querySelectorAll(".shed__columns").forEach((columns) => {
+		columns.style.height = `${maxHeight}px`;
+	});
+}
+
 export function setStackHeight(stackEl, baleCount, maxBales) {
-	const percent = (baleCount / maxBales) * 100;
-	stackEl.style.setProperty("--stack-height", `${percent}%`);
+	const px = getStackHeightPx(baleCount, maxBales);
+	stackEl.style.setProperty("--stack-height", `${px}px`);
 }
 
 export function applyIsleLayout(stackEl, isle, bayStackEl) {
@@ -25,6 +144,24 @@ export function applyIsleLayout(stackEl, isle, bayStackEl) {
 	stackEl.classList.add(`hay-stack--isle-${isle}`);
 	const isleEl = bayStackEl.querySelector(`.shed__isle--${isle}`);
 	isleEl?.appendChild(stackEl);
+}
+
+export function placeStackInContainer(stackEl, container, beforeStack, clientY) {
+	if (!container) return false;
+
+	if (beforeStack && beforeStack !== stackEl && beforeStack.parentElement === container) {
+		const rect = beforeStack.getBoundingClientRect();
+		const insertBefore = clientY < rect.top + rect.height / 2;
+		if (insertBefore) {
+			container.insertBefore(stackEl, beforeStack);
+		} else {
+			beforeStack.after(stackEl);
+		}
+		return true;
+	}
+
+	container.appendChild(stackEl);
+	return true;
 }
 
 export function createHayStack(type, contract, baleCount, isle, bayStackEl) {

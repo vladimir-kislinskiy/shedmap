@@ -1,8 +1,22 @@
+import { applyIsleLayout, placeStackInContainer } from "./dom.js";
+
 const DRAG_THRESHOLD = 10;
 const LONG_PRESS_MS = 400;
 
-function getDropZone(stackEl) {
-	return stackEl.parentElement;
+function getDragContext(stackEl) {
+	const parent = stackEl.parentElement;
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	if (!bayStack) return null;
+
+	if (parent?.classList.contains("shed__isle")) {
+		return { mode: "isle", bayStack };
+	}
+
+	if (parent === bayStack) {
+		return { mode: "full", bayStack };
+	}
+
+	return null;
 }
 
 function clearDropHighlights() {
@@ -27,40 +41,51 @@ function moveGhost(ghost, clientX, clientY, offsetX, offsetY) {
 	ghost.style.top = `${clientY - offsetY}px`;
 }
 
-function getDropTarget(clientX, clientY, dropZone) {
+function getDropTarget(clientX, clientY, dragContext) {
 	const el = document.elementFromPoint(clientX, clientY);
-	if (!el || !dropZone) return null;
+	if (!el || !dragContext) return null;
 
-	const stack = el.closest(".hay-stack");
-	if (stack && !stack.classList.contains("hay-stack--dragging") && stack.parentElement === dropZone) {
-		return { type: "stack", el: stack };
+	const { mode, bayStack } = dragContext;
+
+	if (mode === "isle") {
+		const targetIsle = el.closest(".shed__isle");
+		if (!targetIsle || !bayStack.contains(targetIsle)) return null;
+
+		const stack = el.closest(".hay-stack");
+		if (stack && !stack.classList.contains("hay-stack--dragging") && targetIsle.contains(stack)) {
+			return { type: "stack", el: stack, container: targetIsle };
+		}
+
+		return { type: "column", el: targetIsle, container: targetIsle };
 	}
 
-	if (dropZone.classList.contains("shed__isle") && el.closest(".shed__isle") === dropZone) {
-		return { type: "column", el: dropZone };
+	const stack = el.closest(".hay-stack");
+	if (stack && !stack.classList.contains("hay-stack--dragging") && stack.parentElement === bayStack) {
+		return { type: "stack", el: stack, container: bayStack };
+	}
+
+	const hitBayStack = el.closest(".shed__bay-stack");
+	if (hitBayStack === bayStack && !el.closest(".shed__isle")) {
+		return { type: "column", el: bayStack, container: bayStack };
 	}
 
 	return null;
 }
 
-function reorderStack(draggedStack, target, clientY) {
-	const dropZone = draggedStack.parentElement;
-	if (!dropZone) return false;
+function performDrop(stackEl, target, clientY, dragContext) {
+	const targetContainer = target.container;
+	const isleId = targetContainer.dataset?.isle;
 
-	if (target.type === "stack" && target.el !== draggedStack) {
-		const targetRect = target.el.getBoundingClientRect();
-		const insertBefore = clientY < targetRect.top + targetRect.height / 2;
-		if (insertBefore) {
-			dropZone.insertBefore(draggedStack, target.el);
-		} else {
-			target.el.after(draggedStack);
-		}
-		return true;
+	if (dragContext.mode === "isle" && isleId) {
+		applyIsleLayout(stackEl, isleId, dragContext.bayStack);
+	}
+
+	if (target.type === "stack" && target.el !== stackEl) {
+		return placeStackInContainer(stackEl, targetContainer, target.el, clientY);
 	}
 
 	if (target.type === "column") {
-		dropZone.appendChild(draggedStack);
-		return true;
+		return placeStackInContainer(stackEl, targetContainer, null, clientY);
 	}
 
 	return false;
@@ -87,6 +112,9 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 	const startDrag = (e) => {
 		if (!canDrag()) return;
 
+		const dragContext = getDragContext(stackEl);
+		if (!dragContext) return;
+
 		const rect = stackEl.getBoundingClientRect();
 		const clientX = e.clientX ?? state?.startX ?? rect.left;
 		const clientY = e.clientY ?? state?.startY ?? rect.top;
@@ -94,7 +122,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 
 		state = {
 			pointerId,
-			dropZone: getDropZone(stackEl),
+			dragContext,
 			offsetX: clientX - rect.left,
 			offsetY: clientY - rect.top,
 			ghost: createGhost(stackEl),
@@ -114,7 +142,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		e.preventDefault();
 		moveGhost(state.ghost, e.clientX, e.clientY, state.offsetX, state.offsetY);
 		clearDropHighlights();
-		const target = getDropTarget(e.clientX, e.clientY, state.dropZone);
+		const target = getDropTarget(e.clientX, e.clientY, state.dragContext);
 		if (!target?.el) return;
 		target.el.classList.add(
 			target.type === "stack" ? "hay-stack--drop-target" : "shed__isle--drop-target",
@@ -125,8 +153,8 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!state) return;
 
 		if (state.active && e.pointerId === state.pointerId) {
-			const target = getDropTarget(e.clientX, e.clientY, state.dropZone);
-			if (target && reorderStack(stackEl, target, e.clientY)) onReorder();
+			const target = getDropTarget(e.clientX, e.clientY, state.dragContext);
+			if (target && performDrop(stackEl, target, e.clientY, state.dragContext)) onReorder();
 		}
 
 		cleanup();
