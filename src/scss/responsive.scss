@@ -9,7 +9,7 @@
 		max-width: 960px;
 	}
 
-	.shed-columns {
+	.shed__columns {
 		justify-content: flex-start;
 		overflow-x: auto;
 		overflow-y: hidden;
@@ -17,14 +17,15 @@
 		scrollbar-width: thin;
 		scrollbar-color: var(--color-primary-light) transparent;
 		-webkit-overflow-scrolling: touch;
+		touch-action: pan-x;
 		cursor: grab;
 	}
 
-	.shed-columns:active {
+	.shed__columns--grabbing {
 		cursor: grabbing;
 	}
 
-	.shed-column-wrapper {
+	.shed__bay {
 		flex: 0 0 100px;
 	}
 }
@@ -36,7 +37,7 @@
 		width: calc(100% - 20px);
 	}
 
-	.controls {
+	.inventory__form {
 		flex-wrap: wrap;
 	}
 }
@@ -51,35 +52,36 @@
 		width: 100%;
 	}
 
-	.shed-columns {
+	.shed__columns {
 		height: 320px;
 		padding-bottom: 15px;
 	}
-	
-	.shed-column-wrapper {
+
+	.shed__bay {
 		min-width: 60px;
 		flex: 0 0 auto;
 	}
 
-	.controls {
+	.inventory__form {
 		flex-direction: column;
 		align-items: stretch;
 	}
-	
-	.tabcontent {
-		padding: 15px;
-	}
-	
-	.shed {
+
+	.tabs__panel {
 		padding: 15px;
 	}
 
-	#contractNumber, #baleCount {
+	.shed-tabs__panel {
+		padding: 15px;
+	}
+
+	.inventory__field--contract,
+	.inventory__field--bales {
 		flex: 1 1 auto;
 		width: 100%;
 	}
-	
-	table {
+
+	.log-table-wrap {
 		display: block;
 		overflow-x: auto;
 		white-space: nowrap;

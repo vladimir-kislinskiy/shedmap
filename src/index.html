@@ -2,13 +2,10 @@
 <html lang="en">
 @include('partials/head.html', { 'title': 'Shed map' })
 
-<body class="view-only">
-	<div class="wrapper">
-		<!-- @include('partials/header.html') -->
-		<!-- Main -->
-		<main class="main">
-			<!-- Content -->
-			<div class="content">
+<body class="page page--view-only">
+	<div class="page__wrapper">
+		<main class="page__main">
+			<div class="page__content">
 
 				<div class="auth-bar auth-bar--guest" id="authBar">
 					<div class="auth-bar__status">
@@ -22,111 +19,141 @@
 					<div class="auth-modal__overlay" id="authModalOverlay"></div>
 					<div class="auth-modal__dialog" role="dialog" aria-labelledby="authModalTitle">
 						<button type="button" class="auth-modal__close" id="authModalClose" aria-label="Close">&times;</button>
-						<h2 id="authModalTitle">Sign In</h2>
+						<h2 class="auth-modal__title" id="authModalTitle">Sign In</h2>
 						<p class="auth-modal__hint">Sign in to manage inventory and make changes.</p>
 						<form id="authForm" class="auth-modal__form" autocomplete="off" novalidate>
 							<input type="text" name="auth-decoy" tabindex="-1" autocomplete="off" aria-hidden="true" class="auth-modal__decoy">
 							<input type="password" name="auth-decoy-pass" tabindex="-1" autocomplete="new-password" aria-hidden="true" class="auth-modal__decoy">
-							<input type="email" id="authEmail" name="auth-email" placeholder="Email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required />
-							<input type="password" id="authPassword" name="auth-password" placeholder="Password" autocomplete="new-password" required />
+							<input type="email" id="authEmail" name="auth-email" class="auth-modal__input" placeholder="Email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required>
+							<input type="password" id="authPassword" name="auth-password" class="auth-modal__input" placeholder="Password" autocomplete="new-password" required>
 							<p class="auth-modal__error" id="authError" hidden></p>
 							<button type="submit" class="auth-modal__submit">Sign In</button>
 						</form>
 					</div>
 				</div>
 
-				<h1>Hay Shed Map</h1>
+				<h1 class="page__title">Hay Shed Map</h1>
 
-				<div class="tab">
-					<button class="tablinks active" data-tab="Sheds">Sheds</button>
-					<button class="tablinks" data-tab="Log">Change Log</button>
-				</div>
+				<nav class="tabs" aria-label="Main navigation">
+					<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
+					<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
+				</nav>
 
-				<!-- Tab: Sheds -->
-				<div id="Sheds" class="tabcontent" style="display:block;">
-					<div class="controls-toggle-wrapper" hidden>
-						<button id="toggleControls" class="btn-toggle">
-							<span>Manage Inventory</span>
+				<section id="Sheds" class="tabs__panel tabs__panel--active">
+					<div class="inventory__toggle-wrap" id="inventoryToggleWrap" hidden>
+						<button type="button" id="toggleControls" class="inventory__toggle">
+							<span class="inventory__toggle-label">Manage Inventory</span>
 						</button>
 					</div>
 
-					<div class="controls" id="inventoryControls" hidden>
-						<select id="hayType">
+					<form class="inventory__form" id="inventoryControls" hidden novalidate>
+						<select id="hayType" class="inventory__field inventory__field--select">
 							<option value="alfalfa">Alfalfa</option>
 							<option value="timothy">Timothy</option>
 						</select>
 
-						<input type="text" id="contractNumber" placeholder="Contract #" maxlength="7"
-							pattern="^\d{2}-\d{4}$" title="Format: 25-6651" required />
+						<input type="text" id="contractNumber" class="inventory__field inventory__field--contract" placeholder="Contract #" maxlength="7" pattern="^\d{2}-\d{4}$" title="Format: 25-6651" required>
 
-						<input type="number" id="baleCount" placeholder="Bales" min="1" max="9999" required />
+						<input type="number" id="baleCount" class="inventory__field inventory__field--bales" placeholder="Bales" min="1" max="9999" required>
 
-						<select id="shedSelect">
+						<select id="shedSelect" class="inventory__field inventory__field--select">
 							<option value="north">North Shed</option>
 							<option value="west">West Shed</option>
 							<option value="east">East Shed</option>
 						</select>
 
-						<select id="baySelect"></select>
+						<select id="baySelect" class="inventory__field inventory__field--select">
+							<option value="0">Bay 1</option>
+							<option value="1">Bay 2</option>
+							<option value="2">Bay 3</option>
+							<option value="3">Bay 4</option>
+							<option value="4">Bay 5</option>
+							<option value="5">Bay 6</option>
+							<option value="6">Bay 7</option>
+							<option value="7">Bay 8</option>
+							<option value="8">Bay 9</option>
+							<option value="9">Bay 10</option>
+						</select>
 
-						<select id="actionSelect">
+						<select id="actionSelect" class="inventory__field inventory__field--select">
 							<option value="add">Add</option>
 							<option value="remove">Remove</option>
 						</select>
 
-						<button id="submitHay">Submit</button>
+						<button type="button" id="submitHay" class="inventory__submit">Submit</button>
+					</form>
+
+					<nav class="shed-tabs" aria-label="Shed navigation">
+						<button type="button" class="shed-tabs__btn shed-tabs__btn--active" data-subtab="north-shed-tab">North Shed</button>
+						<button type="button" class="shed-tabs__btn" data-subtab="west-shed-tab">West Shed</button>
+						<button type="button" class="shed-tabs__btn" data-subtab="east-shed-tab">East Shed</button>
+					</nav>
+
+					<div class="shed-tabs__panel shed-tabs__panel--active" id="north-shed-tab">
+						@include('partials/shed-columns.html', { 'shed': 'north' })
 					</div>
 
-					<div class="sub-tab">
-						<button class="sub-tablinks active" data-subtab="north-shed-tab">North Shed</button>
-						<button class="sub-tablinks" data-subtab="west-shed-tab">West Shed</button>
-						<button class="sub-tablinks" data-subtab="east-shed-tab">East Shed</button>
+					<div class="shed-tabs__panel" id="west-shed-tab">
+						@include('partials/shed-columns.html', { 'shed': 'west' })
 					</div>
 
-					<!-- SHEDS -->
-					<div class="shed sub-tabcontent" id="north-shed-tab" style="display:block;">
-						<div class="shed-columns" id="north-cols"></div>
+					<div class="shed-tabs__panel" id="east-shed-tab">
+						@include('partials/shed-columns.html', { 'shed': 'east' })
 					</div>
+				</section>
 
-					<div class="shed sub-tabcontent" id="west-shed-tab" style="display:none;">
-						<div class="shed-columns" id="west-cols"></div>
+				<section id="Log" class="tabs__panel">
+					<h2 class="log__title">Change Log</h2>
+					<div class="log-table-wrap">
+						<table class="log-table">
+							<thead class="log-table__head">
+								<tr class="log-table__row">
+									<th class="log-table__cell log-table__cell--head">Date & Time</th>
+									<th class="log-table__cell log-table__cell--head">Person</th>
+									<th class="log-table__cell log-table__cell--head">Action</th>
+									<th class="log-table__cell log-table__cell--head">Hay Type</th>
+									<th class="log-table__cell log-table__cell--head">Contract #</th>
+									<th class="log-table__cell log-table__cell--head">Bay</th>
+									<th class="log-table__cell log-table__cell--head">Shed</th>
+									<th class="log-table__cell log-table__cell--head">Bales</th>
+								</tr>
+							</thead>
+							<tbody class="log-table__body" id="logBody"></tbody>
+						</table>
 					</div>
+				</section>
 
-					<div class="shed sub-tabcontent" id="east-shed-tab" style="display:none;">
-						<div class="shed-columns" id="east-cols"></div>
-					</div>
-				</div>
-
-				<!-- Tab: Log -->
-				<div id="Log" class="tabcontent">
-					<h2>Change Log</h2>
-					<table>
-						<thead>
-							<tr>
-								<th>Date & Time</th>
-								<th>Person</th>
-								<th>Action</th>
-								<th>Hay Type</th>
-								<th>Contract #</th>
-								<th>Bay</th>
-								<th>Shed</th>
-								<th>Bales</th>
-							</tr>
-						</thead>
-						<tbody id="logBody"></tbody>
-					</table>
-				</div>
-
-				<footer>
-					&copy; Hay Shed Map. Dev by <a href="https://vkys.ca" target="_blank" class="footer__link">VK</a>
+				<footer class="page-footer">
+					&copy; Hay Shed Map. Dev by <a href="https://vkys.ca" target="_blank" class="page-footer__link">VK</a>
 				</footer>
-
 
 			</div>
 		</main>
-
-		<!-- @include('partials/footer.html') -->
 	</div>
+
+	<template id="hayStackTemplate">
+		<div class="hay-stack" data-stack-key="" data-bales="">
+			<div class="hay-stack__desc">
+				<span class="hay-stack__type"></span>
+				<span class="hay-stack__contract"></span>
+			</div>
+			<span class="hay-stack__count"></span>
+		</div>
+	</template>
+
+	<template id="logRowTemplate">
+		<tr class="log-table__row">
+			<td class="log-table__cell" data-field="dateTime"></td>
+			<td class="log-table__cell" data-field="person"></td>
+			<td class="log-table__cell" data-field="action"></td>
+			<td class="log-table__cell" data-field="type"></td>
+			<td class="log-table__cell" data-field="contract"></td>
+			<td class="log-table__cell" data-field="bay"></td>
+			<td class="log-table__cell" data-field="shed"></td>
+			<td class="log-table__cell" data-field="bales"></td>
+		</tr>
+	</template>
+
 	@include('partials/connected/scripts.html')
 </body>
 
