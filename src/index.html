@@ -80,6 +80,18 @@
 							<option value="remove">Remove</option>
 						</select>
 
+						<fieldset class="inventory__isles" id="isleFieldset">
+							<legend class="inventory__isles-legend">Isle</legend>
+							<label class="inventory__isle-option">
+								<input type="checkbox" class="inventory__isle-check" id="isle1" value="1" checked>
+								<span class="inventory__isle-text">Isle 1</span>
+							</label>
+							<label class="inventory__isle-option">
+								<input type="checkbox" class="inventory__isle-check" id="isle2" value="2" checked>
+								<span class="inventory__isle-text">Isle 2</span>
+							</label>
+						</fieldset>
+
 						<button type="button" id="submitHay" class="inventory__submit">Submit</button>
 					</form>
 
@@ -113,8 +125,9 @@
 									<th class="log-table__cell log-table__cell--head">Action</th>
 									<th class="log-table__cell log-table__cell--head">Hay Type</th>
 									<th class="log-table__cell log-table__cell--head">Contract #</th>
-									<th class="log-table__cell log-table__cell--head">Bay</th>
-									<th class="log-table__cell log-table__cell--head">Shed</th>
+								<th class="log-table__cell log-table__cell--head">Bay</th>
+								<th class="log-table__cell log-table__cell--head">Isle</th>
+								<th class="log-table__cell log-table__cell--head">Shed</th>
 									<th class="log-table__cell log-table__cell--head">Bales</th>
 								</tr>
 							</thead>
@@ -149,6 +162,7 @@
 			<td class="log-table__cell" data-field="type"></td>
 			<td class="log-table__cell" data-field="contract"></td>
 			<td class="log-table__cell" data-field="bay"></td>
+			<td class="log-table__cell" data-field="isle"></td>
 			<td class="log-table__cell" data-field="shed"></td>
 			<td class="log-table__cell" data-field="bales"></td>
 		</tr>

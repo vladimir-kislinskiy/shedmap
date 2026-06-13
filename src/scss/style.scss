@@ -245,6 +245,42 @@ body.page--view-only .inventory__form {
 	box-shadow: 0 2px 4px rgba(59, 130, 246, 0.2);
 }
 
+.inventory__isles {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 10px 16px;
+	margin: 0;
+	padding: 8px 12px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	background: #fff;
+}
+
+.inventory__isles-legend {
+	padding: 0 6px;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.inventory__isle-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.9rem;
+	color: var(--text-main);
+	cursor: pointer;
+	user-select: none;
+}
+
+.inventory__isle-check {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--color-primary);
+	cursor: pointer;
+}
+
 /* Shed tabs */
 .shed-tabs {
 	display: flex;
@@ -334,8 +370,9 @@ body.page--view-only .inventory__form {
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-end;
-	align-items: center;
+	align-items: stretch;
 	transition: background-color 0.2s, border-color 0.2s;
+	min-height: 0;
 }
 
 .shed__bay-stack:hover {
@@ -343,9 +380,27 @@ body.page--view-only .inventory__form {
 	border-color: #d1d5db;
 }
 
-.shed__bay-stack--drop-target {
-	background: rgba(59, 130, 246, 0.12);
-	border-color: var(--color-primary);
+.shed__isles {
+	display: flex;
+	flex: 1;
+	width: 100%;
+	min-height: 0;
+	align-items: flex-end;
+	gap: 4px;
+}
+
+.shed__isle {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-end;
+	min-width: 0;
+	min-height: 100%;
+}
+
+.shed__isle--drop-target {
+	background: rgba(59, 130, 246, 0.08);
+	border-radius: var(--radius-sm);
 }
 
 .shed__bay-stats {
@@ -398,6 +453,18 @@ body.page--view-only .inventory__form {
 	font-weight: 500;
 	transition: height 0.4s ease-out, opacity 0.2s, box-shadow 0.2s;
 	animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.hay-stack--full {
+	width: 100%;
+	flex-shrink: 0;
+	align-self: stretch;
+}
+
+.hay-stack--isle-1,
+.hay-stack--isle-2 {
+	width: 100%;
+	align-self: stretch;
 }
 
 .hay-stack__desc {

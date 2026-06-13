@@ -6,8 +6,13 @@ import {
 	capitalize,
 	createHayStack,
 	createLogRow,
+	findStackInContainer,
+	getBayStacks,
+	getIsleContainer,
+	getIsleMaxBales,
 	getStackType,
 	restoreHayStack,
+	sumBalesInContainer,
 	updateHayStack,
 } from "./dom.js";
 
@@ -25,6 +30,7 @@ const db = getDatabase(app);
 const auth = initAuth(app, handleAuthChange);
 
 const MAX_BALES_PER_BAY = 2000;
+const MAX_BALES_PER_ISLE = 1000;
 const SHEDS = ["north", "west", "east"];
 const BAY_COUNT = 10;
 
@@ -102,23 +108,30 @@ function getBayColumn(shed, bay) {
 	return document.getElementById(`${shed}-col-${bay}`);
 }
 
-function updateBayStats(colEl) {
-	if (!colEl) return;
-	const totalEl = colEl.closest(".shed__bay")?.querySelector(".shed__bay-total-val");
-	if (!totalEl) return;
+function getSelectedIsle() {
+	const isle1 = document.getElementById("isle1")?.checked;
+	const isle2 = document.getElementById("isle2")?.checked;
 
-	let total = 0;
-	colEl.querySelectorAll(".hay-stack").forEach((stack) => {
-		total += parseInt(stack.dataset.bales, 10) || 0;
-	});
-	totalEl.textContent = total;
+	if (!isle1 && !isle2) {
+		alert("Select at least one isle.");
+		return null;
+	}
+	if (isle1 && isle2) return "both";
+	return isle1 ? "1" : "2";
+}
+
+function updateBayStats(bayStackEl) {
+	if (!bayStackEl) return;
+	const totalEl = bayStackEl.closest(".shed__bay")?.querySelector(".shed__bay-total-val");
+	if (!totalEl) return;
+	totalEl.textContent = sumBalesInContainer(bayStackEl);
 }
 
 function makeStackDraggable(stackEl) {
 	bindStackDrag(stackEl, {
 		canDrag: () => isEditMode,
 		onReorder: () => {
-			updateBayStats(stackEl.parentElement);
+			updateBayStats(stackEl.closest(".shed__bay-stack"));
 			saveState();
 		},
 	});
@@ -145,12 +158,15 @@ function handleHay() {
 		return;
 	}
 
-	const colEl = getBayColumn(shed, bay);
-	if (!colEl) return;
+	const bayStackEl = getBayColumn(shed, bay);
+	if (!bayStackEl) return;
 
 	const stackKey = `${type}-${contract}`;
 
 	if (action === "add") {
+		const isle = getSelectedIsle();
+		if (!isle) return;
+
 		for (const stack of document.querySelectorAll(".hay-stack")) {
 			const parts = stack.dataset.stackKey.split("-");
 			const stackContract = parts.slice(1).join("-");
@@ -160,33 +176,37 @@ function handleHay() {
 			}
 		}
 
-		let totalBales = 0;
-		let existingStack = null;
-		colEl.querySelectorAll(".hay-stack").forEach((stack) => {
-			totalBales += parseInt(stack.dataset.bales, 10) || 0;
-			if (stack.dataset.stackKey === stackKey) existingStack = stack;
-		});
+		const targetContainer = getIsleContainer(bayStackEl, isle);
+		const bayTotal = sumBalesInContainer(bayStackEl);
+		const isleTotal = isle === "both" ? bayTotal : sumBalesInContainer(targetContainer);
+		const isleMax = getIsleMaxBales(isle);
 
-		if (totalBales + baleCount > MAX_BALES_PER_BAY) {
+		if (bayTotal + baleCount > MAX_BALES_PER_BAY) {
 			alert(`Cannot add more than ${MAX_BALES_PER_BAY} bales in this bay.`);
 			return;
 		}
 
+		if (isleTotal + baleCount > isleMax) {
+			alert(`Cannot add more than ${isleMax} bales in this isle.`);
+			return;
+		}
+
+		const existingStack = findStackInContainer(targetContainer, stackKey);
+
 		if (existingStack) {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;
-			updateHayStack(existingStack, type, contract, newCount, MAX_BALES_PER_BAY);
+			updateHayStack(existingStack, type, contract, newCount);
 		} else {
-			const stack = createHayStack(type, contract, baleCount, MAX_BALES_PER_BAY);
-			colEl.appendChild(stack);
+			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl);
 			makeStackDraggable(stack);
 		}
 
-		logChange(currentPerson, "Add", type, contract, parseInt(bay, 10) + 1, shed, baleCount);
+		logChange(currentPerson, "Add", type, contract, parseInt(bay, 10) + 1, isle, shed, baleCount);
 	}
 
 	if (action === "remove") {
 		let foundStack = null;
-		colEl.querySelectorAll(".hay-stack").forEach((stack) => {
+		getBayStacks(bayStackEl).forEach((stack) => {
 			const contractPart = (stack.dataset.stackKey || "").split("-").slice(1).join("-");
 			if (contractPart === contract) foundStack = stack;
 		});
@@ -197,6 +217,7 @@ function handleHay() {
 		}
 
 		const foundType = getStackType(foundStack);
+		const foundIsle = foundStack.dataset.isle || "both";
 		const newCount = parseInt(foundStack.dataset.bales, 10) - baleCount;
 
 		if (newCount < 0) {
@@ -207,19 +228,19 @@ function handleHay() {
 		if (newCount === 0) {
 			foundStack.remove();
 		} else {
-			updateHayStack(foundStack, foundType, contract, newCount, MAX_BALES_PER_BAY);
+			updateHayStack(foundStack, foundType, contract, newCount);
 		}
 
-		logChange(currentPerson, "Remove", foundType, contract, parseInt(bay, 10) + 1, shed, baleCount);
+		logChange(currentPerson, "Remove", foundType, contract, parseInt(bay, 10) + 1, foundIsle, shed, baleCount);
 	}
 
-	updateBayStats(colEl);
+	updateBayStats(bayStackEl);
 	saveState();
 	document.getElementById("contractNumber").value = "";
 	document.getElementById("baleCount").value = "";
 }
 
-function logChange(person, action, type, contract, bay, shed, bales) {
+function logChange(person, action, type, contract, bay, isle, shed, bales) {
 	const d = new Date();
 	const date = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 	const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
@@ -231,6 +252,7 @@ function logChange(person, action, type, contract, bay, shed, bales) {
 		type: capitalize(type),
 		contract,
 		bay,
+		isle,
 		shed: capitalize(shed),
 		bales,
 	});
@@ -260,10 +282,11 @@ function saveState() {
 			const colEl = document.getElementById(colId);
 			if (!colEl) continue;
 
-			colsData[colId] = Array.from(colEl.querySelectorAll(".hay-stack")).map((stack) => ({
+			colsData[colId] = Array.from(getBayStacks(colEl)).map((stack) => ({
 				type: getStackType(stack),
 				stackKey: stack.dataset.stackKey,
 				bales: stack.dataset.bales,
+				isle: stack.dataset.isle || "both",
 			}));
 		}
 		state.sheds[shed] = colsData;
@@ -297,11 +320,8 @@ onValue(ref(db, "hayShedState"), (snapshot) => {
 
 					if (Array.isArray(savedStacks)) {
 						savedStacks.forEach((stackData) => {
-							const stack = restoreHayStack(stackData, MAX_BALES_PER_BAY);
-							if (stack) {
-								colEl.appendChild(stack);
-								makeStackDraggable(stack);
-							}
+							const stack = restoreHayStack(stackData, colEl);
+							if (stack) makeStackDraggable(stack);
 						});
 					}
 

@@ -1,9 +1,13 @@
 const DRAG_THRESHOLD = 10;
 const LONG_PRESS_MS = 400;
 
+function getDropZone(stackEl) {
+	return stackEl.parentElement;
+}
+
 function clearDropHighlights() {
-	document.querySelectorAll(".hay-stack--drop-target, .shed__bay-stack--drop-target").forEach((el) => {
-		el.classList.remove("hay-stack--drop-target", "shed__bay-stack--drop-target");
+	document.querySelectorAll(".hay-stack--drop-target, .shed__isle--drop-target").forEach((el) => {
+		el.classList.remove("hay-stack--drop-target", "shed__isle--drop-target");
 	});
 }
 
@@ -23,32 +27,31 @@ function moveGhost(ghost, clientX, clientY, offsetX, offsetY) {
 	ghost.style.top = `${clientY - offsetY}px`;
 }
 
-function getDropTarget(clientX, clientY, sourceColId) {
+function getDropTarget(clientX, clientY, dropZone) {
 	const el = document.elementFromPoint(clientX, clientY);
-	if (!el) return null;
+	if (!el || !dropZone) return null;
 
 	const stack = el.closest(".hay-stack");
-	if (stack && !stack.classList.contains("hay-stack--dragging") && stack.parentElement?.id === sourceColId) {
+	if (stack && !stack.classList.contains("hay-stack--dragging") && stack.parentElement === dropZone) {
 		return { type: "stack", el: stack };
 	}
 
-	const col = el.closest(".shed__bay-stack");
-	if (col && col.id === sourceColId) {
-		return { type: "column", el: col };
+	if (dropZone.classList.contains("shed__isle") && el.closest(".shed__isle") === dropZone) {
+		return { type: "column", el: dropZone };
 	}
 
 	return null;
 }
 
 function reorderStack(draggedStack, target, clientY) {
-	const col = draggedStack.parentElement;
-	if (!col) return false;
+	const dropZone = draggedStack.parentElement;
+	if (!dropZone) return false;
 
 	if (target.type === "stack" && target.el !== draggedStack) {
 		const targetRect = target.el.getBoundingClientRect();
 		const insertBefore = clientY < targetRect.top + targetRect.height / 2;
 		if (insertBefore) {
-			col.insertBefore(draggedStack, target.el);
+			dropZone.insertBefore(draggedStack, target.el);
 		} else {
 			target.el.after(draggedStack);
 		}
@@ -56,7 +59,7 @@ function reorderStack(draggedStack, target, clientY) {
 	}
 
 	if (target.type === "column") {
-		col.appendChild(draggedStack);
+		dropZone.appendChild(draggedStack);
 		return true;
 	}
 
@@ -91,7 +94,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 
 		state = {
 			pointerId,
-			sourceColId: stackEl.parentElement.id,
+			dropZone: getDropZone(stackEl),
 			offsetX: clientX - rect.left,
 			offsetY: clientY - rect.top,
 			ghost: createGhost(stackEl),
@@ -111,10 +114,10 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		e.preventDefault();
 		moveGhost(state.ghost, e.clientX, e.clientY, state.offsetX, state.offsetY);
 		clearDropHighlights();
-		const target = getDropTarget(e.clientX, e.clientY, state.sourceColId);
+		const target = getDropTarget(e.clientX, e.clientY, state.dropZone);
 		if (!target?.el) return;
 		target.el.classList.add(
-			target.type === "stack" ? "hay-stack--drop-target" : "shed__bay-stack--drop-target",
+			target.type === "stack" ? "hay-stack--drop-target" : "shed__isle--drop-target",
 		);
 	};
 
@@ -122,7 +125,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!state) return;
 
 		if (state.active && e.pointerId === state.pointerId) {
-			const target = getDropTarget(e.clientX, e.clientY, state.sourceColId);
+			const target = getDropTarget(e.clientX, e.clientY, state.dropZone);
 			if (target && reorderStack(stackEl, target, e.clientY)) onReorder();
 		}
 
