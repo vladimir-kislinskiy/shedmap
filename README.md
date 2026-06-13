@@ -66,6 +66,18 @@ Or paste the rules manually in Firebase Console → Realtime Database → Rules.
 
 Firebase config lives in `src/js/main.js`. Client-side API keys are safe to expose; write access is enforced by Firebase Security Rules.
 
+## Deploy to Netlify
+
+The repo includes `netlify.toml` — Netlify will run `npm run build` and publish the `dist/` folder automatically.
+
+1. Connect the GitHub repo in Netlify.
+2. Push to `main` — deploy runs on every push.
+3. Add `shedmap.netlify.app` (or your custom domain) to **Firebase → Authentication → Settings → Authorized domains**.
+
+If you see "Page not found", check **Site configuration → Build settings**:
+- **Build command:** `npm run build`
+- **Publish directory:** `dist`
+
 ## Deploy to GitHub Pages
 
 1. Push this repo to GitHub.
