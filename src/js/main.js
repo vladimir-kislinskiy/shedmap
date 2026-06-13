@@ -15,20 +15,20 @@ const app = initializeApp(firebaseConfig);
 const db = getDatabase(app);
 const auth = initAuth(app, handleAuthChange);
 
-const MAX_BALES_PER_ROW = 2000;
+const MAX_BALES_PER_BAY = 2000;
 const changeLog = [];
 let draggedStackSourceColId = null;
 let isEditMode = false;
 let currentPerson = null;
 
-// Generate rows dynamically
-function populateRows() {
-	const rowSelect = document.getElementById("rowSelect");
+// Generate bays dynamically
+function populateBays() {
+	const baySelect = document.getElementById("baySelect");
 	for (let i = 0; i < 10; i++) {
 		const option = document.createElement("option");
 		option.value = i;
-		option.textContent = `Row ${i + 1}`;
-		rowSelect.appendChild(option);
+		option.textContent = `Bay ${i + 1}`;
+		baySelect.appendChild(option);
 	}
 
 	["north", "west", "east"].forEach((shed) => {
@@ -40,7 +40,7 @@ function populateRows() {
 
 			const label = document.createElement("div");
 			label.className = "shed-column-label";
-			label.textContent = `Row ${i + 1}`;
+			label.textContent = `Bay ${i + 1}`;
 			wrapper.appendChild(label);
 
 			const col = document.createElement("div");
@@ -51,7 +51,7 @@ function populateRows() {
 
 			const stats = document.createElement("div");
 			stats.className = "shed-column-stats";
-			stats.innerHTML = `<div class="stats-total"><span class="val">0</span> / ${MAX_BALES_PER_ROW}</div>`;
+			stats.innerHTML = `<div class="stats-total"><span class="val">0</span> / ${MAX_BALES_PER_BAY}</div>`;
 			wrapper.appendChild(stats);
 
 			shedCols.appendChild(wrapper);
@@ -135,7 +135,7 @@ function handleHay() {
 	const contract = document.getElementById("contractNumber").value.trim();
 	const baleCount = parseInt(document.getElementById("baleCount").value);
 	const shed = document.getElementById("shedSelect").value;
-	const row = document.getElementById("rowSelect").value;
+	const bay = document.getElementById("baySelect").value;
 	const action = document.getElementById("actionSelect").value;
 	const person = currentPerson;
 
@@ -150,7 +150,7 @@ function handleHay() {
 		return;
 	}
 
-	const colEl = document.getElementById(`${shed}-col-${row}`);
+	const colEl = document.getElementById(`${shed}-col-${bay}`);
 	const stackKey = `${type}-${contract}`;
 	let existingStack = null;
 	let totalBales = 0;
@@ -176,8 +176,8 @@ function handleHay() {
 			}
 		}
 
-		if (totalBales + baleCount > MAX_BALES_PER_ROW) {
-			alert(`Cannot add more than ${MAX_BALES_PER_ROW} bales in this row.`);
+		if (totalBales + baleCount > MAX_BALES_PER_BAY) {
+			alert(`Cannot add more than ${MAX_BALES_PER_BAY} bales in this bay.`);
 			return;
 		}
 
@@ -214,7 +214,7 @@ function handleHay() {
 			"Add",
 			type,
 			contract,
-			parseInt(row) + 1,
+			parseInt(bay) + 1,
 			shed,
 			baleCount,
 		);
@@ -256,7 +256,7 @@ function handleHay() {
 				"Remove",
 				foundType, // Use the actual type of the stack found, not what's in dropdown
 				contract,
-				parseInt(row) + 1,
+				parseInt(bay) + 1,
 				shed,
 				baleCount,
 			);
@@ -296,11 +296,11 @@ function updateRowStats(colEl) {
 }
 
 function updateStackHeight(stackEl, baleCount) {
-	const percent = (baleCount / MAX_BALES_PER_ROW) * 100;
+	const percent = (baleCount / MAX_BALES_PER_BAY) * 100;
 	stackEl.style.height = `${percent}%`;
 }
 
-function logChange(person, action, type, contract, row, shed, bales) {
+function logChange(person, action, type, contract, bay, shed, bales) {
 	const d = new Date();
 	const date = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 	const time = d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
@@ -311,7 +311,7 @@ function logChange(person, action, type, contract, row, shed, bales) {
 		action,
 		type: capitalize(type),
 		contract,
-		row,
+		bay,
 		shed: capitalize(shed),
 		bales,
 	};
@@ -332,7 +332,7 @@ function updateLogTable() {
             <td>${entry.action}</td>
             <td>${entry.type}</td>
             <td>${entry.contract}</td>
-            <td>${entry.row}</td>
+            <td>${entry.bay ?? entry.row}</td>
             <td>${entry.shed}</td>
             <td>${entry.bales}</td>
         `;
@@ -577,26 +577,46 @@ function handleAuthChange(authenticated, person) {
 }
 
 function updateAuthUI(authenticated, person) {
-	const viewOnlyBadge = document.getElementById("viewOnlyBadge");
+	const authBar = document.getElementById("authBar");
 	const authUserName = document.getElementById("authUserName");
 	const authBtn = document.getElementById("authBtn");
 
-	if (!viewOnlyBadge || !authUserName || !authBtn) return;
+	if (!authBar || !authUserName || !authBtn) return;
 
 	if (authenticated && person) {
-		viewOnlyBadge.hidden = true;
-		authUserName.hidden = false;
+		authBar.classList.remove("auth-bar--guest");
+		authBar.classList.add("auth-bar--authenticated");
 		authUserName.textContent = `Signed in as ${person}`;
 		authBtn.textContent = "Sign Out";
 		authBtn.classList.add("auth-bar__btn--out");
 		closeAuthModal();
 	} else {
-		viewOnlyBadge.hidden = false;
-		authUserName.hidden = true;
+		authBar.classList.add("auth-bar--guest");
+		authBar.classList.remove("auth-bar--authenticated");
 		authUserName.textContent = "";
 		authBtn.textContent = "Sign In";
 		authBtn.classList.remove("auth-bar__btn--out");
 	}
+}
+
+function clearAuthFields() {
+	const email = document.getElementById("authEmail");
+	const password = document.getElementById("authPassword");
+	if (email) {
+		email.value = "";
+		email.readOnly = true;
+	}
+	if (password) {
+		password.value = "";
+		password.readOnly = true;
+	}
+}
+
+function enableAuthFields() {
+	const email = document.getElementById("authEmail");
+	const password = document.getElementById("authPassword");
+	if (email) email.readOnly = false;
+	if (password) password.readOnly = false;
 }
 
 function openAuthModal() {
@@ -609,7 +629,11 @@ function openAuthModal() {
 		errorEl.hidden = true;
 		errorEl.textContent = "";
 	}
-	document.getElementById("authPassword")?.focus();
+	clearAuthFields();
+	requestAnimationFrame(() => {
+		enableAuthFields();
+		document.getElementById("authEmail")?.focus();
+	});
 }
 
 function closeAuthModal() {
@@ -617,7 +641,7 @@ function closeAuthModal() {
 	if (!modal) return;
 	modal.classList.remove("auth-modal--open");
 	modal.setAttribute("aria-hidden", "true");
-	document.getElementById("authForm")?.reset();
+	clearAuthFields();
 }
 
 function initAuthUI() {
@@ -661,7 +685,7 @@ function initAuthUI() {
 
 // Initialize on load
 window.addEventListener("load", () => {
-	populateRows();
+	populateBays();
 	initGrabToScroll();
 	initAuthUI();
 

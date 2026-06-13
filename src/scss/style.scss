@@ -499,7 +499,7 @@ footer {
 }
 
 .auth-bar__badge {
-	display: inline-flex;
+	display: none;
 	align-items: center;
 	padding: 6px 12px;
 	font-size: 0.8rem;
@@ -511,10 +511,19 @@ footer {
 	border-radius: 999px;
 }
 
+.auth-bar--guest .auth-bar__badge {
+	display: inline-flex;
+}
+
 .auth-bar__user {
+	display: none;
 	font-size: 0.95rem;
 	font-weight: 600;
 	color: var(--text-main);
+}
+
+.auth-bar--authenticated .auth-bar__user {
+	display: inline;
 }
 
 .auth-bar__btn {
@@ -619,6 +628,15 @@ footer {
 	display: flex;
 	flex-direction: column;
 	gap: 14px;
+}
+
+.auth-modal__decoy {
+	position: absolute;
+	left: -9999px;
+	width: 0;
+	height: 0;
+	opacity: 0;
+	pointer-events: none;
 }
 
 .auth-modal__form select,

@@ -10,10 +10,10 @@
 			<!-- Content -->
 			<div class="content">
 
-				<div class="auth-bar" id="authBar">
+				<div class="auth-bar auth-bar--guest" id="authBar">
 					<div class="auth-bar__status">
 						<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
-						<span class="auth-bar__user" id="authUserName" hidden></span>
+						<span class="auth-bar__user" id="authUserName"></span>
 					</div>
 					<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
 				</div>
@@ -24,9 +24,11 @@
 						<button type="button" class="auth-modal__close" id="authModalClose" aria-label="Close">&times;</button>
 						<h2 id="authModalTitle">Sign In</h2>
 						<p class="auth-modal__hint">Sign in to manage inventory and make changes.</p>
-						<form id="authForm" class="auth-modal__form">
-							<input type="email" id="authEmail" placeholder="Email" autocomplete="username" required />
-							<input type="password" id="authPassword" placeholder="Password" autocomplete="current-password" required />
+						<form id="authForm" class="auth-modal__form" autocomplete="off" novalidate>
+							<input type="text" name="auth-decoy" tabindex="-1" autocomplete="off" aria-hidden="true" class="auth-modal__decoy">
+							<input type="password" name="auth-decoy-pass" tabindex="-1" autocomplete="new-password" aria-hidden="true" class="auth-modal__decoy">
+							<input type="email" id="authEmail" name="auth-email" placeholder="Email" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" required />
+							<input type="password" id="authPassword" name="auth-password" placeholder="Password" autocomplete="new-password" required />
 							<p class="auth-modal__error" id="authError" hidden></p>
 							<button type="submit" class="auth-modal__submit">Sign In</button>
 						</form>
@@ -65,7 +67,7 @@
 							<option value="east">East Shed</option>
 						</select>
 
-						<select id="rowSelect"></select>
+						<select id="baySelect"></select>
 
 						<select id="actionSelect">
 							<option value="add">Add</option>
@@ -106,7 +108,7 @@
 								<th>Action</th>
 								<th>Hay Type</th>
 								<th>Contract #</th>
-								<th>Row</th>
+								<th>Bay</th>
 								<th>Shed</th>
 								<th>Bales</th>
 							</tr>
