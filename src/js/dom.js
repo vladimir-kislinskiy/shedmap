@@ -12,7 +12,8 @@ const LAYOUT = {
 	bayChrome: 60,
 	minStack: 48,
 	textBasePx: 10.4,
-	textMinPx: 7,
+	textMinPx: 5,
+	textLineGap: 2,
 };
 
 export function getBaseColumnHeight() {
@@ -34,18 +35,60 @@ function getDirectStacks(container) {
 }
 
 function fitStackText(stackEl) {
-	const maxWidth = Math.max(stackEl.clientWidth - 14, 20);
-	const lines = stackEl.querySelectorAll(".hay-stack__type, .hay-stack__contract, .hay-stack__count");
+	const lines = [...stackEl.querySelectorAll(".hay-stack__type, .hay-stack__contract, .hay-stack__count")];
+	if (!lines.length) return;
+
+	const padX = 12;
+	const padY = 10;
+	const maxWidth = Math.max(stackEl.clientWidth - padX, 12);
+	const maxHeight = Math.max(stackEl.clientHeight - padY, 12);
 
 	lines.forEach((el) => {
+		el.style.fontSize = `${LAYOUT.textBasePx}px`;
+		el.style.lineHeight = "1.15";
 		el.style.whiteSpace = "nowrap";
-		let size = LAYOUT.textBasePx;
+		el.style.overflow = "visible";
+	});
 
-		while (size > LAYOUT.textMinPx) {
+	const fits = (size) => {
+		lines.forEach((el) => {
 			el.style.fontSize = `${size}px`;
-			if (el.scrollWidth <= maxWidth) break;
-			size -= 0.5;
+		});
+
+		let totalHeight = 0;
+		for (let i = 0; i < lines.length; i++) {
+			const el = lines[i];
+			if (el.scrollWidth > maxWidth + 1) return false;
+			totalHeight += el.getBoundingClientRect().height;
+			if (i > 0) totalHeight += LAYOUT.textLineGap;
 		}
+		return totalHeight <= maxHeight + 1;
+	};
+
+	let lo = LAYOUT.textMinPx;
+	let hi = LAYOUT.textBasePx;
+	let best = LAYOUT.textMinPx;
+
+	while (lo <= hi) {
+		const mid = Math.round(((lo + hi) / 2) * 2) / 2;
+		if (fits(mid)) {
+			best = mid;
+			lo = mid + 0.5;
+		} else {
+			hi = mid - 0.5;
+		}
+	}
+
+	lines.forEach((el) => {
+		el.style.fontSize = `${best}px`;
+	});
+}
+
+function scheduleFitStackText() {
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			document.querySelectorAll(".hay-stack").forEach(fitStackText);
+		});
 	});
 }
 
@@ -117,10 +160,6 @@ export function refreshAllStackHeights() {
 		distributeContainerStackHeights(bayStack.querySelector(".shed__isle--1"));
 		distributeContainerStackHeights(bayStack.querySelector(".shed__isle--2"));
 	});
-
-	requestAnimationFrame(() => {
-		document.querySelectorAll(".hay-stack").forEach(fitStackText);
-	});
 }
 
 export function syncAllShedLayouts() {
@@ -136,6 +175,8 @@ export function syncAllShedLayouts() {
 	document.querySelectorAll(".shed__columns").forEach((columns) => {
 		columns.style.height = `${maxHeight}px`;
 	});
+
+	scheduleFitStackText();
 }
 
 export function setStackHeight(stackEl, baleCount, maxBales) {
