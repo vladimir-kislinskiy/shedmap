@@ -5,31 +5,37 @@ import {
 	onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-/** Emails allowed to edit inventory. Must exist in Firebase Authentication. */
-export const AUTHORIZED_EMAILS = [
-	"operations@barr-ag.com",
-];
+/** Firebase Auth email → person name for change log. */
+export const USERS = {
+	"operations@barr-ag.com": "Vlad",
+	"tschmitt@barr-ag.com": "Tyler",
+	"rschmitt@barr-ag.com": "Ryley",
+	"tbeschmitt@barr-ag.com": "Taylor",
+	"nmathis@barr-ag.com": "Natalie",
+};
 
-export function isAuthorizedEmail(email) {
-	if (!email) return false;
-	return AUTHORIZED_EMAILS.includes(email.toLowerCase());
+export function getPersonFromEmail(email) {
+	if (!email) return null;
+	return USERS[email.toLowerCase()] || null;
 }
 
-export function getDisplayName(user) {
-	if (!user) return null;
-	if (user.displayName) return user.displayName;
-	const localPart = user.email.split("@")[0];
-	return localPart.charAt(0).toUpperCase() + localPart.slice(1);
+export function isAuthorizedEmail(email) {
+	return !!getPersonFromEmail(email);
 }
 
 export function initAuth(app, onAuthChange) {
 	const auth = getAuth(app);
 
 	onAuthStateChanged(auth, (user) => {
-		if (user && isAuthorizedEmail(user.email)) {
-			onAuthChange(true, getDisplayName(user));
+		if (user) {
+			const person = getPersonFromEmail(user.email);
+			if (person) {
+				onAuthChange(true, person);
+			} else {
+				signOut(auth);
+				onAuthChange(false, null);
+			}
 		} else {
-			if (user) signOut(auth);
 			onAuthChange(false, null);
 		}
 	});

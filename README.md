@@ -56,15 +56,17 @@ Or paste the rules manually in Firebase Console → Realtime Database → Rules.
 
 ### Authorized accounts
 
-Login uses **email + password** (Firebase Authentication). Currently allowed:
+Login uses **email + password**. The person name in the change log is taken automatically from the email:
 
-| Email                   | Access        |
-|-------------------------|---------------|
-| operations@barr-ag.com  | Edit inventory |
+| Email                   | Person  |
+|-------------------------|---------|
+| operations@barr-ag.com  | Vlad    |
+| tschmitt@barr-ag.com    | Tyler   |
+| rschmitt@barr-ag.com    | Ryley   |
+| tbeschmitt@barr-ag.com  | Taylor  |
+| nmathis@barr-ag.com     | Natalie |
 
-After sign-in, select **Person** in the inventory form to record who made each change in the log.
-
-Add more emails in `src/js/auth.js` → `AUTHORIZED_EMAILS`.
+Add or update mappings in `src/js/auth.js` → `USERS`.
 
 Firebase config lives in `src/js/main.js`. Client-side API keys are safe to expose; write access is enforced by Firebase Security Rules.
 

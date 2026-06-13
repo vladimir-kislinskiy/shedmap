@@ -154,20 +154,18 @@ h1 {
 }
 
 .controls.hidden,
-.controls.controls--hidden,
 .controls[hidden] {
 	display: none !important;
 }
 
-.controls-toggle-wrapper[hidden],
-body.view-only .controls-toggle-wrapper {
+.controls-toggle-wrapper[hidden] {
 	display: none !important;
 }
 
+body.view-only .controls-toggle-wrapper,
 body.view-only #inventoryControls {
 	display: none !important;
 }
-
 
 .controls select,
 .controls input,

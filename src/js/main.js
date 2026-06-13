@@ -19,7 +19,7 @@ const MAX_BALES_PER_ROW = 2000;
 const changeLog = [];
 let draggedStackSourceColId = null;
 let isEditMode = false;
-let currentUserName = null;
+let currentPerson = null;
 
 // Generate rows dynamically
 function populateRows() {
@@ -129,7 +129,7 @@ function initGrabToScroll() {
 
 // Handle hay add/remove
 function handleHay() {
-	if (!isEditMode) return;
+	if (!isEditMode || !currentPerson) return;
 
 	const type = document.getElementById("hayType").value;
 	const contract = document.getElementById("contractNumber").value.trim();
@@ -137,7 +137,7 @@ function handleHay() {
 	const shed = document.getElementById("shedSelect").value;
 	const row = document.getElementById("rowSelect").value;
 	const action = document.getElementById("actionSelect").value;
-	const person = document.getElementById("personSelect").value;
+	const person = currentPerson;
 
 	const contractPattern = /^\d{2}-\d{4}$/;
 	if (!contractPattern.test(contract)) {
@@ -145,7 +145,7 @@ function handleHay() {
 		return;
 	}
 
-	if (!baleCount || !person) {
+	if (!baleCount) {
 		alert("Please fill in all fields.");
 		return;
 	}
@@ -542,9 +542,21 @@ function makeStackDraggable(stackEl) {
 	});
 }
 
-function setEditMode(enabled, userName = null) {
+function setInventoryControlsOpen(open) {
+	const controls = document.getElementById("inventoryControls");
+	const toggleBtn = document.getElementById("toggleControls");
+	if (!controls || !toggleBtn) return;
+
+	controls.classList.toggle("hidden", !open);
+	controls.hidden = !open;
+	toggleBtn.classList.toggle("active", open);
+	const label = toggleBtn.querySelector("span");
+	if (label) label.textContent = open ? "Close Management" : "Manage Inventory";
+}
+
+function setEditMode(enabled, person = null) {
 	isEditMode = enabled;
-	currentUserName = userName;
+	currentPerson = person;
 	document.body.classList.toggle("view-only", !enabled);
 
 	const toggleWrapper = document.querySelector(".controls-toggle-wrapper");
@@ -553,38 +565,28 @@ function setEditMode(enabled, userName = null) {
 	}
 
 	if (!enabled) {
-		const controls = document.getElementById("inventoryControls");
-		const toggleBtn = document.getElementById("toggleControls");
-		if (controls) {
-			controls.classList.add("hidden");
-			controls.hidden = true;
-		}
-		if (toggleBtn) {
-			toggleBtn.classList.remove("active");
-			const label = toggleBtn.querySelector("span");
-			if (label) label.textContent = "Manage Inventory";
-		}
+		setInventoryControlsOpen(false);
 	}
 
 	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
 }
 
-function handleAuthChange(authenticated, userName) {
-	setEditMode(authenticated, userName);
-	updateAuthUI(authenticated, userName);
+function handleAuthChange(authenticated, person) {
+	setEditMode(authenticated, person);
+	updateAuthUI(authenticated, person);
 }
 
-function updateAuthUI(authenticated, userName) {
+function updateAuthUI(authenticated, person) {
 	const viewOnlyBadge = document.getElementById("viewOnlyBadge");
 	const authUserName = document.getElementById("authUserName");
 	const authBtn = document.getElementById("authBtn");
 
 	if (!viewOnlyBadge || !authUserName || !authBtn) return;
 
-	if (authenticated && userName) {
+	if (authenticated && person) {
 		viewOnlyBadge.hidden = true;
 		authUserName.hidden = false;
-		authUserName.textContent = `Signed in as ${userName}`;
+		authUserName.textContent = `Signed in as ${person}`;
 		authBtn.textContent = "Sign Out";
 		authBtn.classList.add("auth-bar__btn--out");
 		closeAuthModal();
@@ -703,23 +705,9 @@ window.addEventListener("load", () => {
 	if (toggleBtn && controls) {
 		toggleBtn.addEventListener("click", () => {
 			if (!isEditMode) return;
-
-			const isHidden = controls.classList.contains("hidden");
-			if (isHidden) {
-				controls.classList.remove("hidden");
-				controls.hidden = false;
-				toggleBtn.classList.add("active");
-				toggleBtn.querySelector("span").innerText = "Close Management";
-			} else {
-				controls.classList.add("hidden");
-				controls.hidden = true;
-				toggleBtn.classList.remove("active");
-				toggleBtn.querySelector("span").innerText = "Manage Inventory";
-			}
+			setInventoryControlsOpen(controls.hidden);
 		});
 
-		// Set initial state
-		controls.classList.add("hidden");
-		controls.hidden = true;
+		setInventoryControlsOpen(false);
 	}
 });
