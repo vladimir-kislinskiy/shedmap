@@ -45,7 +45,7 @@ Output is written to the `dist/` folder.
 
 1. Create a Firebase project and enable **Realtime Database**.
 2. Enable **Email/Password** sign-in under Authentication.
-3. Create users for each team member (see `src/js/auth.js` for email mapping).
+3. Create authorized users (e.g. `operations@barr-ag.com`). Add emails to `AUTHORIZED_EMAILS` in `src/js/auth.js`.
 4. Deploy database rules from `database.rules.json`:
 
 ```bash
@@ -54,15 +54,17 @@ firebase deploy --only database
 
 Or paste the rules manually in Firebase Console → Realtime Database → Rules.
 
-### Team accounts
+### Authorized accounts
 
-| Person  | Email               |
-|---------|---------------------|
-| Vlad    | vlad@hayshed.app    |
-| Tyler   | tyler@hayshed.app   |
-| Natalie | natalie@hayshed.app |
-| Taylor  | taylor@hayshed.app  |
-| Ryley   | ryley@hayshed.app   |
+Login uses **email + password** (Firebase Authentication). Currently allowed:
+
+| Email                   | Access        |
+|-------------------------|---------------|
+| operations@barr-ag.com  | Edit inventory |
+
+After sign-in, select **Person** in the inventory form to record who made each change in the log.
+
+Add more emails in `src/js/auth.js` → `AUTHORIZED_EMAILS`.
 
 Firebase config lives in `src/js/main.js`. Client-side API keys are safe to expose; write access is enforced by Firebase Security Rules.
 

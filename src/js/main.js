@@ -19,7 +19,7 @@ const MAX_BALES_PER_ROW = 2000;
 const changeLog = [];
 let draggedStackSourceColId = null;
 let isEditMode = false;
-let currentPerson = null;
+let currentUserName = null;
 
 // Generate rows dynamically
 function populateRows() {
@@ -129,7 +129,7 @@ function initGrabToScroll() {
 
 // Handle hay add/remove
 function handleHay() {
-	if (!isEditMode || !currentPerson) return;
+	if (!isEditMode) return;
 
 	const type = document.getElementById("hayType").value;
 	const contract = document.getElementById("contractNumber").value.trim();
@@ -137,7 +137,7 @@ function handleHay() {
 	const shed = document.getElementById("shedSelect").value;
 	const row = document.getElementById("rowSelect").value;
 	const action = document.getElementById("actionSelect").value;
-	const person = currentPerson;
+	const person = document.getElementById("personSelect").value;
 
 	const contractPattern = /^\d{2}-\d{4}$/;
 	if (!contractPattern.test(contract)) {
@@ -145,7 +145,7 @@ function handleHay() {
 		return;
 	}
 
-	if (!baleCount) {
+	if (!baleCount || !person) {
 		alert("Please fill in all fields.");
 		return;
 	}
@@ -542,9 +542,9 @@ function makeStackDraggable(stackEl) {
 	});
 }
 
-function setEditMode(enabled, person = null) {
+function setEditMode(enabled, userName = null) {
 	isEditMode = enabled;
-	currentPerson = person;
+	currentUserName = userName;
 	document.body.classList.toggle("view-only", !enabled);
 
 	const toggleWrapper = document.querySelector(".controls-toggle-wrapper");
@@ -569,22 +569,22 @@ function setEditMode(enabled, person = null) {
 	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
 }
 
-function handleAuthChange(authenticated, person) {
-	setEditMode(authenticated, person);
-	updateAuthUI(authenticated, person);
+function handleAuthChange(authenticated, userName) {
+	setEditMode(authenticated, userName);
+	updateAuthUI(authenticated, userName);
 }
 
-function updateAuthUI(authenticated, person) {
+function updateAuthUI(authenticated, userName) {
 	const viewOnlyBadge = document.getElementById("viewOnlyBadge");
 	const authUserName = document.getElementById("authUserName");
 	const authBtn = document.getElementById("authBtn");
 
 	if (!viewOnlyBadge || !authUserName || !authBtn) return;
 
-	if (authenticated && person) {
+	if (authenticated && userName) {
 		viewOnlyBadge.hidden = true;
 		authUserName.hidden = false;
-		authUserName.textContent = `Signed in as ${person}`;
+		authUserName.textContent = `Signed in as ${userName}`;
 		authBtn.textContent = "Sign Out";
 		authBtn.classList.add("auth-bar__btn--out");
 		closeAuthModal();
@@ -634,12 +634,12 @@ function initAuthUI() {
 
 	authForm?.addEventListener("submit", async (e) => {
 		e.preventDefault();
-		const person = document.getElementById("authPerson").value;
+		const email = document.getElementById("authEmail").value;
 		const password = document.getElementById("authPassword").value;
 		const errorEl = document.getElementById("authError");
 
 		try {
-			await login(auth, person, password);
+			await login(auth, email, password);
 		} catch (err) {
 			if (errorEl) {
 				errorEl.hidden = false;

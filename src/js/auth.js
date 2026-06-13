@@ -5,31 +5,31 @@ import {
 	onAuthStateChanged,
 } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
 
-/** Map display names to Firebase Auth emails. Create matching users in Firebase Console. */
-export const USERS = {
-	Vlad: "vlad@hayshed.app",
-	Tyler: "tyler@hayshed.app",
-	Natalie: "natalie@hayshed.app",
-	Taylor: "taylor@hayshed.app",
-	Ryley: "ryley@hayshed.app",
-};
+/** Emails allowed to edit inventory. Must exist in Firebase Authentication. */
+export const AUTHORIZED_EMAILS = [
+	"operations@barr-ag.com",
+];
 
-export function getPersonFromEmail(email) {
-	if (!email) return null;
-	for (const [name, userEmail] of Object.entries(USERS)) {
-		if (userEmail === email) return name;
-	}
-	return null;
+export function isAuthorizedEmail(email) {
+	if (!email) return false;
+	return AUTHORIZED_EMAILS.includes(email.toLowerCase());
+}
+
+export function getDisplayName(user) {
+	if (!user) return null;
+	if (user.displayName) return user.displayName;
+	const localPart = user.email.split("@")[0];
+	return localPart.charAt(0).toUpperCase() + localPart.slice(1);
 }
 
 export function initAuth(app, onAuthChange) {
 	const auth = getAuth(app);
 
 	onAuthStateChanged(auth, (user) => {
-		if (user) {
-			const person = getPersonFromEmail(user.email);
-			onAuthChange(!!person, person);
+		if (user && isAuthorizedEmail(user.email)) {
+			onAuthChange(true, getDisplayName(user));
 		} else {
+			if (user) signOut(auth);
 			onAuthChange(false, null);
 		}
 	});
@@ -37,10 +37,8 @@ export function initAuth(app, onAuthChange) {
 	return auth;
 }
 
-export function login(auth, person, password) {
-	const email = USERS[person];
-	if (!email) return Promise.reject(new Error("Unknown person"));
-	return signInWithEmailAndPassword(auth, email, password);
+export function login(auth, email, password) {
+	return signInWithEmailAndPassword(auth, email.trim(), password);
 }
 
 export function logout(auth) {

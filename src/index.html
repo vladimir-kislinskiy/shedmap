@@ -25,14 +25,7 @@
 						<h2 id="authModalTitle">Sign In</h2>
 						<p class="auth-modal__hint">Sign in to manage inventory and make changes.</p>
 						<form id="authForm" class="auth-modal__form">
-							<select id="authPerson" required>
-								<option value="" disabled selected>Select Person</option>
-								<option value="Vlad">Vlad</option>
-								<option value="Tyler">Tyler</option>
-								<option value="Natalie">Natalie</option>
-								<option value="Taylor">Taylor</option>
-								<option value="Ryley">Ryley</option>
-							</select>
+							<input type="email" id="authEmail" placeholder="Email" autocomplete="username" value="operations@barr-ag.com" required />
 							<input type="password" id="authPassword" placeholder="Password" autocomplete="current-password" required />
 							<p class="auth-modal__error" id="authError" hidden></p>
 							<button type="submit" class="auth-modal__submit">Sign In</button>
@@ -77,6 +70,15 @@
 						<select id="actionSelect">
 							<option value="add">Add</option>
 							<option value="remove">Remove</option>
+						</select>
+
+						<select id="personSelect">
+							<option value="" disabled selected>Select Person</option>
+							<option value="Vlad">Vlad</option>
+							<option value="Tyler">Tyler</option>
+							<option value="Natalie">Natalie</option>
+							<option value="Taylor">Taylor</option>
+							<option value="Ryley">Ryley</option>
 						</select>
 
 						<button id="submitHay">Submit</button>
