@@ -1,0 +1,87 @@
+@media (max-width: 1440px) {
+	.container {
+		max-width: 1140px;
+	}
+}
+
+@media (max-width: 1280px) {
+	.container {
+		max-width: 960px;
+	}
+
+	.shed-columns {
+		justify-content: flex-start;
+		overflow-x: auto;
+		overflow-y: hidden;
+		padding-bottom: 12px;
+		scrollbar-width: thin;
+		scrollbar-color: var(--color-primary-light) transparent;
+		-webkit-overflow-scrolling: touch;
+		cursor: grab;
+	}
+
+	.shed-columns:active {
+		cursor: grabbing;
+	}
+
+	.shed-column-wrapper {
+		flex: 0 0 100px;
+	}
+}
+
+@media (max-width: 1024px) {
+	.container {
+		padding: 0;
+		max-width: none;
+		width: calc(100% - 20px);
+	}
+
+	.controls {
+		flex-wrap: wrap;
+	}
+}
+
+@media (max-width: 768px) {
+	.auth-bar {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.auth-bar__btn {
+		width: 100%;
+	}
+
+	.shed-columns {
+		height: 320px;
+		padding-bottom: 15px;
+	}
+	
+	.shed-column-wrapper {
+		min-width: 60px;
+		flex: 0 0 auto;
+	}
+
+	.controls {
+		flex-direction: column;
+		align-items: stretch;
+	}
+	
+	.tabcontent {
+		padding: 15px;
+	}
+	
+	.shed {
+		padding: 15px;
+	}
+
+	#contractNumber, #baleCount {
+		flex: 1 1 auto;
+		width: 100%;
+	}
+	
+	table {
+		display: block;
+		overflow-x: auto;
+		white-space: nowrap;
+	}
+}

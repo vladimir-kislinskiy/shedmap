@@ -1,0 +1,55 @@
+/* Button hover */
+.btn-hover {
+  position: relative;
+  color: #000;
+  width: max-content;
+  padding: 15px;
+  transition: all 0.3s;
+  cursor: pointer;
+  display: flex;
+  justify-content: center;
+  border-radius: 15px;
+
+  span {
+    transition: all 0.2s;
+    transform: scale(1, 1);
+    z-index: 2;
+  }
+
+  &::before,
+  &::after {
+    content: '';
+    position: absolute;
+    transition: all 0.5s;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+    border-radius: 15px;
+  }
+
+  &::before {
+    opacity: 0;
+    background: rgba(8, 7, 7, 0.1);
+    transform: scale(1, 0.1);
+  }
+
+  &::after {
+    transition: all 0.3s;
+    border: 1px solid rgba(8, 5, 5, 0.5);
+  }
+
+
+  &:hover {
+    &::before {
+      opacity: 1;
+      transform: scale(1, 1);
+    }
+
+    &::after {
+      transform: scale(1, .1);
+      opacity: 0;
+    }
+  }
+}

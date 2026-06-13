@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+@include('partials/head.html', { 'title': 'Shed map' })
+
+<body class="view-only">
+	<div class="wrapper">
+		<!-- @include('partials/header.html') -->
+		<!-- Main -->
+		<main class="main">
+			<!-- Content -->
+			<div class="content">
+
+				<div class="auth-bar" id="authBar">
+					<div class="auth-bar__status">
+						<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
+						<span class="auth-bar__user" id="authUserName" hidden></span>
+					</div>
+					<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
+				</div>
+
+				<div class="auth-modal" id="authModal" aria-hidden="true">
+					<div class="auth-modal__overlay" id="authModalOverlay"></div>
+					<div class="auth-modal__dialog" role="dialog" aria-labelledby="authModalTitle">
+						<button type="button" class="auth-modal__close" id="authModalClose" aria-label="Close">&times;</button>
+						<h2 id="authModalTitle">Sign In</h2>
+						<p class="auth-modal__hint">Sign in to manage inventory and make changes.</p>
+						<form id="authForm" class="auth-modal__form">
+							<select id="authPerson" required>
+								<option value="" disabled selected>Select Person</option>
+								<option value="Vlad">Vlad</option>
+								<option value="Tyler">Tyler</option>
+								<option value="Natalie">Natalie</option>
+								<option value="Taylor">Taylor</option>
+								<option value="Ryley">Ryley</option>
+							</select>
+							<input type="password" id="authPassword" placeholder="Password" autocomplete="current-password" required />
+							<p class="auth-modal__error" id="authError" hidden></p>
+							<button type="submit" class="auth-modal__submit">Sign In</button>
+						</form>
+					</div>
+				</div>
+
+				<h1>Hay Shed Map</h1>
+
+				<div class="tab">
+					<button class="tablinks active" data-tab="Sheds">Sheds</button>
+					<button class="tablinks" data-tab="Log">Change Log</button>
+				</div>
+
+				<!-- Tab: Sheds -->
+				<div id="Sheds" class="tabcontent" style="display:block;">
+					<div class="controls-toggle-wrapper" hidden>
+						<button id="toggleControls" class="btn-toggle">
+							<span>Manage Inventory</span>
+						</button>
+					</div>
+
+					<div class="controls" id="inventoryControls">
+						<select id="hayType">
+							<option value="alfalfa">Alfalfa</option>
+							<option value="timothy">Timothy</option>
+						</select>
+
+						<input type="text" id="contractNumber" placeholder="Contract #" maxlength="7"
+							pattern="^\d{2}-\d{4}$" title="Format: 25-6651" required />
+
+						<input type="number" id="baleCount" placeholder="Bales" min="1" max="9999" required />
+
+						<select id="shedSelect">
+							<option value="north">North Shed</option>
+							<option value="west">West Shed</option>
+							<option value="east">East Shed</option>
+						</select>
+
+						<select id="rowSelect"></select>
+
+						<select id="actionSelect">
+							<option value="add">Add</option>
+							<option value="remove">Remove</option>
+						</select>
+
+						<button id="submitHay">Submit</button>
+					</div>
+
+					<div class="sub-tab">
+						<button class="sub-tablinks active" data-subtab="north-shed-tab">North Shed</button>
+						<button class="sub-tablinks" data-subtab="west-shed-tab">West Shed</button>
+						<button class="sub-tablinks" data-subtab="east-shed-tab">East Shed</button>
+					</div>
+
+					<!-- SHEDS -->
+					<div class="shed sub-tabcontent" id="north-shed-tab" style="display:block;">
+						<div class="shed-columns" id="north-cols"></div>
+					</div>
+
+					<div class="shed sub-tabcontent" id="west-shed-tab" style="display:none;">
+						<div class="shed-columns" id="west-cols"></div>
+					</div>
+
+					<div class="shed sub-tabcontent" id="east-shed-tab" style="display:none;">
+						<div class="shed-columns" id="east-cols"></div>
+					</div>
+				</div>
+
+				<!-- Tab: Log -->
+				<div id="Log" class="tabcontent">
+					<h2>Change Log</h2>
+					<table>
+						<thead>
+							<tr>
+								<th>Date & Time</th>
+								<th>Person</th>
+								<th>Action</th>
+								<th>Hay Type</th>
+								<th>Contract #</th>
+								<th>Row</th>
+								<th>Shed</th>
+								<th>Bales</th>
+							</tr>
+						</thead>
+						<tbody id="logBody"></tbody>
+					</table>
+				</div>
+
+				<footer>
+					&copy; Hay Shed Map. Dev by <a href="https://vkys.ca" target="_blank" class="footer__link">VK</a>
+				</footer>
+
+
+			</div>
+		</main>
+
+		<!-- @include('partials/footer.html') -->
+	</div>
+	@include('partials/connected/scripts.html')
+</body>
+
+</html>

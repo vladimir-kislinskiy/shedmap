@@ -1,0 +1,53 @@
+/* Scroll to top btn */
+.scroll-top {
+  position: fixed;
+  bottom: 20px;
+  right: 10px;
+  z-index: 99;
+  background-color: #ccc;
+  cursor: pointer;
+  width: 40px;
+  height: 40px;
+  border-radius: 4px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(100%);
+  transition: all .2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  img {
+    width: 40%;
+  }
+
+  &.is-show {
+    opacity: 1;
+    pointer-events: all;
+    transform: translateX(0%);
+  }
+
+  &:hover {
+    img {
+      animation: to-top-btn infinite linear 1s;
+    }
+  }
+}
+
+@keyframes to-top-btn {
+  0% {
+    transform: translateY(0%);
+  }
+
+  25% {
+    transform: translateY(20%);
+  }
+
+  75% {
+    transform: translateY(-20%);
+  }
+
+  100% {
+    transform: translateY(0%);
+  }
+}

@@ -1,0 +1,8 @@
+{
+	"rules": {
+		"hayShedState": {
+			".read": true,
+			".write": "auth != null"
+		}
+	}
+}

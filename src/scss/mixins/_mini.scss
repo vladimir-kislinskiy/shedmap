@@ -1,0 +1,117 @@
+// Background images
+@mixin bg-cover {
+  background-position: center;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+
+@mixin bg-contain {
+  background-position: center;
+  background-size: contain;
+  background-repeat: no-repeat;
+}
+
+// Flex
+@mixin flex-v-center {
+  display: flex;
+  align-items: center;
+}
+
+@mixin flex-h-center {
+  display: flex;
+  justify-content: center;
+}
+
+@mixin flex-all-center {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@mixin flex-all-sb {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+// Pseudo
+@mixin pseudo {
+  position: absolute;
+  content: '';
+}
+
+@mixin pseudo-x {
+  position: absolute;
+  content: '';
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@mixin pseudo-y {
+  position: absolute;
+  content: '';
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+@mixin pseudo-xy {
+  position: absolute;
+  content: '';
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+// Css triangle
+@mixin css-triangle($direction:'left', $size:5px, $color:#000) {
+  width: 0;
+  height: 0;
+  position: absolute;
+  content: "";
+  left: 0;
+  top: 0;
+
+  @if $direction=='left' {
+    border-top: $size solid transparent;
+    border-bottom: $size solid transparent;
+    border-right: $size solid $color;
+  }
+
+  @if $direction=='right' {
+    border-top: $size solid transparent;
+    border-bottom: $size solid transparent;
+    border-left: $size solid $color;
+  }
+
+  @if $direction=='up' {
+    border-left: $size solid transparent;
+    border-right: $size solid transparent;
+    border-bottom: $size solid $color;
+  }
+
+  @if $direction=='down' {
+    border-left: $size solid transparent;
+    border-right: $size solid transparent;
+    border-top: $size solid $color;
+  }
+}
+
+// Centring
+@mixin сentering-xy() {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@mixin сentering-x() {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+@mixin сentering-y() {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+}
