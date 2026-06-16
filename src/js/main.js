@@ -1,5 +1,5 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js";
-import { getDatabase, ref, set, onValue } from "https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js";
+import { initializeApp } from "firebase/app";
+import { getDatabase, ref, set, onValue } from "firebase/database";
 import { initAuth, login, logout } from "./auth.js";
 import { bindStackDrag, setStacksDraggable } from "./drag-drop.js";
 import {
@@ -21,6 +21,7 @@ import {
 const firebaseConfig = {
 	apiKey: "AIzaSyAUqIkZ2dvmKSBzuZH6yfaGfhDCmjalOSQ",
 	authDomain: "hayshed-f65b3.firebaseapp.com",
+	databaseURL: "https://hayshed-f65b3-default-rtdb.firebaseio.com",
 	projectId: "hayshed-f65b3",
 	storageBucket: "hayshed-f65b3.firebasestorage.app",
 	messagingSenderId: "1007336867353",

@@ -3,7 +3,7 @@ import {
 	signInWithEmailAndPassword,
 	signOut,
 	onAuthStateChanged,
-} from "https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js";
+} from "firebase/auth";
 
 /** Firebase Auth email → person name for change log. */
 export const USERS = {

@@ -86,9 +86,7 @@ function fitStackText(stackEl) {
 
 function scheduleFitStackText() {
 	requestAnimationFrame(() => {
-		requestAnimationFrame(() => {
-			document.querySelectorAll(".hay-stack").forEach(fitStackText);
-		});
+		document.querySelectorAll(".shed-tabs__panel--active .hay-stack").forEach(fitStackText);
 	});
 }
 
