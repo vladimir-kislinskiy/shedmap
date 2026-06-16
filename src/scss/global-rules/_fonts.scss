@@ -1,2 +1,5 @@
-/* Fonts */
+/* Fonts — local files from src/resources/fonts/ → dist/fonts/ */
+@include font-face("DMSans", "DMSans-Medium", 400);
 @include font-face("DMSans", "DMSans-Medium", 500);
+@include font-face("DMSans", "DMSans-Bold", 600);
+@include font-face("DMSans", "DMSans-Bold", 700);
