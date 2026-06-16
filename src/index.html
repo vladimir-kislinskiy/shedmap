@@ -3,20 +3,21 @@
 @include('partials/head.html', { 'title': 'Shed map' })
 
 <body class="page page--view-only">
+	<header class="page-hero">
+		<div class="auth-bar auth-bar--guest" id="authBar">
+			<h1 class="auth-bar__title">Hay Shed Map</h1>
+			<div class="auth-bar__actions">
+				<div class="auth-bar__status">
+					<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
+					<span class="auth-bar__user" id="authUserName"></span>
+				</div>
+				<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
+			</div>
+		</div>
+	</header>
 	<div class="page__wrapper">
 		<main class="page__main">
 			<div class="page__content">
-
-				<div class="auth-bar auth-bar--guest" id="authBar">
-					<h1 class="auth-bar__title">Hay Shed Map</h1>
-					<div class="auth-bar__actions">
-						<div class="auth-bar__status">
-							<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
-							<span class="auth-bar__user" id="authUserName"></span>
-						</div>
-						<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
-					</div>
-				</div>
 
 				<div class="auth-modal" id="authModal" aria-hidden="true">
 					<div class="auth-modal__overlay" id="authModalOverlay"></div>

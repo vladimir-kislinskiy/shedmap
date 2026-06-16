@@ -35,8 +35,12 @@ const stylesBackend = () => {
 		.pipe(browserSync.stream());
 };
 
+const cleanHashedAssets = () => {
+	return del(["dist/js/app-*.js", "dist/css/style-*.css", "dist/rev.json"], { force: true });
+};
+
 const scriptsBundle = async () => {
-		try {
+	try {
 		await esbuild.build({
 			entryPoints: ["./src/js/main.js"],
 			bundle: true,
@@ -51,6 +55,7 @@ const scriptsBundle = async () => {
 		browserSync.stream();
 	} catch (error) {
 		notify.onError()(error);
+		throw error;
 	}
 };
 
@@ -61,21 +66,19 @@ const resources = () => {
 };
 
 const images = () => {
-	return src([
-		"./src/img/*.jpg",
-		"./src/img/*.png",
-		"./src/img/*.jpeg",
-		"./src/img/*.svg",
-		"./src/img/*.webp",
-		"./src/img/**/*.jpg",
-		"./src/img/**/*.png",
-		"./src/img/**/*.jpeg",
-		"./src/img/**/*.svg",
-		"./src/img/**/*.webp",
-	])
-		.pipe(webp())
-		.pipe(imagemin())
-		.pipe(dest("./dist/img"));
+	const raster = () =>
+		src([
+			"./src/img/*.{jpg,jpeg,png,webp}",
+			"./src/img/**/*.{jpg,jpeg,png,webp}",
+		])
+			.pipe(webp())
+			.pipe(imagemin())
+			.pipe(dest("./dist/img"));
+
+	const vectors = () =>
+		src(["./src/img/**/*.svg"]).pipe(dest("./dist/img"));
+
+	return Promise.all([raster(), vectors()]);
 };
 
 const htmlInclude = () => {
@@ -152,6 +155,7 @@ const watchFiles = () => {
 };
 
 exports.default = series(
+	cleanHashedAssets,
 	htmlInclude,
 	scriptsBundle,
 	stylesBackend,

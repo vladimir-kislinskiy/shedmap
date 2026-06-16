@@ -12,10 +12,10 @@
 
 body {
 	font-family: var(--font-primary);
-	background: var(--bg-gradient);
+	background-color: #e5e7eb;
 	color: var(--text-main);
 	min-height: 100vh;
-	padding: 20px 10px;
+	padding: 0;
 	margin: 0;
 	-webkit-font-smoothing: antialiased;
 }
@@ -24,6 +24,15 @@ body {
 	display: flex;
 	flex-direction: column;
 	min-height: 100vh;
+}
+
+.page-hero {
+	width: 100%;
+	flex-shrink: 0;
+}
+
+.page__wrapper {
+	padding: clamp(16px, 3vw, 20px) clamp(10px, 2vw, 16px);
 }
 
 .page__wrapper,
@@ -684,12 +693,16 @@ body.page--dragging .shed__columns {
 	align-items: center;
 	justify-content: space-between;
 	gap: clamp(8px, 2vw, 16px);
-	padding: clamp(10px, 2vw, 12px) clamp(12px, 3vw, 20px);
-	background: var(--card-bg);
-	border: 1px solid var(--border-color);
-	border-radius: var(--radius-lg);
-	box-shadow: var(--card-shadow);
+	width: 100%;
+	padding: clamp(10px, 2vw, 14px) clamp(12px, 3vw, 24px);
+	background: rgba(255, 255, 255, 0.96);
+	backdrop-filter: blur(10px);
+	border: none;
+	border-bottom: 1px solid var(--border-color);
+	border-radius: 0;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 	min-width: 0;
+	flex-shrink: 0;
 }
 
 .auth-bar__title {

@@ -65,7 +65,7 @@
 @media (max-width: 768px) {
 	.auth-bar {
 		gap: clamp(6px, 2vw, 10px);
-		padding: clamp(8px, 2.5vw, 10px) clamp(10px, 3vw, 14px);
+		padding: clamp(8px, 2.5vw, 10px) clamp(10px, 3vw, 16px);
 	}
 
 	.auth-bar__title {
@@ -119,5 +119,9 @@
 		display: block;
 		overflow-x: auto;
 		white-space: nowrap;
+	}
+
+	body {
+		background-attachment: scroll;
 	}
 }
