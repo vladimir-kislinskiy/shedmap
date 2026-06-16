@@ -663,17 +663,19 @@ body.page--dragging .shed__columns {
 	color: var(--text-muted);
 	font-weight: 500;
 	line-height: 1.4;
-}
 
-.page-footer__link {
-	color: inherit;
-	text-decoration: none;
-	font-weight: 600;
-	transition: opacity 0.3s ease;
-}
+	a.page-footer__link {
+		color: var(--text-muted);
+		text-decoration: none;
+		font-weight: 600;
+		transition: color 0.3s ease;
 
-.page-footer__link:hover {
-	opacity: 0.75;
+		&:hover,
+		&:focus-visible,
+		&:active {
+			color: var(--color-primary-hover);
+		}
+	}
 }
 
 /* Auth */
