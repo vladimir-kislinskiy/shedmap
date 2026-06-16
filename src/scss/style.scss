@@ -196,7 +196,7 @@ body.page--view-only .inventory__form {
 .inventory__field,
 .inventory__submit {
 	padding: 10px 14px;
-	font-size: 0.95rem;
+	font-size: max(16px, 0.95rem);
 	font-family: var(--font-primary);
 	border: 1px solid #d1d5db;
 	border-radius: var(--radius-sm);
@@ -918,7 +918,7 @@ body.page--dragging .shed__columns {
 .auth-modal__input {
 	padding: 12px 14px;
 	font-family: var(--font-primary);
-	font-size: 0.95rem;
+	font-size: max(16px, 0.95rem);
 	border: 1px solid #d1d5db;
 	border-radius: var(--radius-sm);
 	background: #fff;
