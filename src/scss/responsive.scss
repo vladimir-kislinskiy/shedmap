@@ -26,8 +26,8 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 100px;
-		min-width: 100px;
+		flex: 0 0 clamp(92px, 22vw, 120px);
+		min-width: clamp(92px, 22vw, 120px);
 	}
 
 	.shed__bay-stack {
@@ -63,23 +63,24 @@
 }
 
 @media (max-width: 768px) {
-	.auth-bar {
-		flex-direction: column;
-		align-items: stretch;
-	}
-
-	.auth-bar__btn {
-		width: 100%;
-	}
-
 	.shed__columns {
 		min-height: 320px;
-		padding-bottom: 15px;
+		// padding-bottom: 15px;
 	}
 
 	.shed__bay {
-		min-width: 72px;
-		flex: 0 0 72px;
+		flex: 0 0 clamp(88px, 24vw, 110px);
+		min-width: clamp(88px, 24vw, 110px);
+	}
+
+	.hay-stack {
+		padding: 3px 2px;
+		gap: 1px;
+	}
+
+	.inventory__isles {
+		width: auto;
+		align-self: center;
 	}
 
 	.inventory__form {
@@ -88,11 +89,11 @@
 	}
 
 	.tabs__panel {
-		padding: 15px;
+		padding: 10px;
 	}
 
 	.shed-tabs__panel {
-		padding: 15px;
+		padding: 10px;
 	}
 
 	.inventory__field--contract,

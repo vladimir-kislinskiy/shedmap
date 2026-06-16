@@ -7,6 +7,7 @@ import {
 	createHayStack,
 	createLogRow,
 	findStackInContainer,
+	formatIsleLabel,
 	getBayStacks,
 	getIsleContainer,
 	getIsleMaxBales,
@@ -177,6 +178,54 @@ function getSelectedIsle() {
 	return isle1 ? "1" : "2";
 }
 
+function setIsleCheckboxes(isle) {
+	const isle1 = document.getElementById("isle1");
+	const isle2 = document.getElementById("isle2");
+	if (!isle1 || !isle2) return;
+	isle1.checked = isle === "both" || isle === "1";
+	isle2.checked = isle === "both" || isle === "2";
+}
+
+function fillFormFromStack(stackEl) {
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	if (!bayStack) return;
+
+	const type = getStackType(stackEl);
+	const parts = (stackEl.dataset.stackKey || "").split("-");
+	const contract = parts.slice(1).join("-");
+	const bales = stackEl.dataset.bales || "";
+	const isle = stackEl.dataset.isle || "both";
+	const shed = bayStack.dataset.shed;
+	const bay = bayStack.dataset.bay;
+
+	document.getElementById("hayType").value = type;
+	document.getElementById("contractNumber").value = contract;
+	document.getElementById("baleCount").value = bales;
+	document.getElementById("shedSelect").value = shed;
+	document.getElementById("baySelect").value = bay;
+	setIsleCheckboxes(isle);
+
+	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
+	if (tabBtn) setActiveShedTab(`${shed}-shed-tab`, tabBtn);
+
+	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
+		el.classList.remove("hay-stack--selected");
+	});
+	stackEl.classList.add("hay-stack--selected");
+
+	if (isEditMode) setInventoryControlsOpen(true);
+}
+
+function bindStackSelect(stackEl) {
+	if (stackEl._selectBound) return;
+	stackEl._selectBound = true;
+	stackEl.classList.add("hay-stack--selectable");
+	stackEl.addEventListener("click", () => {
+		if (stackEl._justDragged) return;
+		fillFormFromStack(stackEl);
+	});
+}
+
 function updateBayStats(bayStackEl) {
 	if (!bayStackEl) return;
 	const totalEl = bayStackEl.closest(".shed__bay")?.querySelector(".shed__bay-total-val");
@@ -185,11 +234,29 @@ function updateBayStats(bayStackEl) {
 }
 
 function makeStackDraggable(stackEl) {
+	bindStackSelect(stackEl);
 	bindStackDrag(stackEl, {
 		canDrag: () => isEditMode,
-		onReorder: () => {
-			updateBayStats(stackEl.closest(".shed__bay-stack"));
+		onReorder: ({ stackEl: movedStack, fromIsle, toIsle }) => {
+			const bayStack = movedStack.closest(".shed__bay-stack");
+			updateBayStats(bayStack);
 			syncAllShedLayouts();
+
+			if (isEditMode && currentPerson && bayStack) {
+				const type = getStackType(movedStack);
+				const parts = (movedStack.dataset.stackKey || "").split("-");
+				const contract = parts.slice(1).join("-");
+				const bales = parseInt(movedStack.dataset.bales, 10) || 0;
+				const shed = bayStack.dataset.shed;
+				const bay = parseInt(bayStack.dataset.bay, 10) + 1;
+				const typeLabel = capitalize(type);
+				const note = fromIsle !== toIsle
+					? `${typeLabel} ${contract} (${bales} bales) moved from ${formatIsleLabel(fromIsle)} to ${formatIsleLabel(toIsle)}`
+					: `${typeLabel} ${contract} (${bales} bales) reordered in ${formatIsleLabel(toIsle)}`;
+
+				logChange(currentPerson, "Move", type, contract, bay, toIsle, shed, bales, note);
+			}
+
 			saveState();
 		},
 	});
@@ -300,7 +367,7 @@ function handleHay() {
 	document.getElementById("baleCount").value = "";
 }
 
-function logChange(person, action, type, contract, bay, isle, shed, bales) {
+function logChange(person, action, type, contract, bay, isle, shed, bales, note = "") {
 	const d = new Date();
 	const date = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 	const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
@@ -315,6 +382,7 @@ function logChange(person, action, type, contract, bay, isle, shed, bales) {
 		isle,
 		shed: capitalize(shed),
 		bales,
+		note,
 	});
 	updateLogTable();
 }
@@ -455,13 +523,19 @@ function updateAuthUI(authenticated, person) {
 function clearAuthFields() {
 	const email = document.getElementById("authEmail");
 	const password = document.getElementById("authPassword");
+	const toggle = document.getElementById("authPasswordToggle");
 	if (email) {
 		email.value = "";
 		email.readOnly = true;
 	}
 	if (password) {
 		password.value = "";
+		password.type = "password";
 		password.readOnly = true;
+	}
+	if (toggle) {
+		toggle.setAttribute("aria-pressed", "false");
+		toggle.setAttribute("aria-label", "Show password");
 	}
 }
 
@@ -521,6 +595,17 @@ function initAuthUI() {
 
 	document.getElementById("authModalClose")?.addEventListener("click", closeAuthModal);
 	document.getElementById("authModalOverlay")?.addEventListener("click", closeAuthModal);
+
+	document.getElementById("authPasswordToggle")?.addEventListener("click", () => {
+		const input = document.getElementById("authPassword");
+		const btn = document.getElementById("authPasswordToggle");
+		if (!input || !btn) return;
+		const show = input.type === "password";
+		input.type = show ? "text" : "password";
+		btn.setAttribute("aria-pressed", show ? "true" : "false");
+		btn.setAttribute("aria-label", show ? "Hide password" : "Show password");
+	});
+
 	document.addEventListener("keydown", (e) => {
 		if (e.key === "Escape") closeAuthModal();
 	});
@@ -570,6 +655,7 @@ window.addEventListener("load", () => {
 	initAuthUI();
 	initTabs();
 	initInventoryForm();
+	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	syncAllShedLayouts();
 });
 

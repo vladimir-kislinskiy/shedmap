@@ -1,6 +1,6 @@
 import { applyIsleLayout, placeStackInContainer } from "./dom.js";
 
-const DRAG_THRESHOLD = 10;
+const DRAG_THRESHOLD = 6;
 const LONG_PRESS_MS = 400;
 
 function getDragContext(stackEl) {
@@ -92,39 +92,82 @@ function performDrop(stackEl, target, clientY, dragContext) {
 	return false;
 }
 
+function markDragged(stackEl) {
+	stackEl._justDragged = true;
+	setTimeout(() => {
+		stackEl._justDragged = false;
+	}, 300);
+}
+
 export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 	if (stackEl._pointerDragBound) return;
 	stackEl._pointerDragBound = true;
 
 	let state = null;
 
+	const removePendingListeners = () => {
+		document.removeEventListener("pointermove", onPendingPointerMove);
+		document.removeEventListener("pointerup", onPendingPointerUp);
+		document.removeEventListener("pointercancel", onPendingPointerUp);
+	};
+
+	const removeActiveListeners = () => {
+		document.removeEventListener("pointermove", onActivePointerMove);
+		document.removeEventListener("pointerup", onActivePointerUp);
+		document.removeEventListener("pointercancel", onActivePointerUp);
+	};
+
+	const releaseCapture = () => {
+		if (state?.pointerId == null) return;
+		try {
+			if (stackEl.hasPointerCapture?.(state.pointerId)) {
+				stackEl.releasePointerCapture(state.pointerId);
+			}
+		} catch (_) {
+			/* Safari may throw if capture was never set */
+		}
+	};
+
 	const cleanup = () => {
 		if (state?.longPressTimer) clearTimeout(state.longPressTimer);
 		if (state?.ghost) state.ghost.remove();
+		removePendingListeners();
+		removeActiveListeners();
+		releaseCapture();
 		stackEl.classList.remove("hay-stack--dragging");
 		stackEl.style.pointerEvents = "";
 		clearDropHighlights();
 		document.body.classList.remove("page--dragging");
-		document.removeEventListener("pointermove", onPointerMove);
-		document.removeEventListener("pointerup", onPointerUp);
-		document.removeEventListener("pointercancel", onPointerUp);
 		state = null;
 	};
 
 	const startDrag = (e) => {
-		if (!canDrag()) return;
+		if (!canDrag()) {
+			cleanup();
+			return;
+		}
 
 		const dragContext = getDragContext(stackEl);
-		if (!dragContext) return;
+		if (!dragContext) {
+			cleanup();
+			return;
+		}
+
+		removePendingListeners();
+		if (state?.longPressTimer) clearTimeout(state.longPressTimer);
 
 		const rect = stackEl.getBoundingClientRect();
 		const clientX = e.clientX ?? state?.startX ?? rect.left;
 		const clientY = e.clientY ?? state?.startY ?? rect.top;
 		const pointerId = e.pointerId ?? state?.pointerId;
+		const fromIsle = stackEl.dataset.isle || "both";
 
 		state = {
 			pointerId,
 			dragContext,
+			fromIsle,
+			startX: state?.startX ?? clientX,
+			startY: state?.startY ?? clientY,
 			offsetX: clientX - rect.left,
 			offsetY: clientY - rect.top,
 			ghost: createGhost(stackEl),
@@ -135,12 +178,13 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		stackEl.style.pointerEvents = "none";
 		document.body.classList.add("page--dragging");
 		moveGhost(state.ghost, clientX, clientY, state.offsetX, state.offsetY);
-		document.addEventListener("pointermove", onPointerMove);
-		document.addEventListener("pointerup", onPointerUp);
-		document.addEventListener("pointercancel", onPointerUp);
+
+		document.addEventListener("pointermove", onActivePointerMove, { passive: false });
+		document.addEventListener("pointerup", onActivePointerUp);
+		document.addEventListener("pointercancel", onActivePointerUp);
 	};
 
-	const onPointerMove = (e) => {
+	const onActivePointerMove = (e) => {
 		if (!state?.active || e.pointerId !== state.pointerId) return;
 		e.preventDefault();
 		moveGhost(state.ghost, e.clientX, e.clientY, state.offsetX, state.offsetY);
@@ -152,55 +196,76 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		);
 	};
 
-	const onPointerUp = (e) => {
-		if (!state) return;
+	const onActivePointerUp = (e) => {
+		if (!state?.active || e.pointerId !== state.pointerId) return;
 
-		if (state.active && e.pointerId === state.pointerId) {
-			const target = getDropTarget(e.clientX, e.clientY, state.dragContext);
-			if (target && performDrop(stackEl, target, e.clientY, state.dragContext)) onReorder();
+		const target = getDropTarget(e.clientX, e.clientY, state.dragContext);
+		if (target && performDrop(stackEl, target, e.clientY, state.dragContext)) {
+			markDragged(stackEl);
+			onReorder({
+				stackEl,
+				fromIsle: state.fromIsle,
+				toIsle: stackEl.dataset.isle || "both",
+			});
+		} else {
+			markDragged(stackEl);
 		}
 
 		cleanup();
 	};
 
-	stackEl.addEventListener("pointerdown", (e) => {
-		if (!canDrag() || e.button !== 0) return;
-
-		state = {
-			pointerId: e.pointerId,
-			startX: e.clientX,
-			startY: e.clientY,
-			active: false,
-			longPressTimer: setTimeout(() => {
-				if (state && !state.active) {
-					startDrag({ pointerId: state.pointerId, clientX: state.startX, clientY: state.startY });
-				}
-			}, LONG_PRESS_MS),
-		};
-	});
-
-	stackEl.addEventListener("pointermove", (e) => {
+	const onPendingPointerMove = (e) => {
 		if (!state || state.active || e.pointerId !== state.pointerId) return;
 
 		const dx = e.clientX - state.startX;
 		const dy = e.clientY - state.startY;
 		if (Math.hypot(dx, dy) > DRAG_THRESHOLD) {
-			clearTimeout(state.longPressTimer);
 			startDrag(e);
 		}
-	});
+	};
 
-	stackEl.addEventListener("pointerup", (e) => {
-		if (!state || state.active) return;
-		if (e.pointerId !== state.pointerId) return;
-		clearTimeout(state.longPressTimer);
+	const onPendingPointerUp = (e) => {
+		if (!state || state.active || e.pointerId !== state.pointerId) return;
 		cleanup();
-	});
+	};
 
-	stackEl.addEventListener("pointercancel", () => {
-		if (!state || state.active) return;
-		cleanup();
-	});
+	stackEl.addEventListener(
+		"pointerdown",
+		(e) => {
+			if (!canDrag() || e.button !== 0) return;
+
+			e.preventDefault();
+
+			cleanup();
+
+			try {
+				stackEl.setPointerCapture(e.pointerId);
+			} catch (_) {
+				/* ignore */
+			}
+
+			state = {
+				pointerId: e.pointerId,
+				startX: e.clientX,
+				startY: e.clientY,
+				active: false,
+				longPressTimer: setTimeout(() => {
+					if (state && !state.active) {
+						startDrag({
+							pointerId: state.pointerId,
+							clientX: state.startX,
+							clientY: state.startY,
+						});
+					}
+				}, LONG_PRESS_MS),
+			};
+
+			document.addEventListener("pointermove", onPendingPointerMove);
+			document.addEventListener("pointerup", onPendingPointerUp);
+			document.addEventListener("pointercancel", onPendingPointerUp);
+		},
+		{ passive: false },
+	);
 
 	stackEl.addEventListener("contextmenu", (e) => {
 		if (canDrag()) e.preventDefault();

@@ -345,7 +345,7 @@ export function createLogRow(entry) {
 	const fields = {
 		dateTime: entry.dateTime,
 		person: entry.person,
-		action: entry.action,
+		action: entry.note ? `${entry.action} — ${entry.note}` : entry.action,
 		type: entry.type,
 		contract: entry.contract,
 		bay: entry.bay ?? entry.row,
