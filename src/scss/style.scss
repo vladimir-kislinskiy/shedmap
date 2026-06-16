@@ -31,6 +31,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
+	min-height: 0;
 	gap: 30px;
 }
 
@@ -38,6 +39,7 @@ body {
 	display: flex;
 	flex-direction: column;
 	flex: 1;
+	min-height: 0;
 	gap: clamp(20px, 2.5vw, 30px);
 	padding-inline: clamp(0px, 2vw, 16px);
 }
@@ -88,7 +90,7 @@ h3 {
 
 .tabs__panel {
 	display: none;
-	padding: 30px;
+	padding: clamp(16px, 3vw, 30px);
 	background: var(--card-bg);
 	backdrop-filter: blur(20px);
 	border-radius: var(--radius-lg);
@@ -97,10 +99,20 @@ h3 {
 	box-shadow: var(--card-shadow);
 	border: 1px solid rgba(255, 255, 255, 0.4);
 	animation: fadeIn 0.4s ease-out forwards;
+	min-height: 0;
 }
 
 .tabs__panel--active {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	flex: 1;
+	min-height: 0;
+}
+
+#Sheds.tabs__panel--active {
+	flex: 0 0 auto;
+	min-height: auto;
+	overflow: visible;
 }
 
 @keyframes fadeIn {
@@ -281,13 +293,22 @@ body.page--view-only .inventory__form {
 }
 
 /* Shed tabs */
+#Sheds .inventory__toggle-wrap,
+#Sheds .inventory__form,
+#Sheds .shed-tabs {
+	flex-shrink: 0;
+}
+
 .shed-tabs {
 	display: flex;
+	flex-wrap: nowrap;
 	justify-content: center;
+	align-items: stretch;
 	background-color: rgba(255, 255, 255, 0.4);
 	border-radius: var(--radius-lg);
 	margin: 0 auto 20px auto;
 	padding: 6px;
+	width: 100%;
 	max-width: 500px;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
@@ -297,15 +318,17 @@ body.page--view-only .inventory__form {
 	border: none;
 	outline: none;
 	cursor: pointer;
-	padding: 10px clamp(15px, 2vw, 20px);
-	font-size: 0.95rem;
+	padding: 10px clamp(6px, 2vw, 20px);
+	font-size: clamp(0.85rem, 2.2vw, 0.95rem);
 	font-weight: 600;
 	font-family: var(--font-primary);
 	color: var(--text-muted);
 	transition: var(--transition);
 	border-radius: var(--radius-md);
-	flex: 1;
+	flex: 1 1 0;
+	min-width: 0;
 	text-align: center;
+	white-space: nowrap;
 }
 
 .shed-tabs__btn:hover {
@@ -323,16 +346,21 @@ body.page--view-only .inventory__form {
 	display: none;
 	background: #fff;
 	border-radius: var(--radius-lg);
-	padding: 24px;
-	margin: 10px auto;
+	padding: clamp(12px, 2.5vw, 24px);
+	margin: 10px 0 0;
 	width: 100%;
 	max-width: 100%;
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
 	border: 1px solid var(--border-color);
+	min-height: 0;
 }
 
 .shed-tabs__panel--active {
-	display: block;
+	display: flex;
+	flex-direction: column;
+	flex: 0 0 auto;
+	min-height: auto;
+	overflow: visible;
 }
 
 /* Shed bays */
@@ -340,6 +368,7 @@ body.page--view-only .inventory__form {
 	display: flex;
 	justify-content: space-around;
 	gap: clamp(8px, 1.2vw, 16px);
+	flex: 0 0 auto;
 	min-height: 380px;
 	height: 380px;
 	align-items: stretch;
@@ -358,11 +387,13 @@ body.page--view-only .inventory__form {
 	justify-content: flex-start;
 	align-items: center;
 	position: relative;
+	min-height: 0;
 }
 
 .shed__bay-stack {
 	width: 100%;
 	flex: 1;
+	min-height: 0;
 	background: #f9fafb;
 	border: 2px solid #e5e7eb;
 	padding: 6px;
@@ -374,8 +405,7 @@ body.page--view-only .inventory__form {
 	transition:
 		background-color 0.2s,
 		border-color 0.2s;
-	min-height: 0;
-	overflow: visible;
+	overflow: hidden;
 }
 
 .shed__bay-stack:hover {
@@ -626,10 +656,12 @@ body.page--dragging .shed__columns {
 .page-footer {
 	text-align: center;
 	margin-top: auto;
-	padding: 30px 0 10px 0;
-	font-size: 0.85rem;
+	flex-shrink: 0;
+	padding: clamp(10px, 2vw, 16px) 0 clamp(4px, 1vw, 6px);
+	font-size: clamp(10px, 1.2vw + 8px, 12px);
 	color: var(--text-muted);
 	font-weight: 500;
+	line-height: 1.4;
 }
 
 .page-footer__link {

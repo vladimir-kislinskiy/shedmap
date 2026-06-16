@@ -173,7 +173,7 @@ export function syncAllShedLayouts() {
 	});
 
 	document.querySelectorAll(".shed__columns").forEach((columns) => {
-		columns.style.height = `${maxHeight}px`;
+		columns.style.height = `${Math.round(maxHeight)}px`;
 	});
 
 	scheduleFitStackText();

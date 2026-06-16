@@ -105,6 +105,10 @@ function setActiveTab(panelId, btn) {
 	});
 	document.getElementById(panelId)?.classList.add("tabs__panel--active");
 	btn?.classList.add("tabs__btn--active");
+
+	if (panelId === "Sheds") {
+		requestAnimationFrame(() => syncAllShedLayouts());
+	}
 }
 
 function setActiveShedTab(panelId, btn) {
@@ -121,6 +125,8 @@ function setActiveShedTab(panelId, btn) {
 	if (shedSelect && panelId) {
 		shedSelect.value = panelId.replace("-shed-tab", "");
 	}
+
+	requestAnimationFrame(() => syncAllShedLayouts());
 }
 
 function initGrabToScroll() {
@@ -532,7 +538,7 @@ function updateAuthUI(authenticated, person) {
 	authBar.classList.toggle("auth-bar--authenticated", authenticated && !!person);
 
 	if (authenticated && person) {
-		authUserName.textContent = `Signed in as ${person}`;
+		authUserName.textContent = `Hi, ${person}`;
 		authBtn.textContent = "Sign Out";
 		authBtn.classList.add("auth-bar__btn--out");
 		closeAuthModal();
