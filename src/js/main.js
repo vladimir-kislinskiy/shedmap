@@ -134,6 +134,29 @@ function initGrabToScroll() {
 			e.target.closest(".hay-stack") ||
 			document.body.classList.contains("page--dragging");
 
+		const stopGrabMouse = () => {
+			isDown = false;
+			slider.classList.remove("shed__columns--grabbing");
+		};
+
+		slider.addEventListener("mousedown", (e) => {
+			if (shouldSkip(e)) return;
+			isDown = true;
+			slider.classList.add("shed__columns--grabbing");
+			startX = e.pageX - slider.offsetLeft;
+			scrollLeft = slider.scrollLeft;
+		});
+
+		slider.addEventListener("mouseup", stopGrabMouse);
+		slider.addEventListener("mouseleave", stopGrabMouse);
+
+		slider.addEventListener("mousemove", (e) => {
+			if (!isDown) return;
+			e.preventDefault();
+			const x = e.pageX - slider.offsetLeft;
+			slider.scrollLeft = scrollLeft - (x - startX) * 2;
+		});
+
 		slider.addEventListener("pointerdown", (e) => {
 			if (shouldSkip(e)) return;
 			isDown = true;
