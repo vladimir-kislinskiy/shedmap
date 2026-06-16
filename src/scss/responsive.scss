@@ -63,6 +63,19 @@
 }
 
 @media (max-width: 768px) {
+	.auth-bar {
+		gap: clamp(6px, 2vw, 10px);
+		padding: clamp(8px, 2.5vw, 10px) clamp(10px, 3vw, 14px);
+	}
+
+	.auth-bar__title {
+		font-size: clamp(1rem, 4.5vw, 1.35rem);
+	}
+
+	.auth-bar__user {
+		max-width: clamp(64px, 22vw, 140px);
+	}
+
 	.shed__columns {
 		min-height: 320px;
 		// padding-bottom: 15px;

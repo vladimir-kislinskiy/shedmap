@@ -8,11 +8,14 @@
 			<div class="page__content">
 
 				<div class="auth-bar auth-bar--guest" id="authBar">
-					<div class="auth-bar__status">
-						<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
-						<span class="auth-bar__user" id="authUserName"></span>
+					<h1 class="auth-bar__title">Hay Shed Map</h1>
+					<div class="auth-bar__actions">
+						<div class="auth-bar__status">
+							<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
+							<span class="auth-bar__user" id="authUserName"></span>
+						</div>
+						<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
 					</div>
-					<button type="button" class="auth-bar__btn" id="authBtn">Sign In</button>
 				</div>
 
 				<div class="auth-modal" id="authModal" aria-hidden="true">
@@ -35,8 +38,6 @@
 						</form>
 					</div>
 				</div>
-
-				<h1 class="page__title">Hay Shed Map</h1>
 
 				<nav class="tabs" aria-label="Main navigation">
 					<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
