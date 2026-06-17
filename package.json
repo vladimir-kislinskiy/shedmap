@@ -8,6 +8,7 @@
 		"dev": "gulp",
 		"build": "gulp build",
 		"cache": "gulp cache",
+		"deploy:rules": "bash scripts/deploy-database-rules.sh",
 		"backend": "gulp backend",
 		"code": "editorconfig-checker"
 	},

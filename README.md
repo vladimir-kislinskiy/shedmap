@@ -51,15 +51,17 @@ Output is written to the `dist/` folder. Firebase values are injected from envir
 
 1. Create a Firebase project and enable **Realtime Database**.
 2. Enable **Email/Password** sign-in under Authentication.
-3. Create authorized users (e.g. `operations@barr-ag.com`). Add emails to `AUTHORIZED_EMAILS` in `src/js/auth.js`.
+3. Create authorized users in Firebase Console (do **not** allow public sign-up — see Security below).
 4. Copy `.env.example` to `.env` and paste your Firebase web config values.
 5. Deploy database rules from `database.rules.json`:
 
 ```bash
-firebase deploy --only database
+npm run deploy:rules
 ```
 
-Or paste the rules manually in Firebase Console → Realtime Database → Rules.
+First run opens a browser for one-time Firebase login. The script installs Node 20 and firebase-tools locally in `.tools/` (no `sudo` needed).
+
+Or paste `database.rules.json` manually in Firebase Console → Realtime Database → Rules → **Publish**.
 
 ### Authorized accounts
 
@@ -73,9 +75,16 @@ Login uses **email + password**. The person name in the change log is taken auto
 | tbeschmitt@barr-ag.com  | Taylor  |
 | nmathis@barr-ag.com     | Natalie |
 
-Add or update mappings in `src/js/auth.js` → `USERS`.
+Add or update mappings in `src/js/auth.js` → `USERS` (and the same emails in `database.rules.json`).
 
-Firebase config is **not** stored in source code. Set `FIREBASE_*` variables in `.env` for local builds and in Netlify **Site configuration → Environment variables** for production.
+### Security checklist
+
+1. **Disable public sign-up:** Firebase Console → Authentication → Settings → **User account creation** → disable *Allow users to sign up* (wording may vary). Only create users manually in the Users tab.
+2. **Deploy database rules** after any change: `firebase deploy --only database`
+3. **API key referrers** in Google Cloud: `localhost`, `*.netlify.app`, your domain.
+4. Use strong unique passwords for each team account.
+
+Firebase config is **not** stored in source code. Set `FIREBASE_*` in `.env` (local) and Netlify environment variables (production).
 
 If GitHub flagged an exposed API key:
 

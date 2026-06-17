@@ -5,7 +5,7 @@ import {
 	onAuthStateChanged,
 } from "firebase/auth";
 
-/** Firebase Auth email → person name for change log. */
+/** Firebase Auth email → person name for change log. Keep in sync with database.rules.json */
 export const USERS = {
 	"operations@barr-ag.com": "Vlad",
 	"tschmitt@barr-ag.com": "Tyler",

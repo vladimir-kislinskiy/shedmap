@@ -801,13 +801,20 @@ function enableAuthFields() {
 	document.getElementById("authPassword").readOnly = false;
 }
 
+let authModalReturnFocus = null;
+
 function openAuthModal() {
 	const modal = document.getElementById("authModal");
+	const dialog = modal?.querySelector(".auth-modal__dialog");
 	const errorEl = document.getElementById("authError");
 	if (!modal) return;
 
+	authModalReturnFocus = document.activeElement;
+
 	modal.classList.add("auth-modal--open");
+	modal.removeAttribute("inert");
 	modal.setAttribute("aria-hidden", "false");
+	dialog?.setAttribute("aria-modal", "true");
 	if (errorEl) {
 		errorEl.hidden = true;
 		errorEl.textContent = "";
@@ -822,9 +829,28 @@ function openAuthModal() {
 function closeAuthModal() {
 	const modal = document.getElementById("authModal");
 	if (!modal) return;
+
+	const dialog = modal.querySelector(".auth-modal__dialog");
+	const returnFocus = authModalReturnFocus || document.getElementById("authBtn");
+	const focused = document.activeElement;
+
 	modal.classList.remove("auth-modal--open");
-	modal.setAttribute("aria-hidden", "true");
+	modal.setAttribute("inert", "");
 	clearAuthFields();
+
+	requestAnimationFrame(() => {
+		if (focused instanceof HTMLElement && modal.contains(focused)) {
+			focused.blur();
+		}
+
+		if (returnFocus instanceof HTMLElement) {
+			returnFocus.focus();
+		}
+
+		modal.setAttribute("aria-hidden", "true");
+		dialog?.removeAttribute("aria-modal");
+		authModalReturnFocus = null;
+	});
 }
 
 function initAuthUI() {

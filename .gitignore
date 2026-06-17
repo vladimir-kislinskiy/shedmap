@@ -8,3 +8,4 @@ dist/
 !.env.example
 rev.json
 shedmap/
+.tools/
