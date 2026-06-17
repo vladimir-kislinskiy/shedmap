@@ -238,7 +238,7 @@ body.page--view-only .inventory__form {
 }
 
 .inventory__field--select {
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-image: url("../img/icons/chevron-down.svg");
 	background-repeat: no-repeat;
 	background-position: right 12px center;
 	background-size: 14px;
@@ -680,7 +680,7 @@ body.page--dragging .shed__columns {
 .log__filter-input--select {
 	padding-right: 34px;
 	cursor: pointer;
-	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-image: url("../img/icons/chevron-down.svg");
 	background-repeat: no-repeat;
 	background-position: right 12px center;
 	background-size: 14px;
@@ -1043,7 +1043,11 @@ body.page--dragging .shed__columns {
 	height: 32px;
 	padding: 0;
 	border: none;
-	background: transparent;
+	background-color: transparent;
+	background-image: url("../img/icons/visible.svg");
+	background-repeat: no-repeat;
+	background-position: center;
+	background-size: 18px;
 	color: var(--text-muted);
 	cursor: pointer;
 	border-radius: var(--radius-sm);
@@ -1051,21 +1055,11 @@ body.page--dragging .shed__columns {
 
 .auth-modal__password-toggle:hover {
 	color: var(--text-main);
-	background: rgba(0, 0, 0, 0.04);
+	background-color: rgba(0, 0, 0, 0.04);
 }
 
-.auth-modal__password-icon--hide {
-	display: none;
-}
-
-.auth-modal__password-toggle[aria-pressed="true"]
-	.auth-modal__password-icon--show {
-	display: none;
-}
-
-.auth-modal__password-toggle[aria-pressed="true"]
-	.auth-modal__password-icon--hide {
-	display: block;
+.auth-modal__password-toggle[aria-pressed="true"] {
+	background-image: url("../img/icons/eye-off.svg");
 }
 
 .auth-modal__decoy {

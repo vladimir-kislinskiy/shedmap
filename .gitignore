@@ -3,6 +3,8 @@ dist/
 .DS_Store
 *.log
 .env
-.env.*
+.env.local
+.env.*.local
+!.env.example
 rev.json
 shedmap/

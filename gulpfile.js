@@ -1,5 +1,6 @@
 const { src, dest, series, watch } = require("gulp");
-const { readFileSync } = require("fs");
+const { readFileSync, existsSync } = require("fs");
+const { resolve } = require("path");
 const autoprefixer = require("gulp-autoprefixer");
 const cleanCSS = require("gulp-clean-css");
 const del = require("del");
@@ -17,6 +18,51 @@ const webp = require("gulp-webp");
 const esbuild = require("esbuild");
 
 let isProduction = false;
+
+const FIREBASE_ENV_KEYS = [
+	"FIREBASE_API_KEY",
+	"FIREBASE_AUTH_DOMAIN",
+	"FIREBASE_DATABASE_URL",
+	"FIREBASE_PROJECT_ID",
+	"FIREBASE_STORAGE_BUCKET",
+	"FIREBASE_MESSAGING_SENDER_ID",
+	"FIREBASE_APP_ID",
+];
+
+function loadEnvFile() {
+	const envPath = resolve(__dirname, ".env");
+	if (!existsSync(envPath)) return;
+
+	for (const line of readFileSync(envPath, "utf8").split("\n")) {
+		const trimmed = line.trim();
+		if (!trimmed || trimmed.startsWith("#")) continue;
+
+		const separator = trimmed.indexOf("=");
+		if (separator === -1) continue;
+
+		const key = trimmed.slice(0, separator).trim();
+		let value = trimmed.slice(separator + 1).trim();
+		if (
+			(value.startsWith('"') && value.endsWith('"')) ||
+			(value.startsWith("'") && value.endsWith("'"))
+		) {
+			value = value.slice(1, -1);
+		}
+
+		if (!(key in process.env)) {
+			process.env[key] = value;
+		}
+	}
+}
+
+function getFirebaseDefine() {
+	loadEnvFile();
+
+	return FIREBASE_ENV_KEYS.reduce((define, key) => {
+		define[`__${key}__`] = JSON.stringify(process.env[key] || "");
+		return define;
+	}, {});
+}
 
 const clean = () => {
 	return del(["dist/**/*.*"], { force: true });
@@ -51,6 +97,7 @@ const scriptsBundle = async () => {
 			logLevel: "silent",
 			legalComments: "none",
 			drop: isProduction ? ["console"] : [],
+			define: getFirebaseDefine(),
 		});
 		browserSync.stream();
 	} catch (error) {

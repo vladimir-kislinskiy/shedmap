@@ -2,6 +2,7 @@ import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue } from "firebase/database";
 import { initAuth, login, logout } from "./auth.js";
 import { bindStackDrag, setStacksDraggable } from "./drag-drop.js";
+import { getFirebaseConfig } from "./firebase-config.js";
 import {
 	capitalize,
 	createHayStack,
@@ -18,17 +19,7 @@ import {
 	updateHayStack,
 } from "./dom.js";
 
-const firebaseConfig = {
-	apiKey: "AIzaSyAUqIkZ2dvmKSBzuZH6yfaGfhDCmjalOSQ",
-	authDomain: "hayshed-f65b3.firebaseapp.com",
-	databaseURL: "https://hayshed-f65b3-default-rtdb.firebaseio.com",
-	projectId: "hayshed-f65b3",
-	storageBucket: "hayshed-f65b3.firebasestorage.app",
-	messagingSenderId: "1007336867353",
-	appId: "1:1007336867353:web:a092aa900b3aa6f32a8c88",
-};
-
-const app = initializeApp(firebaseConfig);
+const app = initializeApp(getFirebaseConfig());
 const db = getDatabase(app);
 const auth = initAuth(app, handleAuthChange);
 
