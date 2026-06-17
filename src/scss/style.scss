@@ -761,18 +761,40 @@ body.page--dragging .shed__columns {
 	overflow-y: hidden;
 	-webkit-overflow-scrolling: touch;
 	overscroll-behavior-x: contain;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
+	background-color: var(--color-surface);
 }
 
 .log-table {
 	display: table;
 	width: max-content;
 	min-width: 100%;
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
 	table-layout: auto;
 	overflow: visible;
-	border-radius: var(--radius-md);
-	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
-	border: 1px solid var(--border-color);
+	border: none;
+	border-radius: 0;
+	box-shadow: none;
+	background-color: var(--color-surface);
+}
+
+.log-table__head .log-table__row:first-child > .log-table__cell:first-child {
+	border-top-left-radius: calc(var(--radius-md) - 1px);
+}
+
+.log-table__head .log-table__row:first-child > .log-table__cell:last-child {
+	border-top-right-radius: calc(var(--radius-md) - 1px);
+}
+
+.log-table__body .log-table__row:last-child > .log-table__cell:first-child {
+	border-bottom-left-radius: calc(var(--radius-md) - 1px);
+}
+
+.log-table__body .log-table__row:last-child > .log-table__cell:last-child {
+	border-bottom-right-radius: calc(var(--radius-md) - 1px);
 }
 
 .log-table__head {
