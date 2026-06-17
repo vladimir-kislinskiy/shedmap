@@ -420,7 +420,7 @@ body.page--view-only .inventory__form {
 	min-height: 0;
 	background: #f9fafb;
 	border: 2px solid #e5e7eb;
-	padding: 6px;
+	padding: 6px 6px 16px;
 	border-radius: var(--radius-md) var(--radius-md) 0 0;
 	display: flex;
 	flex-direction: column;
@@ -461,6 +461,11 @@ body.page--view-only .inventory__form {
 .shed__isle--drop-target {
 	background: rgba(59, 130, 246, 0.08);
 	border-radius: var(--radius-sm);
+}
+
+.shed__bay-stack-tail {
+	flex: 0 0 10px;
+	min-height: 10px;
 }
 
 .shed__bay-stats {
@@ -542,6 +547,10 @@ body.page--view-only .inventory__form {
 	width: 100%;
 	flex-shrink: 0;
 	align-self: stretch;
+}
+
+.shed__isle > .hay-stack:last-child {
+	margin-bottom: 0;
 }
 
 .hay-stack__desc {

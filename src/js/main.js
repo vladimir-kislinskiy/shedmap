@@ -10,6 +10,7 @@ import {
 	findStackInContainer,
 	formatIsleLabel,
 	getBayStacks,
+	getBayFillPercent,
 	getIsleContainer,
 	getIsleMaxBales,
 	getStackType,
@@ -256,8 +257,7 @@ function updateBayStats(bayStackEl) {
 
 	if (totalEl) totalEl.textContent = total;
 	if (fillEl) {
-		const pct = Math.min(100, Math.round((total / MAX_BALES_PER_BAY) * 100));
-		fillEl.textContent = `${pct}% full`;
+		fillEl.textContent = `${getBayFillPercent(total, MAX_BALES_PER_BAY)}% full`;
 	}
 }
 
