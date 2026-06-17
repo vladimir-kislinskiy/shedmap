@@ -38,6 +38,7 @@ body {
 
 .page__wrapper {
 	padding: clamp(16px, 3vw, 20px) clamp(10px, 2vw, 16px);
+	flex: 1;
 }
 
 .page__wrapper,
@@ -54,8 +55,9 @@ body {
 	flex-direction: column;
 	flex: 1;
 	min-height: 0;
+	min-width: 0;
 	gap: clamp(20px, 2.5vw, 30px);
-	padding-inline: clamp(0px, 2vw, 16px);
+	// padding-inline: clamp(0px, 2vw, 16px);
 }
 
 h2,
@@ -127,6 +129,13 @@ h3 {
 #Sheds.tabs__panel--active {
 	flex: 0 0 auto;
 	min-height: auto;
+	overflow: visible;
+}
+
+#Log.tabs__panel--active {
+	flex: 0 0 auto;
+	min-height: auto;
+	min-width: 0;
 	overflow: visible;
 }
 
@@ -382,7 +391,7 @@ body.page--view-only .inventory__form {
 .shed__columns {
 	display: flex;
 	justify-content: space-around;
-	gap: clamp(8px, 1.2vw, 16px);
+	gap: clamp(8px, 1vw, 16px);
 	flex: 0 0 auto;
 	min-height: 380px;
 	height: 380px;
@@ -472,6 +481,15 @@ body.page--view-only .inventory__form {
 	font-weight: 700;
 	font-size: 0.8rem;
 	color: var(--text-main);
+}
+
+.shed__bay-fill {
+	display: block;
+	margin-top: 2px;
+	font-size: 0.65rem;
+	font-weight: 500;
+	color: var(--text-muted);
+	line-height: 1.2;
 }
 
 .shed__bay-label {
@@ -618,33 +636,158 @@ body.page--dragging .shed__columns {
 
 /* Log table */
 .log__title {
-	margin: 0 0 15px;
+	margin: 0 0 12px;
+}
+
+.log__filters {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: flex-end;
+	gap: 10px 14px;
+	margin-bottom: 14px;
+}
+
+.log__filter {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	flex: 0 0 auto;
+}
+
+.log__filter-label {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+.log__filter-input {
+	box-sizing: border-box;
+	height: 42px;
+	min-height: 42px;
+	padding: 10px 14px;
+	font-size: 16px;
+	font-family: var(--font-primary);
+	border: 1px solid #d1d5db;
+	border-radius: var(--radius-sm);
+	background: #fff;
+	color: var(--text-main);
+	line-height: normal;
+	-webkit-appearance: none;
+	-moz-appearance: none;
+	appearance: none;
+}
+
+.log__filter-input--select {
+	padding-right: 34px;
+	cursor: pointer;
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+	background-size: 14px;
+}
+
+#logFilterMonth.log__filter-input--select {
+	padding-right: 38px;
+	background-position: right 10px center;
+	text-overflow: clip;
+	overflow: visible;
+}
+
+#logFilterYear {
+	min-width: 96px;
+	width: 96px;
+}
+
+#logFilterMonth {
+	width: auto;
+	min-width: 0;
+	max-width: 100%;
+	flex-shrink: 0;
+}
+
+#logFilterDay {
+	min-width: 72px;
+	width: auto;
+}
+
+#logFilterDay:disabled {
+	opacity: 0.65;
+	cursor: not-allowed;
+}
+
+.log__filter-reset {
+	box-sizing: border-box;
+	height: 42px;
+	min-height: 42px;
+	padding: 10px 16px;
+	font-size: 16px;
+	font-family: var(--font-primary);
+	font-weight: 600;
+	color: var(--text-muted);
+	background: #fff;
+	border: 1px solid #d1d5db;
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: var(--transition);
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.log__filter-reset:hover {
+	color: var(--text-main);
+	border-color: #d1d5db;
 }
 
 .log-table-wrap {
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: hidden;
+	-webkit-overflow-scrolling: touch;
+	overscroll-behavior-x: contain;
 }
 
 .log-table {
-	width: 100%;
-	border-collapse: separate;
-	border-spacing: 0;
+	display: table;
+	width: max-content;
+	min-width: 100%;
+	border-collapse: collapse;
+	table-layout: auto;
+	overflow: visible;
 	border-radius: var(--radius-md);
-	overflow: hidden;
 	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
 	border: 1px solid var(--border-color);
 }
 
+.log-table__head {
+	display: table-header-group;
+}
+
+.log-table__body {
+	display: table-row-group;
+}
+
+.log-table__row {
+	display: table-row;
+	transition: var(--transition);
+}
+
 .log-table__cell {
+	display: table-cell;
 	padding: 14px 16px;
 	text-align: left;
 	font-size: 0.95rem;
+	line-height: 1.35;
 	background-color: #fff;
 	border-bottom: 1px solid #f3f4f6;
 	color: var(--text-main);
+	white-space: nowrap;
+	vertical-align: top;
 }
 
 .log-table__cell--head {
+	display: table-cell;
 	background-color: #f9fafb;
 	color: var(--text-muted);
 	font-weight: 600;
@@ -653,10 +796,7 @@ body.page--dragging .shed__columns {
 	text-transform: uppercase;
 	font-size: 0.8rem;
 	letter-spacing: 0.05em;
-}
-
-.log-table__row {
-	transition: var(--transition);
+	white-space: nowrap;
 }
 
 .log-table__body .log-table__row:hover .log-table__cell {
@@ -669,16 +809,18 @@ body.page--dragging .shed__columns {
 
 /* Footer */
 .page-footer {
-	text-align: center;
-	margin-top: auto;
+	text-align: left;
 	flex-shrink: 0;
-	padding: clamp(10px, 2vw, 16px) 0 clamp(4px, 1vw, 6px);
-	font-size: clamp(10px, 1.2vw + 8px, 12px);
+	padding: clamp(10px, 2vw, 16px);
+	padding-bottom: clamp(4px, 1vw, 6px);
+	font-size: 10px;
 	color: var(--text-muted);
 	font-weight: 500;
 	line-height: 1.4;
+	width: 100%;
 
 	a.page-footer__link {
+		font-size: inherit;
 		color: var(--text-muted);
 		text-decoration: none;
 		font-weight: 600;

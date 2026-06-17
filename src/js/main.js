@@ -258,9 +258,16 @@ function bindStackSelect(stackEl) {
 
 function updateBayStats(bayStackEl) {
 	if (!bayStackEl) return;
-	const totalEl = bayStackEl.closest(".shed__bay")?.querySelector(".shed__bay-total-val");
-	if (!totalEl) return;
-	totalEl.textContent = sumBalesInContainer(bayStackEl);
+	const bayEl = bayStackEl.closest(".shed__bay");
+	const totalEl = bayEl?.querySelector(".shed__bay-total-val");
+	const fillEl = bayEl?.querySelector(".shed__bay-fill");
+	const total = sumBalesInContainer(bayStackEl);
+
+	if (totalEl) totalEl.textContent = total;
+	if (fillEl) {
+		const pct = Math.min(100, Math.round((total / MAX_BALES_PER_BAY) * 100));
+		fillEl.textContent = `${pct}% full`;
+	}
 }
 
 function makeStackDraggable(stackEl) {
@@ -403,6 +410,7 @@ function logChange(person, action, type, contract, bay, isle, shed, bales, note 
 	const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 
 	changeLog.push({
+		timestamp: d.getTime(),
 		dateTime: `${date}, ${time}`,
 		person,
 		action,
@@ -417,15 +425,243 @@ function logChange(person, action, type, contract, bay, isle, shed, bales, note 
 	updateLogTable();
 }
 
+function parseLogTimestamp(entry) {
+	if (entry.timestamp) return entry.timestamp;
+
+	const match = String(entry.dateTime || "").match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+	if (!match) return null;
+
+	const month = Number(match[1]);
+	const day = Number(match[2]);
+	const year = Number(match[3]);
+	return new Date(year, month - 1, day).getTime();
+}
+
+function getLogEntryDateParts(entry) {
+	const timestamp = parseLogTimestamp(entry);
+	if (!timestamp) return null;
+
+	const d = new Date(timestamp);
+	return {
+		year: d.getFullYear(),
+		month: d.getMonth() + 1,
+		day: d.getDate(),
+	};
+}
+
+function getLogFilterValues() {
+	const monthVal = document.getElementById("logFilterMonth")?.value ?? "";
+	const dayVal = document.getElementById("logFilterDay")?.value ?? "";
+
+	return {
+		year: Number(document.getElementById("logFilterYear")?.value) || null,
+		month: monthVal === "all" ? null : Number(monthVal),
+		day: dayVal === "all" ? null : Number(dayVal),
+	};
+}
+
+function matchesLogFilter(entry, filters) {
+	const parts = getLogEntryDateParts(entry);
+	if (!parts || !filters.year) return false;
+
+	if (parts.year !== filters.year) return false;
+	if (filters.month !== null && parts.month !== filters.month) return false;
+	if (filters.day !== null && parts.day !== filters.day) return false;
+
+	return true;
+}
+
 function updateLogTable() {
 	const logBody = document.getElementById("logBody");
 	if (!logBody) return;
 
+	const filters = getLogFilterValues();
 	logBody.replaceChildren();
+
 	for (let i = changeLog.length - 1; i >= 0; i--) {
-		const row = createLogRow(changeLog[i]);
+		const entry = changeLog[i];
+		if (!matchesLogFilter(entry, filters)) continue;
+
+		const row = createLogRow(entry);
 		if (row) logBody.appendChild(row);
 	}
+}
+
+const LOG_START_YEAR = 2026;
+const LOG_MONTH_NAMES = [
+	"January",
+	"February",
+	"March",
+	"April",
+	"May",
+	"June",
+	"July",
+	"August",
+	"September",
+	"October",
+	"November",
+	"December",
+];
+
+function getLogYearRange() {
+	const currentYear = new Date().getFullYear();
+	const endYear = Math.max(LOG_START_YEAR, currentYear);
+	return { start: LOG_START_YEAR, end: endYear };
+}
+
+function isLogFilterCompact() {
+	return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function syncSelectWidth(el, { selectedOnly = false } = {}) {
+	if (!el) return;
+
+	const measure = document.createElement("span");
+	measure.style.position = "absolute";
+	measure.style.visibility = "hidden";
+	measure.style.whiteSpace = "nowrap";
+	measure.style.font = getComputedStyle(el).font;
+	document.body.appendChild(measure);
+
+	let maxTextWidth = 0;
+	const options =
+		selectedOnly && el.selectedIndex >= 0
+			? [el.options[el.selectedIndex]]
+			: [...el.options];
+
+	for (const option of options) {
+		if (!option) continue;
+		measure.textContent = option.text;
+		maxTextWidth = Math.max(maxTextWidth, measure.offsetWidth);
+	}
+
+	measure.remove();
+
+	const style = getComputedStyle(el);
+	const padLeft = parseFloat(style.paddingLeft) || 0;
+	const padRight = parseFloat(style.paddingRight) || 0;
+	el.style.width = `${Math.ceil(maxTextWidth + padLeft + padRight + 2)}px`;
+}
+
+function syncLogMonthSelectWidth() {
+	const compact = isLogFilterCompact();
+	syncSelectWidth(document.getElementById("logFilterYear"));
+	syncSelectWidth(document.getElementById("logFilterMonth"), { selectedOnly: compact });
+	syncSelectWidth(document.getElementById("logFilterDay"), { selectedOnly: compact });
+}
+
+function updateLogDayOptions() {
+	const yearEl = document.getElementById("logFilterYear");
+	const monthEl = document.getElementById("logFilterMonth");
+	const dayEl = document.getElementById("logFilterDay");
+	if (!yearEl || !monthEl || !dayEl) return;
+
+	const monthVal = monthEl.value;
+	const prevDay = dayEl.value;
+
+	dayEl.replaceChildren();
+	dayEl.append(new Option("All days", "all"));
+
+	if (monthVal === "all") {
+		dayEl.value = "all";
+		dayEl.disabled = true;
+		syncLogMonthSelectWidth();
+		return;
+	}
+
+	dayEl.disabled = false;
+	const year = Number(yearEl.value);
+	const month = Number(monthVal);
+	const maxDay = new Date(year, month, 0).getDate();
+
+	for (let day = 1; day <= maxDay; day++) {
+		dayEl.append(new Option(String(day), String(day)));
+	}
+
+	if (prevDay === "all") {
+		dayEl.value = "all";
+	} else {
+		const prev = Number(prevDay) || 1;
+		dayEl.value = String(Math.min(prev, maxDay));
+	}
+
+	syncLogMonthSelectWidth();
+}
+
+function populateLogFilterOptions() {
+	const yearEl = document.getElementById("logFilterYear");
+	const monthEl = document.getElementById("logFilterMonth");
+	if (!yearEl || !monthEl) return;
+
+	const { start, end } = getLogYearRange();
+	yearEl.replaceChildren();
+	for (let year = start; year <= end; year++) {
+		yearEl.append(new Option(String(year), String(year)));
+	}
+
+	monthEl.replaceChildren();
+	monthEl.append(new Option("All months", "all"));
+	for (let month = 1; month <= 12; month++) {
+		monthEl.append(new Option(LOG_MONTH_NAMES[month - 1], String(month)));
+	}
+
+	syncLogMonthSelectWidth();
+}
+
+function resetLogFilters() {
+	const now = new Date();
+	const yearEl = document.getElementById("logFilterYear");
+	const monthEl = document.getElementById("logFilterMonth");
+	const dayEl = document.getElementById("logFilterDay");
+	if (!yearEl || !monthEl || !dayEl) return;
+
+	populateLogFilterOptions();
+
+	const year = Math.min(Math.max(now.getFullYear(), LOG_START_YEAR), getLogYearRange().end);
+	yearEl.value = String(year);
+	monthEl.value = String(now.getMonth() + 1);
+	updateLogDayOptions();
+	dayEl.value = "all";
+	syncLogMonthSelectWidth();
+}
+
+function initLogFilters() {
+	populateLogFilterOptions();
+	resetLogFilters();
+
+	const yearEl = document.getElementById("logFilterYear");
+	const monthEl = document.getElementById("logFilterMonth");
+	const dayEl = document.getElementById("logFilterDay");
+	const resetBtn = document.getElementById("logFilterReset");
+
+	const refresh = () => updateLogTable();
+
+	yearEl?.addEventListener("change", () => {
+		updateLogDayOptions();
+		syncLogMonthSelectWidth();
+		refresh();
+	});
+
+	monthEl?.addEventListener("change", () => {
+		updateLogDayOptions();
+		syncLogMonthSelectWidth();
+		refresh();
+	});
+
+	dayEl?.addEventListener("change", () => {
+		syncLogMonthSelectWidth();
+		refresh();
+	});
+
+	window.addEventListener("resize", syncLogMonthSelectWidth);
+
+	resetBtn?.addEventListener("click", () => {
+		resetLogFilters();
+		updateLogTable();
+	});
+
+	syncLogMonthSelectWidth();
+	updateLogTable();
 }
 
 function saveState() {
@@ -685,6 +921,7 @@ window.addEventListener("load", () => {
 	initAuthUI();
 	initTabs();
 	initInventoryForm();
+	initLogFilters();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	syncAllShedLayouts();
 });
