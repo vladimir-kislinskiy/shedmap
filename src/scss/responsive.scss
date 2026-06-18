@@ -13,8 +13,9 @@
 		justify-content: flex-start;
 		align-items: flex-start;
 		overflow-x: auto;
-		overflow-y: visible;
-		padding-bottom: 16px;
+		overflow-y: hidden;
+		overscroll-behavior-y: none;
+		padding-bottom: 0;
 		scrollbar-width: thin;
 		scrollbar-color: var(--color-primary-light) transparent;
 		-webkit-overflow-scrolling: touch;
@@ -82,7 +83,7 @@
 	}
 
 	.shed__columns {
-		min-height: 584px;
+		min-height: 0;
 	}
 
 	.shed__bay {

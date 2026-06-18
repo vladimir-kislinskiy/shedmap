@@ -9,11 +9,14 @@ import {
 	createLogRow,
 	findStackInContainer,
 	formatIsleLabel,
+	formatStackKey,
 	getBayStacks,
 	getBayFillPercent,
+	getHayTypeLabel,
 	getIsleContainer,
 	getIsleMaxBales,
 	getStackType,
+	parseStackKey,
 	restoreHayStack,
 	sumBalesInContainer,
 	syncAllShedLayouts,
@@ -27,7 +30,7 @@ const auth = initAuth(app, handleAuthChange);
 
 const MAX_BALES_PER_BAY = 2000;
 const MAX_BALES_PER_ISLE = 1000;
-const SHEDS = ["north", "west", "east"];
+const SHEDS = ["west", "north", "east"];
 const BAY_COUNT = 10;
 
 function buildEmptyShedState() {
@@ -214,8 +217,7 @@ function fillFormFromStack(stackEl) {
 	if (!bayStack) return;
 
 	const type = getStackType(stackEl);
-	const parts = (stackEl.dataset.stackKey || "").split("-");
-	const contract = parts.slice(1).join("-");
+	const { contract } = parseStackKey(stackEl.dataset.stackKey || "");
 	const bales = stackEl.dataset.bales || "";
 	const isle = stackEl.dataset.isle || "both";
 	const shed = bayStack.dataset.shed;
@@ -273,12 +275,11 @@ function makeStackDraggable(stackEl) {
 
 			if (isEditMode && currentPerson && bayStack) {
 				const type = getStackType(movedStack);
-				const parts = (movedStack.dataset.stackKey || "").split("-");
-				const contract = parts.slice(1).join("-");
+				const { contract } = parseStackKey(movedStack.dataset.stackKey || "");
 				const bales = parseInt(movedStack.dataset.bales, 10) || 0;
 				const shed = bayStack.dataset.shed;
 				const bay = parseInt(bayStack.dataset.bay, 10) + 1;
-				const typeLabel = capitalize(type);
+				const typeLabel = getHayTypeLabel(type);
 				const note = fromIsle !== toIsle
 					? `${typeLabel} ${contract} (${bales} bales) moved from ${formatIsleLabel(fromIsle)} to ${formatIsleLabel(toIsle)}`
 					: `${typeLabel} ${contract} (${bales} bales) reordered in ${formatIsleLabel(toIsle)}`;
@@ -307,25 +308,24 @@ function handleHay() {
 		return;
 	}
 
-	if (!baleCount) {
-		alert("Please fill in all fields.");
+	if (!Number.isFinite(baleCount) || baleCount < 1) {
+		alert("Please enter at least 1 bale.");
 		return;
 	}
 
 	const bayStackEl = getBayColumn(shed, bay);
 	if (!bayStackEl) return;
 
-	const stackKey = `${type}-${contract}`;
+	const stackKey = formatStackKey(type, contract);
 
 	if (action === "add") {
 		const isle = getSelectedIsle();
 		if (!isle) return;
 
 		for (const stack of document.querySelectorAll(".hay-stack")) {
-			const parts = stack.dataset.stackKey.split("-");
-			const stackContract = parts.slice(1).join("-");
-			if (stackContract === contract && parts[0] !== type) {
-				alert(`Contract #${contract} is already registered as ${capitalize(parts[0])}. You cannot add it as ${capitalize(type)}.`);
+			const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
+			if (stackContract === contract && stackType !== type) {
+				alert(`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot add it as ${getHayTypeLabel(type)}.`);
 				return;
 			}
 		}
@@ -406,7 +406,7 @@ function logChange(person, action, type, contract, bay, isle, shed, bales, note 
 		dateTime: `${date}, ${time}`,
 		person,
 		action,
-		type: capitalize(type),
+		type: getHayTypeLabel(type),
 		contract,
 		bay,
 		isle,
@@ -910,17 +910,31 @@ function initTabs() {
 	});
 }
 
-function bindDigitsOnlyInput(input, { maxDigits, format } = {}) {
+function bindDigitsOnlyInput(input, { maxDigits, format, minValue } = {}) {
 	if (!input) return;
 
 	const applyFormat = () => {
-		const digits = input.value.replace(/\D/g, "").slice(0, maxDigits);
+		let digits = input.value.replace(/\D/g, "").slice(0, maxDigits);
+		if (minValue !== undefined) {
+			digits = digits.replace(/^0+/, "");
+		}
 		input.value = format ? format(digits) : digits;
+	};
+
+	const wouldStartWithZero = () => {
+		const start = input.selectionStart ?? input.value.length;
+		const end = input.selectionEnd ?? input.value.length;
+		const before = `${input.value.slice(0, start)}${input.value.slice(end)}`.replace(/\D/g, "");
+		return before.length === 0;
 	};
 
 	input.addEventListener("beforeinput", (e) => {
 		if (e.isComposing) return;
 		if (e.inputType === "insertText" && e.data && !/^\d$/.test(e.data)) {
+			e.preventDefault();
+			return;
+		}
+		if (minValue !== undefined && e.inputType === "insertText" && e.data === "0" && wouldStartWithZero()) {
 			e.preventDefault();
 		}
 	});
@@ -929,6 +943,10 @@ function bindDigitsOnlyInput(input, { maxDigits, format } = {}) {
 		if (e.ctrlKey || e.metaKey || e.altKey) return;
 		const allowed = ["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "Home", "End"];
 		if (allowed.includes(e.key)) return;
+		if (minValue !== undefined && e.key === "0" && wouldStartWithZero()) {
+			e.preventDefault();
+			return;
+		}
 		if (!/^\d$/.test(e.key)) e.preventDefault();
 	});
 
@@ -960,6 +978,7 @@ function initInventoryForm() {
 
 	bindDigitsOnlyInput(document.getElementById("baleCount"), {
 		maxDigits: 4,
+		minValue: 1,
 	});
 
 	const toggleBtn = document.getElementById("toggleControls");

@@ -59,19 +59,22 @@
 						<select id="hayType" class="inventory__field inventory__field--select">
 							<option value="alfalfa">Alfalfa</option>
 							<option value="timothy">Timothy</option>
+							<option value="wheat-straw">Wheat Straw</option>
+							<option value="barley-straw">Barley Straw</option>
+							<option value="mixed-hay">Mixed Hay</option>
 						</select>
 
 						<input type="text" id="contractNumber" class="inventory__field inventory__field--contract"
-							placeholder="22-2224" maxlength="7" inputmode="numeric" autocomplete="off"
-							pattern="^\d{2}-\d{4}$" title="Format: 22-2224" required>
+							placeholder="11-1111" maxlength="7" inputmode="numeric" autocomplete="off"
+							pattern="^\d{2}-\d{4}$" title="Format: 11-1111" required>
 
 						<input type="text" id="baleCount" class="inventory__field inventory__field--bales"
 							placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
-							pattern="[0-9]*" required>
+							pattern="[1-9][0-9]*" title="Minimum 1 bale" required>
 
 						<select id="shedSelect" class="inventory__field inventory__field--select">
-							<option value="north">North Shed</option>
 							<option value="west">West Shed</option>
+							<option value="north">North Shed</option>
 							<option value="east">East Shed</option>
 						</select>
 
@@ -109,17 +112,17 @@
 
 					<nav class="shed-tabs" aria-label="Shed navigation">
 						<button type="button" class="shed-tabs__btn shed-tabs__btn--active"
-							data-subtab="north-shed-tab">North Shed</button>
-						<button type="button" class="shed-tabs__btn" data-subtab="west-shed-tab">West Shed</button>
+							data-subtab="west-shed-tab">West Shed</button>
+						<button type="button" class="shed-tabs__btn" data-subtab="north-shed-tab">North Shed</button>
 						<button type="button" class="shed-tabs__btn" data-subtab="east-shed-tab">East Shed</button>
 					</nav>
 
-					<div class="shed-tabs__panel shed-tabs__panel--active" id="north-shed-tab">
-						@include('partials/shed-columns.html', { 'shed': 'north' })
+					<div class="shed-tabs__panel shed-tabs__panel--active" id="west-shed-tab">
+						@include('partials/shed-columns.html', { 'shed': 'west' })
 					</div>
 
-					<div class="shed-tabs__panel" id="west-shed-tab">
-						@include('partials/shed-columns.html', { 'shed': 'west' })
+					<div class="shed-tabs__panel" id="north-shed-tab">
+						@include('partials/shed-columns.html', { 'shed': 'north' })
 					</div>
 
 					<div class="shed-tabs__panel" id="east-shed-tab">

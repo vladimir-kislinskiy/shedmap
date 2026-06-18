@@ -649,6 +649,21 @@ body.page--dragging .shed__columns {
 	background-image: var(--color-timothy);
 }
 
+.hay-stack--wheat-straw {
+	background-color: var(--color-wheat-straw-solid);
+	background-image: var(--color-wheat-straw);
+}
+
+.hay-stack--barley-straw {
+	background-color: var(--color-barley-straw-solid);
+	background-image: var(--color-barley-straw);
+}
+
+.hay-stack--mixed-hay {
+	background-color: var(--color-mixed-hay-solid);
+	background-image: var(--color-mixed-hay);
+}
+
 .hay-stack__count {
 	font-weight: 800;
 	font-size: 0.75rem;

@@ -2,6 +2,32 @@ export function capitalize(word) {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
 
+export const HAY_TYPES = [
+	{ id: "alfalfa", label: "Alfalfa" },
+	{ id: "timothy", label: "Timothy" },
+	{ id: "wheat-straw", label: "Wheat Straw" },
+	{ id: "barley-straw", label: "Barley Straw" },
+	{ id: "mixed-hay", label: "Mixed Hay" },
+];
+
+export function getHayTypeLabel(type) {
+	return HAY_TYPES.find((entry) => entry.id === type)?.label ?? capitalize(type.replace(/-/g, " "));
+}
+
+export function formatStackKey(type, contract) {
+	return `${type}-${contract}`;
+}
+
+export function parseStackKey(stackKey = "") {
+	const known = HAY_TYPES.find((entry) => stackKey.startsWith(`${entry.id}-`));
+	if (known) {
+		return { type: known.id, contract: stackKey.slice(known.id.length + 1) };
+	}
+
+	const parts = stackKey.split("-");
+	return { type: parts[0] || "", contract: parts.slice(1).join("-") };
+}
+
 export function getIsleMaxBales(isle) {
 	return isle === "both" ? 2000 : 1000;
 }
@@ -237,6 +263,15 @@ function syncShedColumnsLayout(columns) {
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
 		applyAllStackHeights(bayStack);
 	});
+
+	let tallestBay = 0;
+	columns.querySelectorAll(".shed__bay").forEach((bay) => {
+		tallestBay = Math.max(tallestBay, bay.offsetHeight);
+	});
+
+	if (tallestBay > columnsHeight) {
+		columns.style.height = `${Math.round(tallestBay)}px`;
+	}
 }
 
 export function refreshAllStackHeights() {
@@ -354,9 +389,9 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
 
 	const stack = tpl.content.firstElementChild.cloneNode(true);
 	stack.classList.add(`hay-stack--${type}`);
-	stack.dataset.stackKey = `${type}-${contract}`;
+	stack.dataset.stackKey = formatStackKey(type, contract);
 	stack.dataset.bales = String(baleCount);
-	stack.querySelector(".hay-stack__type").textContent = capitalize(type);
+	stack.querySelector(".hay-stack__type").textContent = getHayTypeLabel(type);
 	stack.querySelector(".hay-stack__contract").textContent = contract;
 	stack.querySelector(".hay-stack__count").textContent = baleCount;
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle));
@@ -366,17 +401,18 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
 
 export function updateHayStack(stackEl, type, contract, baleCount) {
 	const isle = stackEl.dataset.isle || "both";
+	HAY_TYPES.forEach((entry) => stackEl.classList.remove(`hay-stack--${entry.id}`));
+	stackEl.classList.add(`hay-stack--${type}`);
+	stackEl.dataset.stackKey = formatStackKey(type, contract);
 	stackEl.dataset.bales = String(baleCount);
-	stackEl.querySelector(".hay-stack__type").textContent = capitalize(type);
+	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeLabel(type);
 	stackEl.querySelector(".hay-stack__contract").textContent = contract;
 	stackEl.querySelector(".hay-stack__count").textContent = baleCount;
 	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle));
 }
 
 export function getStackType(stackEl) {
-	if (stackEl.classList.contains("hay-stack--alfalfa")) return "alfalfa";
-	if (stackEl.classList.contains("hay-stack--timothy")) return "timothy";
-	return "";
+	return HAY_TYPES.find((entry) => stackEl.classList.contains(`hay-stack--${entry.id}`))?.id ?? "";
 }
 
 export function getBayStacks(bayStackEl) {
@@ -444,9 +480,9 @@ export function createLogRow(entry) {
 }
 
 export function restoreHayStack(stackData, bayStackEl) {
-	const parts = stackData.stackKey?.split("-") || [];
-	const type = stackData.type || parts[0] || "alfalfa";
-	const contract = parts.slice(1).join("-") || "";
+	const parsed = parseStackKey(stackData.stackKey || "");
+	const type = stackData.type || parsed.type || "alfalfa";
+	const contract = parsed.contract || "";
 	const bales = parseInt(stackData.bales, 10) || 0;
 	const isle = stackData.isle || "both";
 

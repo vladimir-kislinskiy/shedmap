@@ -1,4 +1,4 @@
-const { src, dest, series, watch } = require("gulp");
+const { src, dest, series, watch, parallel } = require("gulp");
 const { readFileSync, existsSync } = require("fs");
 const { resolve } = require("path");
 const autoprefixer = require("gulp-autoprefixer");
@@ -162,15 +162,21 @@ const cache = () => {
 		.pipe(dest("dist"));
 };
 
-const rewrite = () => {
+function rewriteCss() {
 	const manifest = readFileSync("dist/rev.json");
-	src("dist/css/*.css")
+
+	return src("dist/css/*.css")
 		.pipe(
 			revRewrite({
 				manifest,
 			}),
 		)
 		.pipe(dest("dist/css"));
+}
+
+function rewriteHtml() {
+	const manifest = readFileSync("dist/rev.json");
+
 	return src("dist/**/*.html")
 		.pipe(
 			revRewrite({
@@ -178,7 +184,9 @@ const rewrite = () => {
 			}),
 		)
 		.pipe(dest("dist"));
-};
+}
+
+const rewrite = parallel(rewriteCss, rewriteHtml);
 
 const watchFiles = () => {
 	browserSync.init({

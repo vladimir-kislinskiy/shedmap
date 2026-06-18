@@ -40,11 +40,17 @@
 	--color-bay-border: #ddd4c4;
 	--color-bay-border-hover: #cfc4b4;
 
-	/* Hay bale types – muted blue & green for warm palette */
+	/* Hay bale types */
 	--color-alfalfa-solid: #6289a8;
 	--color-alfalfa: linear-gradient(135deg, #6289a8 0%, #85a4be 100%);
 	--color-timothy-solid: #588f66;
 	--color-timothy: linear-gradient(135deg, #588f66 0%, #78ad84 100%);
+	--color-wheat-straw-solid: #b89428;
+	--color-wheat-straw: linear-gradient(135deg, #b89428 0%, #c9a440 100%);
+	--color-barley-straw-solid: #a8561f;
+	--color-barley-straw: linear-gradient(135deg, #8f4618 0%, #c46a2a 100%);
+	--color-mixed-hay-solid: #7a6898;
+	--color-mixed-hay: linear-gradient(135deg, #7a6898 0%, #9688b3 100%);
 
 	/* Layout */
 	--tabs-gutter: clamp(18px, 2.5vw, 22px);
