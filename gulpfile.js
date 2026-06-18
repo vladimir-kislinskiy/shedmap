@@ -82,7 +82,17 @@ const stylesBackend = () => {
 };
 
 const cleanHashedAssets = () => {
-	return del(["dist/js/app-*.js", "dist/css/style-*.css", "dist/rev.json"], { force: true });
+	return del(
+		[
+			"dist/js/app-*.js",
+			"dist/css/style-*.css",
+			"dist/fonts/*-*.woff",
+			"dist/fonts/*-*.woff2",
+			"dist/favicon/**",
+			"dist/rev.json",
+		],
+		{ force: true },
+	);
 };
 
 const scriptsBundle = async () => {
@@ -152,9 +162,16 @@ const htmlInclude = () => {
 };
 
 const cache = () => {
-	return src("dist/**/*.{css,js,svg,png,jpg,jpeg,webp,woff2,woff}", {
-		base: "dist",
-	})
+	return src(
+		[
+			"dist/**/*.{css,js,svg,jpg,jpeg,webp,woff2,woff}",
+			"dist/img/**/*.png",
+			"!dist/favicon/**",
+		],
+		{
+			base: "dist",
+		},
+	)
 		.pipe(rev())
 		.pipe(revDel())
 		.pipe(dest("dist"))
@@ -188,6 +205,53 @@ function rewriteHtml() {
 
 const rewrite = parallel(rewriteCss, rewriteHtml);
 
+const DEV_FONT_FILES = [
+	"./dist/fonts/DMSans-Medium.woff2",
+	"./dist/fonts/DMSans-Medium.woff",
+	"./dist/fonts/DMSans-Bold.woff2",
+	"./dist/fonts/DMSans-Bold.woff",
+];
+
+const DEV_FAVICON_FILES = [
+	"./dist/favicon/favicon-32x32.png",
+	"./dist/favicon/apple-icon-180x180.png",
+];
+
+const ensureDevAssets = (done) => {
+	if (isProduction) {
+		done();
+		return;
+	}
+
+	const needsCss = !existsSync("./dist/css/style.css");
+	const needsJs = !existsSync("./dist/js/app.js");
+	const needsResources =
+		DEV_FONT_FILES.some((file) => !existsSync(file)) ||
+		DEV_FAVICON_FILES.some((file) => !existsSync(file));
+
+	if (!needsCss && !needsJs && !needsResources) {
+		done();
+		return;
+	}
+
+	const tasks = [];
+	if (needsCss) tasks.push(stylesBackend);
+	if (needsJs) tasks.push(scriptsBundle);
+	if (needsResources) tasks.push(resources);
+
+	series(...tasks)(done);
+};
+
+const htmlIncludeDev = series(htmlInclude, ensureDevAssets);
+
+const restoreDevAssets = series(
+	cleanHashedAssets,
+	htmlInclude,
+	scriptsBundle,
+	stylesBackend,
+	resources,
+);
+
 const watchFiles = () => {
 	browserSync.init({
 		server: {
@@ -199,14 +263,15 @@ const watchFiles = () => {
 
 	watch("./src/scss/**/*.scss", stylesBackend);
 	watch("./src/js/**/*.js", scriptsBundle);
-	watch("./src/partials/*.html", htmlInclude);
-	watch("./src/partials/connected/*.html", htmlInclude);
-	watch("./src/partials/sections/*.html", htmlInclude);
-	watch("./src/*.html", htmlInclude);
+	watch("./src/partials/*.html", htmlIncludeDev);
+	watch("./src/partials/connected/*.html", htmlIncludeDev);
+	watch("./src/partials/sections/*.html", htmlIncludeDev);
+	watch("./src/*.html", htmlIncludeDev);
 	watch("./src/resources/**", resources);
 	watch("./src/img/*.{jpg,jpeg,png,svg,webp}", images);
 	watch("./src/img/**/*.{jpg,jpeg,png,svg,webp}", images);
 	watch("./src/img/svg/**.svg", images);
+	watch("./dist/rev.json", { ignoreInitial: true }, restoreDevAssets);
 };
 
 exports.default = series(
@@ -216,6 +281,7 @@ exports.default = series(
 	stylesBackend,
 	resources,
 	images,
+	ensureDevAssets,
 	watchFiles,
 );
 

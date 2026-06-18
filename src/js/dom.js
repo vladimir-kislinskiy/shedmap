@@ -487,6 +487,26 @@ export function formatIsleLabel(isle) {
 	return isle;
 }
 
+export function createReportRow(entry) {
+	const tpl = document.getElementById("reportRowTemplate");
+	if (!tpl) return null;
+
+	const row = tpl.content.firstElementChild.cloneNode(true);
+	const fields = {
+		contract: entry.contract,
+		shed: entry.shed,
+		bay: entry.bay,
+		bales: entry.bales,
+	};
+
+	row.querySelectorAll("[data-field]").forEach((cell) => {
+		const key = cell.dataset.field;
+		if (key in fields) cell.textContent = fields[key];
+	});
+
+	return row;
+}
+
 export function createLogRow(entry) {
 	const tpl = document.getElementById("logRowTemplate");
 	if (!tpl) return null;

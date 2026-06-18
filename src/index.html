@@ -46,6 +46,7 @@
 				<nav class="tabs" aria-label="Main navigation">
 					<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
 					<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
+					<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
 				</nav>
 
 				<section id="Sheds" class="tabs__panel tabs__panel--active">
@@ -59,6 +60,7 @@
 						<select id="reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
 							required>
 							<option value="" selected disabled>Reported by</option>
+							<option value="N/A">N/A</option>
 							<option value="John">John</option>
 							<option value="Jim">Jim</option>
 							<option value="Logan">Logan</option>
@@ -128,6 +130,41 @@
 					</div>
 				</section>
 
+				<section id="Reports" class="tabs__panel">
+					<h2 class="log__title">Inventory Reports</h2>
+					<div class="log__filters reports__filters">
+						<label class="log__filter">
+							<span class="log__filter-label">Product</span>
+							<select id="reportProductFilter" class="log__filter-input log__filter-input--select">
+								<option value="" selected disabled>Select product</option>
+								<option value="alfalfa">Alfalfa</option>
+								<option value="timothy">Timothy</option>
+								<option value="wheat-straw">Wheat Straw</option>
+								<option value="barley-straw">Barley Straw</option>
+								<option value="mixed-hay">Mixed Hay</option>
+							</select>
+						</label>
+						<button type="button" id="reportPrintPdf" class="reports__print-btn" disabled>
+							Print PDF
+						</button>
+					</div>
+					<p class="reports__summary" id="reportSummary" hidden></p>
+					<div class="log-table-wrap reports__table-wrap" id="reportTableWrap" hidden>
+						<table class="log-table">
+							<thead class="log-table__head">
+								<tr class="log-table__row">
+									<th class="log-table__cell log-table__cell--head">Contract #</th>
+									<th class="log-table__cell log-table__cell--head">Shed</th>
+									<th class="log-table__cell log-table__cell--head">Bay</th>
+									<th class="log-table__cell log-table__cell--head">Bales</th>
+								</tr>
+							</thead>
+							<tbody class="log-table__body" id="reportBody"></tbody>
+						</table>
+					</div>
+					<p class="reports__empty" id="reportEmpty">Select a product to view inventory locations.</p>
+				</section>
+
 				<section id="Log" class="tabs__panel">
 					<h2 class="log__title">Change Log</h2>
 					<div class="log__filters">
@@ -183,6 +220,15 @@
 			</div>
 			<span class="hay-stack__count"></span>
 		</div>
+	</template>
+
+	<template id="reportRowTemplate">
+		<tr class="log-table__row">
+			<td class="log-table__cell" data-field="contract"></td>
+			<td class="log-table__cell" data-field="shed"></td>
+			<td class="log-table__cell" data-field="bay"></td>
+			<td class="log-table__cell" data-field="bales"></td>
+		</tr>
 	</template>
 
 	<template id="logRowTemplate">

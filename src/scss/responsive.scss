@@ -119,11 +119,12 @@
 		max-width: 100%;
 		padding: 4px;
 		border-radius: 12px;
+		gap: 3px;
 	}
 
 	.tabs__btn {
-		padding: 8px 10px;
-		font-size: 0.875rem;
+		padding: 8px 6px;
+		font-size: clamp(0.75rem, 2.6vw, 0.875rem);
 		border-radius: 8px;
 	}
 
@@ -201,6 +202,23 @@
 		flex-shrink: 0;
 	}
 
+	#reportProductFilter {
+		min-width: 0;
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.reports__filters {
+		flex-wrap: wrap;
+	}
+
+	.reports__print-btn {
+		height: 32px;
+		min-height: 32px;
+		padding: 4px 12px;
+		font-size: 13px;
+	}
+
 	body {
 		background-attachment: scroll;
 		-webkit-overflow-scrolling: touch;
@@ -211,12 +229,14 @@
 	.tabs {
 		padding: 3px;
 		border-radius: 10px;
+		gap: 2px;
 	}
 
 	.tabs__btn {
-		padding: 7px 8px;
-		font-size: 0.8125rem;
+		padding: 7px 4px;
+		font-size: 0.75rem;
 		border-radius: 7px;
+		letter-spacing: -0.01em;
 	}
 
 	.tabs__panel {
@@ -249,6 +269,13 @@
 		height: 30px;
 		min-height: 30px;
 		padding: 3px 8px;
+		font-size: 12px;
+	}
+
+	.reports__print-btn {
+		height: 30px;
+		min-height: 30px;
+		padding: 3px 10px;
 		font-size: 12px;
 	}
 }

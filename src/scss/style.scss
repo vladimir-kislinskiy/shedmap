@@ -71,15 +71,18 @@ h3 {
 /* Tabs */
 .tabs {
 	display: flex;
-	justify-content: center;
+	justify-content: stretch;
+	align-items: stretch;
 	background-color: var(--color-surface-glass);
 	backdrop-filter: blur(10px);
 	border-radius: var(--radius-lg);
 	margin: 0 auto;
 	padding: 6px;
-	width: clamp(300px, 2vw, 800px);
+	width: 100%;
+	max-width: 800px;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
 	flex-shrink: 0;
+	gap: 4px;
 }
 
 .tabs__btn {
@@ -87,15 +90,18 @@ h3 {
 	border: none;
 	outline: none;
 	cursor: pointer;
-	padding: 12px 24px;
+	padding: 12px 14px;
 	font-size: 1rem;
 	font-weight: 600;
 	font-family: var(--font-primary);
 	color: var(--text-muted);
 	transition: var(--transition);
 	border-radius: var(--radius-md);
-	flex: 1;
+	flex: 1 1 0;
+	min-width: 0;
 	text-align: center;
+	white-space: nowrap;
+	line-height: 1.2;
 }
 
 .tabs__btn:hover {
@@ -136,7 +142,8 @@ h3 {
 	overflow: visible;
 }
 
-#Log.tabs__panel--active {
+#Log.tabs__panel--active,
+#Reports.tabs__panel--active {
 	flex: 0 0 auto;
 	min-height: auto;
 	min-width: 0;
@@ -672,6 +679,70 @@ body.page--dragging .shed__columns {
 	font-weight: 800;
 	font-size: 0.75rem;
 	margin-top: 0;
+}
+
+/* Reports */
+.reports__summary {
+	margin: 0 0 12px;
+	font-size: 0.95rem;
+	font-weight: 600;
+	color: var(--text-main);
+}
+
+.reports__empty {
+	margin: 0;
+	font-size: 0.95rem;
+	color: var(--text-muted);
+}
+
+.reports__empty[hidden],
+.reports__summary[hidden],
+.reports__table-wrap[hidden] {
+	display: none !important;
+}
+
+.reports__table-wrap:not([hidden]) {
+	display: block;
+}
+
+#reportProductFilter {
+	min-width: 180px;
+	width: auto;
+	max-width: 100%;
+}
+
+.reports__filters {
+	align-items: flex-end;
+}
+
+.reports__print-btn {
+	box-sizing: border-box;
+	height: 42px;
+	min-height: 42px;
+	padding: 10px 16px;
+	font-size: 16px;
+	font-family: var(--font-primary);
+	font-weight: 600;
+	color: var(--color-surface);
+	background: var(--color-primary);
+	border: 1px solid var(--color-primary);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: var(--transition);
+	flex-shrink: 0;
+	white-space: nowrap;
+}
+
+.reports__print-btn:hover:not(:disabled) {
+	background: var(--color-primary-hover);
+	border-color: var(--color-primary-hover);
+}
+
+.reports__print-btn:disabled {
+	opacity: 0.55;
+	cursor: not-allowed;
+	background: var(--color-primary-light);
+	border-color: var(--color-primary-light);
 }
 
 /* Log table */

@@ -44,6 +44,8 @@
 		"gulp-ttf2woff2": "^4.0.1",
 		"gulp-uglify-es": "^3.0.0",
 		"gulp-webp": "^4.0.1",
+		"jspdf": "^4.2.1",
+		"jspdf-autotable": "^5.0.8",
 		"node-w3c-validator": "^2.0.1",
 		"sass": "^1.38.2",
 		"stylelint": "^13.13.1",

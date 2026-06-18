@@ -3,10 +3,12 @@ import { getDatabase, ref, set, onValue } from "firebase/database";
 import { initAuth, login, logout } from "./auth.js";
 import { bindStackDrag, setStacksDraggable } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
+import { downloadReportPdf } from "./report-pdf.js";
 import {
 	capitalize,
 	createHayStack,
 	createLogRow,
+	createReportRow,
 	findStackInContainer,
 	formatIsleLabel,
 	formatStackKey,
@@ -107,6 +109,10 @@ function setActiveTab(panelId, btn) {
 
 	if (panelId === "Sheds") {
 		requestAnimationFrame(() => syncAllShedLayouts());
+	}
+
+	if (panelId === "Reports") {
+		updateReportsTable();
 	}
 }
 
@@ -313,7 +319,7 @@ function handleHay() {
 	const reportedBy = getReportedByValue();
 
 	if (!reportedBy) {
-		alert("Please enter who reported this change.");
+		alert("Please select who reported this change (or N/A).");
 		return;
 	}
 
@@ -406,6 +412,7 @@ function handleHay() {
 	updateBayStats(bayStackEl);
 	syncAllShedLayouts();
 	saveState();
+	updateReportsTable();
 	document.getElementById("contractNumber").value = "";
 	document.getElementById("baleCount").value = "";
 }
@@ -632,6 +639,120 @@ function resetLogFilters() {
 	syncLogMonthSelectWidth();
 }
 
+function collectProductReport(typeId) {
+	const rows = [];
+
+	SHEDS.forEach((shed, shedOrder) => {
+		for (let bayIndex = 0; bayIndex < BAY_COUNT; bayIndex++) {
+			const colEl = document.getElementById(`${shed}-col-${bayIndex}`);
+			if (!colEl) continue;
+
+			getBayStacks(colEl).forEach((stack) => {
+				if (getStackType(stack) !== typeId) return;
+
+				const { contract } = parseStackKey(stack.dataset.stackKey || "");
+				const bales = parseInt(stack.dataset.bales, 10) || 0;
+				if (bales <= 0) return;
+
+				rows.push({
+					contract,
+					shed: `${capitalize(shed)} Shed`,
+					bay: getBayDisplayNumber(shed, bayIndex),
+					bales,
+					shedOrder,
+					bayIndex,
+				});
+			});
+		}
+	});
+
+	rows.sort((a, b) => {
+		if (a.shedOrder !== b.shedOrder) return a.shedOrder - b.shedOrder;
+		if (a.bayIndex !== b.bayIndex) return a.bayIndex - b.bayIndex;
+		return a.contract.localeCompare(b.contract, undefined, { numeric: true });
+	});
+
+	return rows;
+}
+
+function syncReportPrintButton(productId) {
+	const printBtn = document.getElementById("reportPrintPdf");
+	if (!printBtn) return;
+	printBtn.disabled = !productId;
+	printBtn.setAttribute("aria-disabled", productId ? "false" : "true");
+	printBtn.title = productId
+		? "Download current report as PDF"
+		: "Select a product to export a PDF report";
+}
+
+function updateReportsTable() {
+	const filterEl = document.getElementById("reportProductFilter");
+	const productId = filterEl?.value ?? "";
+	const reportBody = document.getElementById("reportBody");
+	const reportSummary = document.getElementById("reportSummary");
+	const reportTableWrap = document.getElementById("reportTableWrap");
+	const reportEmpty = document.getElementById("reportEmpty");
+	if (!filterEl || !reportBody || !reportSummary || !reportTableWrap || !reportEmpty) return;
+
+	reportBody.replaceChildren();
+
+	if (!productId) {
+		reportSummary.hidden = true;
+		reportTableWrap.hidden = true;
+		reportEmpty.hidden = false;
+		reportEmpty.textContent = "Select a product to view inventory locations.";
+		syncReportPrintButton("");
+		return;
+	}
+
+	const rows = collectProductReport(productId);
+	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
+	const productLabel = getHayTypeLabel(productId);
+	syncReportPrintButton(productId);
+
+	if (rows.length === 0) {
+		reportSummary.hidden = true;
+		reportTableWrap.hidden = true;
+		reportEmpty.hidden = false;
+		reportEmpty.textContent = `No ${productLabel} found in any shed.`;
+		return;
+	}
+
+	reportEmpty.hidden = true;
+	reportSummary.hidden = false;
+	reportSummary.textContent = `${productLabel}: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
+	reportTableWrap.hidden = false;
+
+	rows.forEach((entry) => {
+		const row = createReportRow(entry);
+		if (row) reportBody.appendChild(row);
+	});
+}
+
+function printCurrentReportPdf() {
+	const filterEl = document.getElementById("reportProductFilter");
+	const productId = filterEl?.value ?? "";
+	if (!productId) {
+		alert("Select a product to export a PDF report.");
+		return;
+	}
+
+	const productLabel = getHayTypeLabel(productId);
+	const rows = collectProductReport(productId);
+	downloadReportPdf({ productLabel, rows });
+}
+
+function initReports() {
+	const filterEl = document.getElementById("reportProductFilter");
+	if (!filterEl) return;
+
+	const refresh = () => updateReportsTable();
+	filterEl.addEventListener("change", refresh);
+	filterEl.addEventListener("input", refresh);
+	document.getElementById("reportPrintPdf")?.addEventListener("click", printCurrentReportPdf);
+	refresh();
+}
+
 function initLogFilters() {
 	populateLogFilterOptions();
 	resetLogFilters();
@@ -731,6 +852,8 @@ onValue(ref(db, "hayShedState"), (snapshot) => {
 			});
 			syncAllShedLayoutsAfterPaint();
 		}
+
+		updateReportsTable();
 	} catch (e) {
 		console.error("Error syncing state:", e);
 	}
@@ -1117,6 +1240,7 @@ window.addEventListener("load", () => {
 	initGrabToScroll();
 	initAuthUI();
 	initTabs();
+	initReports();
 	initInventoryForm();
 	initLogFilters();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
