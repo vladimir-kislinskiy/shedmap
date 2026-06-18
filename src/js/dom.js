@@ -36,14 +36,21 @@ function getBayChromeForColumns(columns) {
 }
 
 function measureBayChromeForColumns(columns) {
-	const bay = columns?.querySelector(".shed__bay");
-	if (!bay) return LAYOUT.bayChrome;
+	let maxChrome = LAYOUT.bayChrome;
 
-	const label = bay.querySelector(".shed__bay-label");
-	const stats = bay.querySelector(".shed__bay-stats");
-	if (!label || !stats) return LAYOUT.bayChrome;
+	columns?.querySelectorAll(".shed__bay").forEach((bay) => {
+		const label = bay.querySelector(".shed__bay-label");
+		const stats = bay.querySelector(".shed__bay-stats");
+		if (!label || !stats) return;
 
-	return Math.max(label.offsetHeight + stats.offsetHeight, LAYOUT.bayChrome);
+		const labelStyle = window.getComputedStyle(label);
+		const marginBottom = parseFloat(labelStyle.marginBottom) || 0;
+		const chrome = label.offsetHeight + marginBottom + stats.offsetHeight;
+
+		if (chrome > maxChrome) maxChrome = chrome;
+	});
+
+	return maxChrome;
 }
 
 function getStackAreaBudget(maxBales) {
@@ -220,7 +227,7 @@ function syncShedColumnsLayout(columns) {
 
 	const maxStackContent = measureMaxBayStackContentHeight(columns);
 	const chrome = getBayChromeForColumns(columns);
-	const columnsHeight = Math.max(getBaseColumnHeight(), maxStackContent + chrome);
+	const columnsHeight = Math.max(getBaseColumnHeight(), maxStackContent + chrome + 4);
 
 	columns.style.height = `${Math.round(columnsHeight)}px`;
 	columns.offsetHeight;

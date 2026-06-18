@@ -11,9 +11,10 @@
 
 	.shed__columns {
 		justify-content: flex-start;
+		align-items: flex-start;
 		overflow-x: auto;
-		overflow-y: hidden;
-		padding-bottom: 12px;
+		overflow-y: visible;
+		padding-bottom: 16px;
 		scrollbar-width: thin;
 		scrollbar-color: var(--color-primary-light) transparent;
 		-webkit-overflow-scrolling: touch;
@@ -28,6 +29,8 @@
 	.shed__bay {
 		flex: 0 0 clamp(92px, 22vw, 120px);
 		min-width: clamp(92px, 22vw, 120px);
+		height: auto;
+		align-self: flex-start;
 	}
 
 	.shed__bay-stack {
@@ -83,8 +86,10 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(88px, 24vw, 110px);
-		min-width: clamp(88px, 24vw, 110px);
+		flex: 0 0 clamp(120px, 25vw, 140px);
+		min-width: clamp(120px, 25vw, 140px);
+		height: auto;
+		align-self: flex-start;
 	}
 
 	.hay-stack {

@@ -398,7 +398,7 @@ body.page--view-only .inventory__form {
 	gap: clamp(8px, 1vw, 16px);
 	flex: 0 0 auto;
 	min-height: 584px;
-	height: 584px;
+	height: auto;
 	align-items: stretch;
 	transition: height 0.35s ease-out;
 }
@@ -419,11 +419,15 @@ body.page--view-only .inventory__form {
 	min-height: 0;
 }
 
+.shed__bay-label,
+.shed__bay-stats {
+	flex-shrink: 0;
+}
+
 .shed__bay-stack {
 	--stack-area-height: 500px;
 	width: 100%;
-	flex: 1;
-	min-height: 0;
+	flex: 0 0 auto;
 	box-sizing: border-box;
 	height: calc(var(--stack-area-height) + 20px);
 	min-height: calc(var(--stack-area-height) + 20px);
