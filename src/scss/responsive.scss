@@ -28,8 +28,8 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(92px, 22vw, 120px);
-		min-width: clamp(92px, 22vw, 120px);
+		flex: 0 0 clamp(130px, 22vw, 160px);
+		min-width: 130px;
 		height: auto;
 		align-self: flex-start;
 	}
@@ -87,8 +87,8 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(120px, 25vw, 140px);
-		min-width: clamp(120px, 25vw, 140px);
+		flex: 0 0 clamp(130px, 25vw, 160px);
+		min-width: 130px;
 		height: auto;
 		align-self: flex-start;
 	}
@@ -116,6 +116,7 @@
 		padding: 10px;
 	}
 
+	.inventory__field--reported-by,
 	.inventory__field--contract,
 	.inventory__field--bales {
 		flex: 1 1 auto;

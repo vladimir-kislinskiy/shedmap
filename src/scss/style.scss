@@ -254,6 +254,10 @@ body.page--view-only .inventory__form {
 	width: 120px;
 }
 
+.inventory__field--reported-by {
+	width: clamp(150px, 20vw, 200px);
+}
+
 .inventory__field--bales {
 	width: 100px;
 }
@@ -409,7 +413,7 @@ body.page--view-only .inventory__form {
 
 .shed__bay {
 	flex: 1;
-	min-width: 0;
+	min-width: 130px;
 	height: 100%;
 	display: flex;
 	flex-direction: column;

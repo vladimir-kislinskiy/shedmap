@@ -5,13 +5,18 @@ export function capitalize(word) {
 export const HAY_TYPES = [
 	{ id: "alfalfa", label: "Alfalfa" },
 	{ id: "timothy", label: "Timothy" },
-	{ id: "wheat-straw", label: "Wheat Straw" },
-	{ id: "barley-straw", label: "Barley Straw" },
-	{ id: "mixed-hay", label: "Mixed Hay" },
+	{ id: "wheat-straw", label: "Wheat Straw", stackLabel: "Wht Str" },
+	{ id: "barley-straw", label: "Barley Straw", stackLabel: "Barl Str" },
+	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
 ];
 
 export function getHayTypeLabel(type) {
 	return HAY_TYPES.find((entry) => entry.id === type)?.label ?? capitalize(type.replace(/-/g, " "));
+}
+
+export function getHayTypeStackLabel(type) {
+	const entry = HAY_TYPES.find((item) => item.id === type);
+	return entry?.stackLabel ?? entry?.label ?? capitalize(type.replace(/-/g, " "));
 }
 
 export function formatStackKey(type, contract) {
@@ -26,6 +31,17 @@ export function parseStackKey(stackKey = "") {
 
 	const parts = stackKey.split("-");
 	return { type: parts[0] || "", contract: parts.slice(1).join("-") };
+}
+
+export const SHED_BAY_OFFSETS = {
+	west: 0,
+	north: 10,
+	east: 20,
+};
+
+export function getBayDisplayNumber(shed, bayIndex) {
+	const offset = SHED_BAY_OFFSETS[shed] ?? 0;
+	return offset + parseInt(bayIndex, 10) + 1;
 }
 
 export function getIsleMaxBales(isle) {
@@ -85,8 +101,10 @@ function getStackAreaBudget(maxBales) {
 }
 
 export function getBayFillPercent(total, maxBales = getIsleMaxBales("both")) {
+	if (total <= 0) return 0;
 	if (total >= maxBales) return 100;
-	return Math.floor((total / maxBales) * 100);
+	const percent = Math.floor((total / maxBales) * 100);
+	return Math.max(percent, 1);
 }
 
 function getMinStackPercent() {
@@ -391,7 +409,7 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
 	stack.classList.add(`hay-stack--${type}`);
 	stack.dataset.stackKey = formatStackKey(type, contract);
 	stack.dataset.bales = String(baleCount);
-	stack.querySelector(".hay-stack__type").textContent = getHayTypeLabel(type);
+	stack.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
 	stack.querySelector(".hay-stack__contract").textContent = contract;
 	stack.querySelector(".hay-stack__count").textContent = baleCount;
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle));
@@ -405,7 +423,7 @@ export function updateHayStack(stackEl, type, contract, baleCount) {
 	stackEl.classList.add(`hay-stack--${type}`);
 	stackEl.dataset.stackKey = formatStackKey(type, contract);
 	stackEl.dataset.bales = String(baleCount);
-	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeLabel(type);
+	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
 	stackEl.querySelector(".hay-stack__contract").textContent = contract;
 	stackEl.querySelector(".hay-stack__count").textContent = baleCount;
 	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle));
@@ -462,6 +480,7 @@ export function createLogRow(entry) {
 	const fields = {
 		dateTime: entry.dateTime,
 		person: entry.person,
+		reportedBy: entry.reportedBy || "—",
 		action: entry.note ? `${entry.action} — ${entry.note}` : entry.action,
 		type: entry.type,
 		contract: entry.contract,

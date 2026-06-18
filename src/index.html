@@ -56,6 +56,14 @@
 					</div>
 
 					<form class="inventory__form" id="inventoryControls" hidden novalidate>
+						<select id="reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
+							required>
+							<option value="" selected disabled>Reported by</option>
+							<option value="John">John</option>
+							<option value="Jim">Jim</option>
+							<option value="Logan">Logan</option>
+						</select>
+
 						<select id="hayType" class="inventory__field inventory__field--select">
 							<option value="alfalfa">Alfalfa</option>
 							<option value="timothy">Timothy</option>
@@ -65,8 +73,9 @@
 						</select>
 
 						<input type="text" id="contractNumber" class="inventory__field inventory__field--contract"
-							placeholder="11-1111" maxlength="7" inputmode="numeric" autocomplete="off"
-							pattern="^\d{2}-\d{4}$" title="Format: 11-1111" required>
+							placeholder="26-2222" maxlength="8" inputmode="text" autocomplete="off"
+							autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
+							title="Format: 26-2222 or 26-2222A" required>
 
 						<input type="text" id="baleCount" class="inventory__field inventory__field--bales"
 							placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
@@ -118,15 +127,15 @@
 					</nav>
 
 					<div class="shed-tabs__panel shed-tabs__panel--active" id="west-shed-tab">
-						@include('partials/shed-columns.html', { 'shed': 'west' })
+						@include('partials/shed-columns-west.html')
 					</div>
 
 					<div class="shed-tabs__panel" id="north-shed-tab">
-						@include('partials/shed-columns.html', { 'shed': 'north' })
+						@include('partials/shed-columns-north.html')
 					</div>
 
 					<div class="shed-tabs__panel" id="east-shed-tab">
-						@include('partials/shed-columns.html', { 'shed': 'east' })
+						@include('partials/shed-columns-east.html')
 					</div>
 				</section>
 
@@ -152,7 +161,8 @@
 							<thead class="log-table__head">
 								<tr class="log-table__row">
 									<th class="log-table__cell log-table__cell--head">Date & Time</th>
-									<th class="log-table__cell log-table__cell--head">Person</th>
+									<th class="log-table__cell log-table__cell--head">Changed By</th>
+									<th class="log-table__cell log-table__cell--head">Reported By</th>
 									<th class="log-table__cell log-table__cell--head">Action</th>
 									<th class="log-table__cell log-table__cell--head">Hay Type</th>
 									<th class="log-table__cell log-table__cell--head">Contract #</th>
@@ -190,6 +200,7 @@
 		<tr class="log-table__row">
 			<td class="log-table__cell" data-field="dateTime"></td>
 			<td class="log-table__cell" data-field="person"></td>
+			<td class="log-table__cell" data-field="reportedBy"></td>
 			<td class="log-table__cell" data-field="action"></td>
 			<td class="log-table__cell" data-field="type"></td>
 			<td class="log-table__cell" data-field="contract"></td>

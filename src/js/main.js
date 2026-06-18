@@ -12,6 +12,7 @@ import {
 	formatStackKey,
 	getBayStacks,
 	getBayFillPercent,
+	getBayDisplayNumber,
 	getHayTypeLabel,
 	getIsleContainer,
 	getIsleMaxBales,
@@ -120,7 +121,9 @@ function setActiveShedTab(panelId, btn) {
 
 	const shedSelect = document.getElementById("shedSelect");
 	if (shedSelect && panelId) {
-		shedSelect.value = panelId.replace("-shed-tab", "");
+		const shed = panelId.replace("-shed-tab", "");
+		shedSelect.value = shed;
+		updateBaySelectForShed(shed);
 	}
 
 	requestAnimationFrame(() => syncAllShedLayouts());
@@ -278,7 +281,7 @@ function makeStackDraggable(stackEl) {
 				const { contract } = parseStackKey(movedStack.dataset.stackKey || "");
 				const bales = parseInt(movedStack.dataset.bales, 10) || 0;
 				const shed = bayStack.dataset.shed;
-				const bay = parseInt(bayStack.dataset.bay, 10) + 1;
+				const bay = getBayDisplayNumber(shed, bayStack.dataset.bay);
 				const typeLabel = getHayTypeLabel(type);
 				const note = fromIsle !== toIsle
 					? `${typeLabel} ${contract} (${bales} bales) moved from ${formatIsleLabel(fromIsle)} to ${formatIsleLabel(toIsle)}`
@@ -293,6 +296,10 @@ function makeStackDraggable(stackEl) {
 	stackEl.classList.toggle("hay-stack--draggable", isEditMode);
 }
 
+function getReportedByValue() {
+	return document.getElementById("reportedBy")?.value.trim() || "";
+}
+
 function handleHay() {
 	if (!isEditMode || !currentPerson) return;
 
@@ -302,9 +309,15 @@ function handleHay() {
 	const shed = document.getElementById("shedSelect").value;
 	const bay = document.getElementById("baySelect").value;
 	const action = document.getElementById("actionSelect").value;
+	const reportedBy = getReportedByValue();
 
-	if (!/^\d{2}-\d{4}$/.test(contract)) {
-		alert("Contract number must be in format: 25-6651");
+	if (!reportedBy) {
+		alert("Please enter who reported this change.");
+		return;
+	}
+
+	if (!isValidContract(contract)) {
+		alert("Contract number must be in format: 26-2222 or 26-2222A");
 		return;
 	}
 
@@ -355,7 +368,7 @@ function handleHay() {
 			makeStackDraggable(stack);
 		}
 
-		logChange(currentPerson, "Add", type, contract, parseInt(bay, 10) + 1, isle, shed, baleCount);
+		logChange(currentPerson, "Add", type, contract, getBayDisplayNumber(shed, bay), isle, shed, baleCount);
 	}
 
 	if (action === "remove") {
@@ -386,7 +399,7 @@ function handleHay() {
 			updateHayStack(foundStack, foundType, contract, newCount);
 		}
 
-		logChange(currentPerson, "Remove", foundType, contract, parseInt(bay, 10) + 1, foundIsle, shed, baleCount);
+		logChange(currentPerson, "Remove", foundType, contract, getBayDisplayNumber(shed, bay), foundIsle, shed, baleCount);
 	}
 
 	updateBayStats(bayStackEl);
@@ -405,6 +418,7 @@ function logChange(person, action, type, contract, bay, isle, shed, bales, note 
 		timestamp: d.getTime(),
 		dateTime: `${date}, ${time}`,
 		person,
+		reportedBy: getReportedByValue() || "—",
 		action,
 		type: getHayTypeLabel(type),
 		contract,
@@ -905,9 +919,13 @@ function initTabs() {
 	});
 
 	document.getElementById("shedSelect")?.addEventListener("change", (e) => {
+		updateBaySelectForShed(e.target.value);
 		const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${e.target.value}-shed-tab"]`);
 		if (tabBtn) setActiveShedTab(`${e.target.value}-shed-tab`, tabBtn);
 	});
+
+	initBayNumbers();
+	updateBaySelectForShed(document.getElementById("shedSelect")?.value || "west");
 }
 
 function bindDigitsOnlyInput(input, { maxDigits, format, minValue } = {}) {
@@ -963,18 +981,122 @@ function bindDigitsOnlyInput(input, { maxDigits, format, minValue } = {}) {
 	input.addEventListener("input", applyFormat);
 }
 
-function formatContractDigits(digits) {
+function isValidContract(contract) {
+	return /^\d{2}-\d{4}[A-Z]?$/.test(contract.trim());
+}
+
+function formatContractValue(value) {
+	const cleaned = value.toUpperCase().replace(/[^0-9A-Z]/g, "");
+	const digits = cleaned.replace(/\D/g, "").slice(0, 6);
+	let letter = "";
+
+	if (digits.length === 6) {
+		const letters = cleaned.replace(/[^A-Z]/g, "");
+		if (letters) letter = letters.slice(-1);
+	}
+
 	if (digits.length <= 2) return digits;
-	return `${digits.slice(0, 2)}-${digits.slice(2, 6)}`;
+	return `${digits.slice(0, 2)}-${digits.slice(2)}${letter}`;
+}
+
+function bindContractInput(input) {
+	if (!input) return;
+
+	const applyFormat = () => {
+		input.value = formatContractValue(input.value);
+	};
+
+	const getDigitCount = () => input.value.replace(/\D/g, "").length;
+
+	input.addEventListener("beforeinput", (e) => {
+		if (e.isComposing) return;
+
+		if (e.inputType === "insertText" && e.data) {
+			if (/^\d$/.test(e.data)) return;
+
+			if (/^[a-zA-Z]$/.test(e.data)) {
+				if (getDigitCount() !== 6) {
+					e.preventDefault();
+				}
+				return;
+			}
+
+			e.preventDefault();
+		}
+	});
+
+	input.addEventListener("keydown", (e) => {
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+		const allowed = ["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "Home", "End"];
+		if (allowed.includes(e.key)) return;
+
+		if (/^\d$/.test(e.key)) {
+			if (getDigitCount() >= 6 && !input.value.slice(input.selectionStart ?? 0, input.selectionEnd ?? 0).replace(/\D/g, "").length) {
+				const suffix = input.value.replace(/^[\d-]+/, "");
+				if (suffix) e.preventDefault();
+			}
+			return;
+		}
+
+		if (/^[a-zA-Z]$/.test(e.key)) {
+			if (getDigitCount() !== 6) {
+				e.preventDefault();
+				return;
+			}
+			const suffix = input.value.replace(/^[\d-]+/, "");
+			if (suffix) e.preventDefault();
+			return;
+		}
+
+		e.preventDefault();
+	});
+
+	input.addEventListener("paste", (e) => {
+		e.preventDefault();
+		const pasted = (e.clipboardData?.getData("text") || "").toUpperCase();
+		const start = input.selectionStart ?? input.value.length;
+		const end = input.selectionEnd ?? input.value.length;
+		const merged = `${input.value.slice(0, start)}${pasted}${input.value.slice(end)}`;
+		input.value = merged;
+		applyFormat();
+	});
+
+	input.addEventListener("input", applyFormat);
+}
+
+function updateBaySelectForShed(shed) {
+	const select = document.getElementById("baySelect");
+	if (!select) return;
+
+	select.replaceChildren(
+		...Array.from({ length: BAY_COUNT }, (_, index) => {
+			const option = document.createElement("option");
+			option.value = String(index);
+			option.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
+			return option;
+		}),
+	);
+}
+
+function initBayNumbers() {
+	SHEDS.forEach((shed) => {
+		for (let index = 0; index < BAY_COUNT; index++) {
+			const bayStack = document.getElementById(`${shed}-col-${index}`);
+			const bayEl = bayStack?.closest(".shed__bay");
+			const label = bayEl?.querySelector(".shed__bay-label");
+			const bayNumber = getBayDisplayNumber(shed, index);
+
+			if (label) label.textContent = `Bay ${bayNumber}`;
+			if (bayEl) bayEl.dataset.bayNumber = String(bayNumber);
+		}
+	});
 }
 
 function initInventoryForm() {
 	document.getElementById("submitHay")?.addEventListener("click", handleHay);
 
-	bindDigitsOnlyInput(document.getElementById("contractNumber"), {
-		maxDigits: 6,
-		format: formatContractDigits,
-	});
+	bindContractInput(document.getElementById("contractNumber"));
 
 	bindDigitsOnlyInput(document.getElementById("baleCount"), {
 		maxDigits: 4,
