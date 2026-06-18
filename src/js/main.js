@@ -3,7 +3,7 @@ import { getDatabase, ref, set, onValue } from "firebase/database";
 import { initAuth, login, logout } from "./auth.js";
 import { bindStackDrag, setStacksDraggable } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
-import { downloadReportPdf } from "./report-pdf.js";
+import { openReportPdf } from "./report-pdf.js";
 import {
 	capitalize,
 	createHayStack,
@@ -681,7 +681,7 @@ function syncReportPrintButton(productId) {
 	printBtn.disabled = !productId;
 	printBtn.setAttribute("aria-disabled", productId ? "false" : "true");
 	printBtn.title = productId
-		? "Download current report as PDF"
+		? "Open current report as PDF in a new tab"
 		: "Select a product to export a PDF report";
 }
 
@@ -739,7 +739,7 @@ function printCurrentReportPdf() {
 
 	const productLabel = getHayTypeLabel(productId);
 	const rows = collectProductReport(productId);
-	downloadReportPdf({ productLabel, rows });
+	openReportPdf({ productLabel, rows });
 }
 
 function initReports() {

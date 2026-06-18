@@ -10,26 +10,12 @@
 	}
 
 	.shed__columns {
-		justify-content: flex-start;
 		align-items: flex-start;
-		overflow-x: auto;
-		overflow-y: hidden;
-		overscroll-behavior-y: none;
-		padding-bottom: 0;
-		scrollbar-width: thin;
-		scrollbar-color: var(--color-primary-light) transparent;
-		-webkit-overflow-scrolling: touch;
 		touch-action: pan-x;
-		cursor: grab;
-	}
-
-	.shed__columns--grabbing {
-		cursor: grabbing;
 	}
 
 	.shed__bay {
 		flex: 0 0 clamp(130px, 22vw, 160px);
-		min-width: 130px;
 		height: auto;
 		align-self: flex-start;
 	}

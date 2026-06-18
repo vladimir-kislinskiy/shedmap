@@ -4,7 +4,7 @@ import autoTable from "jspdf-autotable";
 const PDF_HEAD_COLOR = [109, 123, 78];
 const PDF_ALT_ROW_COLOR = [250, 246, 239];
 
-export function downloadReportPdf({ productLabel, rows, generatedAt = new Date() }) {
+export function openReportPdf({ productLabel, rows, generatedAt = new Date() }) {
 	const doc = new jsPDF({
 		orientation: "portrait",
 		unit: "pt",
@@ -63,5 +63,14 @@ export function downloadReportPdf({ productLabel, rows, generatedAt = new Date()
 
 	const slug = productLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 	const datePart = generatedAt.toISOString().slice(0, 10);
-	doc.save(`${slug || "product"}-inventory-${datePart}.pdf`);
+	const filename = `${slug || "product"}-inventory-${datePart}.pdf`;
+	const blobUrl = doc.output("bloburl");
+	const pdfWindow = window.open(blobUrl, "_blank", "noopener,noreferrer");
+
+	if (!pdfWindow) {
+		doc.save(filename);
+		return;
+	}
+
+	pdfWindow.document.title = filename;
 }

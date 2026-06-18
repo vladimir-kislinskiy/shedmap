@@ -139,7 +139,9 @@ h3 {
 #Sheds.tabs__panel--active {
 	flex: 0 0 auto;
 	min-height: auto;
-	overflow: visible;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
 }
 
 #Log.tabs__panel--active,
@@ -399,18 +401,31 @@ body.page--view-only .inventory__form {
 	flex-direction: column;
 	flex: 0 0 auto;
 	min-height: auto;
-	overflow: visible;
+	min-width: 0;
+	max-width: 100%;
+	overflow: hidden;
 }
 
 /* Shed bays — stack area 500px + 20px padding + ~64px chrome ≈ 584px column */
 .shed__columns {
 	display: flex;
-	justify-content: space-around;
+	justify-content: flex-start;
+	align-items: stretch;
 	gap: clamp(8px, 1vw, 16px);
 	flex: 0 0 auto;
+	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	min-height: 584px;
 	height: auto;
-	align-items: stretch;
+	overflow-x: auto;
+	overflow-y: hidden;
+	overscroll-behavior-x: contain;
+	overscroll-behavior-y: none;
+	scrollbar-width: thin;
+	scrollbar-color: var(--color-primary-light) transparent;
+	-webkit-overflow-scrolling: touch;
+	cursor: grab;
 	transition: height 0.35s ease-out;
 }
 
@@ -419,7 +434,7 @@ body.page--view-only .inventory__form {
 }
 
 .shed__bay {
-	flex: 1;
+	flex: 1 0 130px;
 	min-width: 130px;
 	height: 100%;
 	display: flex;
