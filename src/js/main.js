@@ -17,6 +17,7 @@ import {
 	restoreHayStack,
 	sumBalesInContainer,
 	syncAllShedLayouts,
+	syncAllShedLayoutsAfterPaint,
 	updateHayStack,
 } from "./dom.js";
 
@@ -713,7 +714,7 @@ onValue(ref(db, "hayShedState"), (snapshot) => {
 					updateBayStats(colEl);
 				}
 			});
-			syncAllShedLayouts();
+			syncAllShedLayoutsAfterPaint();
 		}
 	} catch (e) {
 		console.error("Error syncing state:", e);
@@ -909,17 +910,56 @@ function initTabs() {
 	});
 }
 
+function bindDigitsOnlyInput(input, { maxDigits, format } = {}) {
+	if (!input) return;
+
+	const applyFormat = () => {
+		const digits = input.value.replace(/\D/g, "").slice(0, maxDigits);
+		input.value = format ? format(digits) : digits;
+	};
+
+	input.addEventListener("beforeinput", (e) => {
+		if (e.isComposing) return;
+		if (e.inputType === "insertText" && e.data && !/^\d$/.test(e.data)) {
+			e.preventDefault();
+		}
+	});
+
+	input.addEventListener("keydown", (e) => {
+		if (e.ctrlKey || e.metaKey || e.altKey) return;
+		const allowed = ["Backspace", "Delete", "Tab", "Enter", "ArrowLeft", "ArrowRight", "Home", "End"];
+		if (allowed.includes(e.key)) return;
+		if (!/^\d$/.test(e.key)) e.preventDefault();
+	});
+
+	input.addEventListener("paste", (e) => {
+		e.preventDefault();
+		const pasted = (e.clipboardData?.getData("text") || "").replace(/\D/g, "");
+		const start = input.selectionStart ?? input.value.length;
+		const end = input.selectionEnd ?? input.value.length;
+		const merged = `${input.value.slice(0, start)}${pasted}${input.value.slice(end)}`;
+		input.value = merged;
+		applyFormat();
+	});
+
+	input.addEventListener("input", applyFormat);
+}
+
+function formatContractDigits(digits) {
+	if (digits.length <= 2) return digits;
+	return `${digits.slice(0, 2)}-${digits.slice(2, 6)}`;
+}
+
 function initInventoryForm() {
 	document.getElementById("submitHay")?.addEventListener("click", handleHay);
 
-	document.getElementById("contractNumber")?.addEventListener("input", (e) => {
-		let val = e.target.value.replace(/\D/g, "");
-		if (val.length > 2) val = `${val.substring(0, 2)}-${val.substring(2, 6)}`;
-		e.target.value = val;
+	bindDigitsOnlyInput(document.getElementById("contractNumber"), {
+		maxDigits: 6,
+		format: formatContractDigits,
 	});
 
-	document.getElementById("baleCount")?.addEventListener("input", (e) => {
-		if (e.target.value.length > 4) e.target.value = e.target.value.slice(0, 4);
+	bindDigitsOnlyInput(document.getElementById("baleCount"), {
+		maxDigits: 4,
 	});
 
 	const toggleBtn = document.getElementById("toggleControls");
@@ -940,7 +980,7 @@ window.addEventListener("load", () => {
 	initInventoryForm();
 	initLogFilters();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
-	syncAllShedLayouts();
+	syncAllShedLayoutsAfterPaint();
 });
 
 let resizeTimer;

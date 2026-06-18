@@ -62,11 +62,12 @@
 						</select>
 
 						<input type="text" id="contractNumber" class="inventory__field inventory__field--contract"
-							placeholder="Contract #" maxlength="7" pattern="^\d{2}-\d{4}$" title="Format: 25-6651"
-							required>
+							placeholder="22-2224" maxlength="7" inputmode="numeric" autocomplete="off"
+							pattern="^\d{2}-\d{4}$" title="Format: 22-2224" required>
 
-						<input type="number" id="baleCount" class="inventory__field inventory__field--bales"
-							placeholder="Bales" min="1" max="9999" required>
+						<input type="text" id="baleCount" class="inventory__field inventory__field--bales"
+							placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
+							pattern="[0-9]*" required>
 
 						<select id="shedSelect" class="inventory__field inventory__field--select">
 							<option value="north">North Shed</option>

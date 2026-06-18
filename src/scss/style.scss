@@ -391,14 +391,14 @@ body.page--view-only .inventory__form {
 	overflow: visible;
 }
 
-/* Shed bays */
+/* Shed bays — stack area 500px + 20px padding + ~64px chrome ≈ 584px column */
 .shed__columns {
 	display: flex;
 	justify-content: space-around;
 	gap: clamp(8px, 1vw, 16px);
 	flex: 0 0 auto;
-	min-height: 380px;
-	height: 380px;
+	min-height: 584px;
+	height: 584px;
 	align-items: stretch;
 	transition: height 0.35s ease-out;
 }
@@ -409,6 +409,7 @@ body.page--view-only .inventory__form {
 
 .shed__bay {
 	flex: 1;
+	min-width: 0;
 	height: 100%;
 	display: flex;
 	flex-direction: column;
@@ -419,17 +420,22 @@ body.page--view-only .inventory__form {
 }
 
 .shed__bay-stack {
+	--stack-area-height: 500px;
 	width: 100%;
 	flex: 1;
 	min-height: 0;
+	box-sizing: border-box;
+	height: calc(var(--stack-area-height) + 20px);
+	min-height: calc(var(--stack-area-height) + 20px);
 	background: var(--color-bay-bg);
 	border: 2px solid var(--color-bay-border);
-	padding: 6px 6px 16px;
+	padding: 10px 6px;
 	border-radius: var(--radius-md) var(--radius-md) 0 0;
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;
 	align-items: stretch;
+	gap: 6px;
 	transition:
 		background-color 0.2s,
 		border-color 0.2s;
@@ -458,6 +464,7 @@ body.page--view-only .inventory__form {
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;
+	gap: 6px;
 	min-width: 0;
 	align-self: stretch;
 }
@@ -468,8 +475,7 @@ body.page--view-only .inventory__form {
 }
 
 .shed__bay-stack-tail {
-	flex: 0 0 10px;
-	min-height: 10px;
+	display: none;
 }
 
 .shed__bay-stats {
@@ -509,9 +515,9 @@ body.page--view-only .inventory__form {
 	margin-bottom: 8px;
 }
 
-/* Hay stacks */
+/* Hay stacks — --stack-height is % of --stack-area-height (500px); min 9.6% ≈ 48px */
 .hay-stack {
-	height: var(--stack-height, 48px);
+	height: calc(var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100);
 	flex-shrink: 0;
 	padding: 5px 6px;
 	border-radius: var(--radius-sm);
@@ -526,9 +532,9 @@ body.page--view-only .inventory__form {
 	gap: 2px;
 	font-size: 0.65rem;
 	line-height: 1.15;
-	min-height: 48px;
+	min-height: calc(9.6 * var(--stack-area-height, 500px) / 100);
 	overflow: hidden;
-	margin-bottom: 6px;
+	margin-bottom: 0;
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
 		inset 0 2px 0 rgba(255, 255, 255, 0.2);
@@ -551,10 +557,6 @@ body.page--view-only .inventory__form {
 	width: 100%;
 	flex-shrink: 0;
 	align-self: stretch;
-}
-
-.shed__isle > .hay-stack:last-child {
-	margin-bottom: 0;
 }
 
 .hay-stack__desc {
@@ -849,7 +851,10 @@ body.page--dragging .shed__columns {
 	text-align: left;
 	flex-shrink: 0;
 	padding: clamp(10px, 2vw, 16px);
-	padding-bottom: max(clamp(10px, 2vw, 16px), env(safe-area-inset-bottom, 0px));
+	padding-bottom: max(
+		clamp(10px, 2vw, 16px),
+		env(safe-area-inset-bottom, 0px)
+	);
 	font-size: 10px;
 	color: var(--text-muted);
 	font-weight: 500;

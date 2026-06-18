@@ -33,6 +33,7 @@
 	.shed__bay-stack {
 		display: flex;
 		flex-direction: column;
+		gap: 6px;
 	}
 
 	.shed__isles {
@@ -46,6 +47,7 @@
 		display: flex;
 		flex-direction: column;
 		flex: 1 1 0;
+		gap: 6px;
 		min-width: 0;
 	}
 }
@@ -77,8 +79,7 @@
 	}
 
 	.shed__columns {
-		min-height: 320px;
-		// padding-bottom: 15px;
+		min-height: 584px;
 	}
 
 	.shed__bay {
