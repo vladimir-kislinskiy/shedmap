@@ -523,7 +523,7 @@ body.page--view-only .inventory__form {
 	margin-bottom: 8px;
 }
 
-/* Hay stacks — --stack-height is % of --stack-area-height (500px); min 9.6% ≈ 48px */
+/* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
 .hay-stack {
 	height: calc(var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100);
 	flex-shrink: 0;

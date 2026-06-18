@@ -52,7 +52,9 @@ const LAYOUT = {
 	stackGap: 6,
 	stackPaddingTop: 10,
 	stackPaddingBottom: 10,
-	stackAreaBudget: 500,
+	stackAreaDesktop: 500,
+	stackAreaMobile: 450,
+	stackAreaMobileBreakpoint: 768,
 	bayChrome: 64,
 	minStack: 48,
 	baleStep: 10,
@@ -60,8 +62,17 @@ const LAYOUT = {
 	textBasePx: 10.4,
 };
 
+function isMobileStackLayout() {
+	return window.matchMedia(`(max-width: ${LAYOUT.stackAreaMobileBreakpoint}px)`).matches;
+}
+
+export function getStackAreaBudgetValue() {
+	return isMobileStackLayout() ? LAYOUT.stackAreaMobile : LAYOUT.stackAreaDesktop;
+}
+
 export function getStandardBayStackContentHeight() {
-	return LAYOUT.stackAreaBudget + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
+	const budget = getStackAreaBudgetValue();
+	return budget + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
 }
 
 export function getBaseColumnHeight() {
@@ -95,20 +106,8 @@ function measureBayChromeForColumns(columns) {
 	return maxChrome;
 }
 
-function getStackAreaBudget(maxBales) {
-	if (maxBales >= getIsleMaxBales("both")) return LAYOUT.stackAreaBudget;
-	return LAYOUT.stackAreaBudget / 2;
-}
-
-export function getBayFillPercent(total, maxBales = getIsleMaxBales("both")) {
-	if (total <= 0) return 0;
-	if (total >= maxBales) return 100;
-	const percent = Math.floor((total / maxBales) * 100);
-	return Math.max(percent, 1);
-}
-
-function getMinStackPercent() {
-	return (LAYOUT.minStack / LAYOUT.stackAreaBudget) * 100;
+function getMinStackPercent(areaBudget) {
+	return (LAYOUT.minStack / areaBudget) * 100;
 }
 
 function getTierInSegment(baleCount, segmentStart) {
@@ -117,14 +116,14 @@ function getTierInSegment(baleCount, segmentStart) {
 	return Math.min(Math.ceil(offset / LAYOUT.baleStep), LAYOUT.baleSegmentMax / LAYOUT.baleStep);
 }
 
-function percentForTiers(tier, maxTier, maxPercent) {
+function percentForTiers(tier, maxTier, maxPercent, areaBudget) {
 	if (tier <= 0) return 0;
 	const pct = (tier / maxTier) * maxPercent;
-	return Math.max(getMinStackPercent(), Math.round(pct * 100) / 100);
+	return Math.max(getMinStackPercent(areaBudget), Math.round(pct * 100) / 100);
 }
 
-/** % of shed__bay-stack area (500px): 2000 bales = 100%, 1000 bales = 50% */
-export function getStackHeightPercent(baleCount, maxBales) {
+/** % of shed__bay-stack area: 2000 bales = 100%, 1000 bales = 50% */
+export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop) {
 	if (baleCount <= 0) return 0;
 
 	const tiersPerSegment = LAYOUT.baleSegmentMax / LAYOUT.baleStep;
@@ -132,16 +131,23 @@ export function getStackHeightPercent(baleCount, maxBales) {
 
 	if (maxBales <= LAYOUT.baleSegmentMax || baleCount <= LAYOUT.baleSegmentMax) {
 		const tier = getTierInSegment(baleCount, 0);
-		return percentForTiers(tier, tiersPerSegment, halfPercent);
+		return percentForTiers(tier, tiersPerSegment, halfPercent, areaBudget);
 	}
 
 	const tier = getTierInSegment(baleCount, LAYOUT.baleSegmentMax);
 	return Math.round((halfPercent + (tier / tiersPerSegment) * halfPercent) * 100) / 100;
 }
 
-export function getStackHeightPx(baleCount, maxBales) {
-	const pct = getStackHeightPercent(baleCount, maxBales);
-	return Math.round((pct / 100) * LAYOUT.stackAreaBudget);
+export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop) {
+	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget);
+	return Math.round((pct / 100) * areaBudget);
+}
+
+export function getBayFillPercent(total, maxBales = getIsleMaxBales("both")) {
+	if (total <= 0) return 0;
+	if (total >= maxBales) return 100;
+	const percent = Math.floor((total / maxBales) * 100);
+	return Math.max(percent, 1);
 }
 
 function getDirectStacks(container) {
@@ -194,18 +200,19 @@ function getBayStackPadding(bayStackEl) {
 	};
 }
 
-function getStackAbsoluteHeightPx(stack) {
+function getStackAbsoluteHeightPx(stack, bayStackEl) {
 	const bales = parseInt(stack.dataset.bales, 10) || 0;
 	const isle = stack.dataset.isle || "both";
-	return getStackHeightPx(bales, getIsleMaxBales(isle));
+	const areaBudget = getStackAreaBudgetValue();
+	return getStackHeightPx(bales, getIsleMaxBales(isle), areaBudget);
 }
 
-function measureStacksBlockHeight(stacks) {
+function measureStacksBlockHeight(stacks, bayStackEl) {
 	if (!stacks.length) return 0;
 
 	let total = 0;
 	stacks.forEach((stack, index) => {
-		total += getStackAbsoluteHeightPx(stack);
+		total += getStackAbsoluteHeightPx(stack, bayStackEl);
 		if (index < stacks.length - 1) total += LAYOUT.stackGap;
 	});
 	return total;
@@ -218,10 +225,10 @@ export function measureBayStackContent(bayStackEl) {
 	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
 	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
 
-	const fullHeight = measureStacksBlockHeight(fullStacks);
+	const fullHeight = measureStacksBlockHeight(fullStacks, bayStackEl);
 	const islesHeight = Math.max(
-		measureStacksBlockHeight(isle1Stacks),
-		measureStacksBlockHeight(isle2Stacks),
+		measureStacksBlockHeight(isle1Stacks, bayStackEl),
+		measureStacksBlockHeight(isle2Stacks, bayStackEl),
 	);
 
 	if (!fullHeight && !islesHeight) return 0;
@@ -253,9 +260,13 @@ function measureMaxBayStackContentHeight(columns) {
 	return maxContent;
 }
 
+function applyStackAreaHeight(bayStack) {
+	bayStack.style.setProperty("--stack-area-height", `${getStackAreaBudgetValue()}px`);
+}
+
 function applyUniformBayStackHeights(columns, contentHeight) {
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		bayStack.style.setProperty("--stack-area-height", `${LAYOUT.stackAreaBudget}px`);
+		applyStackAreaHeight(bayStack);
 		bayStack.style.height = `${contentHeight}px`;
 		bayStack.style.minHeight = `${contentHeight}px`;
 	});
@@ -265,7 +276,7 @@ function syncShedColumnsLayout(columns) {
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		bayStack.style.setProperty("--stack-area-height", `${LAYOUT.stackAreaBudget}px`);
+		applyStackAreaHeight(bayStack);
 		applyAllStackHeights(bayStack);
 	});
 
@@ -314,7 +325,8 @@ export function syncAllShedLayoutsAfterPaint() {
 }
 
 export function setStackHeight(stackEl, baleCount, maxBales) {
-	const pct = getStackHeightPercent(baleCount, maxBales);
+	const areaBudget = getStackAreaBudgetValue();
+	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget);
 	stackEl.style.setProperty("--stack-height", String(pct));
 }
 
