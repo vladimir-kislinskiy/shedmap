@@ -33,15 +33,18 @@ export function parseStackKey(stackKey = "") {
 	return { type: parts[0] || "", contract: parts.slice(1).join("-") };
 }
 
-export const SHED_BAY_OFFSETS = {
-	west: 0,
-	north: 10,
-	east: 20,
+export const BAYS_PER_SHED = 12;
+
+export const SHED_BAY_START = {
+	west: 1,
+	north: 25,
+	east: 49,
 };
 
 export function getBayDisplayNumber(shed, bayIndex) {
-	const offset = SHED_BAY_OFFSETS[shed] ?? 0;
-	return offset + parseInt(bayIndex, 10) + 1;
+	const colIndex = parseInt(bayIndex, 10);
+	const start = (SHED_BAY_START[shed] ?? 1) + colIndex * 2;
+	return `${start}-${start + 1}`;
 }
 
 export function getIsleMaxBales(isle) {

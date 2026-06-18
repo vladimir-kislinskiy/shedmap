@@ -13,6 +13,7 @@ import {
 	getBayStacks,
 	getBayFillPercent,
 	getBayDisplayNumber,
+	BAYS_PER_SHED,
 	getHayTypeLabel,
 	getIsleContainer,
 	getIsleMaxBales,
@@ -32,7 +33,7 @@ const auth = initAuth(app, handleAuthChange);
 const MAX_BALES_PER_BAY = 2000;
 const MAX_BALES_PER_ISLE = 1000;
 const SHEDS = ["west", "north", "east"];
-const BAY_COUNT = 10;
+const BAY_COUNT = BAYS_PER_SHED;
 
 function buildEmptyShedState() {
 	const sheds = {};
@@ -1085,10 +1086,8 @@ function initBayNumbers() {
 			const bayStack = document.getElementById(`${shed}-col-${index}`);
 			const bayEl = bayStack?.closest(".shed__bay");
 			const label = bayEl?.querySelector(".shed__bay-label");
-			const bayNumber = getBayDisplayNumber(shed, index);
-
-			if (label) label.textContent = `Bay ${bayNumber}`;
-			if (bayEl) bayEl.dataset.bayNumber = String(bayNumber);
+			if (label) label.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
+			if (bayEl) bayEl.dataset.bayNumber = getBayDisplayNumber(shed, index);
 		}
 	});
 }
