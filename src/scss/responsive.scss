@@ -11,7 +11,6 @@
 
 	.shed__columns {
 		align-items: flex-start;
-		touch-action: pan-x;
 	}
 
 	.shed__bay {
@@ -68,6 +67,12 @@
 		max-width: clamp(64px, 22vw, 140px);
 	}
 
+	.tabs,
+	.shed-tabs {
+		width: 100%;
+		max-width: 100%;
+	}
+
 	.shed__columns {
 		min-height: 0;
 	}
@@ -98,35 +103,6 @@
 	.inventory__form {
 		flex-direction: column;
 		align-items: stretch;
-	}
-
-	.tabs {
-		width: 100%;
-		max-width: 100%;
-		padding: 4px;
-		border-radius: 12px;
-		gap: 3px;
-	}
-
-	.tabs__btn {
-		padding: 8px 6px;
-		font-size: clamp(0.75rem, 2.6vw, 0.875rem);
-		border-radius: 8px;
-	}
-
-	.tabs__panel {
-		padding: 10px;
-	}
-
-	.shed-tabs__panel {
-		padding: 10px;
-	}
-
-	.inventory__field--reported-by,
-	.inventory__field--contract,
-	.inventory__field--bales {
-		flex: 1 1 auto;
-		width: 100%;
 	}
 
 	.log-table-wrap {
@@ -205,6 +181,18 @@
 		font-size: 13px;
 	}
 
+	.tabs__panel,
+	.shed-tabs__panel {
+		padding: 10px;
+	}
+
+	.inventory__field--reported-by,
+	.inventory__field--contract,
+	.inventory__field--bales {
+		flex: 1 1 auto;
+		width: 100%;
+	}
+
 	body {
 		background-attachment: scroll;
 		-webkit-overflow-scrolling: touch;
@@ -212,20 +200,8 @@
 }
 
 @media (max-width: 430px) {
-	.tabs {
-		padding: 3px;
-		border-radius: 10px;
-		gap: 2px;
-	}
-
-	.tabs__btn {
-		padding: 7px 4px;
-		font-size: 0.75rem;
-		border-radius: 7px;
-		letter-spacing: -0.01em;
-	}
-
-	.tabs__panel {
+	.tabs__panel,
+	.shed-tabs__panel {
 		padding: 8px;
 	}
 

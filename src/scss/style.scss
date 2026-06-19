@@ -68,6 +68,35 @@ h3 {
 	font-family: var(--font-heading);
 }
 
+/* Shared sizing — auth, main tabs, inventory toggle, shed tabs */
+.auth-bar__btn,
+.tabs__btn,
+.inventory__toggle,
+.shed-tabs__btn {
+	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	font-family: var(--font-primary);
+	font-size: var(--ctrl-font-size);
+	font-weight: var(--ctrl-font-weight);
+	line-height: var(--ctrl-line-height);
+	padding: var(--ctrl-pad-y) var(--ctrl-pad-x);
+	border-radius: var(--ctrl-radius);
+	min-height: var(--ctrl-min-height);
+	white-space: nowrap;
+	cursor: pointer;
+	transition: var(--transition);
+}
+
+.tabs,
+.inventory__toggle-wrap,
+.shed-tabs {
+	padding: var(--ctrl-bar-pad);
+	gap: var(--ctrl-bar-gap);
+	border-radius: var(--ctrl-bar-radius);
+}
+
 /* Tabs */
 .tabs {
 	display: flex;
@@ -75,33 +104,21 @@ h3 {
 	align-items: stretch;
 	background-color: var(--color-surface-glass);
 	backdrop-filter: blur(10px);
-	border-radius: var(--radius-lg);
 	margin: 0 auto;
-	padding: 6px;
 	width: 100%;
 	max-width: 800px;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.02);
 	flex-shrink: 0;
-	gap: 4px;
 }
 
 .tabs__btn {
 	background-color: transparent;
 	border: none;
 	outline: none;
-	cursor: pointer;
-	padding: 12px 14px;
-	font-size: 1rem;
-	font-weight: 600;
-	font-family: var(--font-primary);
 	color: var(--text-muted);
-	transition: var(--transition);
-	border-radius: var(--radius-md);
 	flex: 1 1 0;
 	min-width: 0;
 	text-align: center;
-	white-space: nowrap;
-	line-height: 1.2;
 }
 
 .tabs__btn:hover {
@@ -169,10 +186,9 @@ h3 {
 	justify-content: center;
 	background-color: var(--color-surface-glass);
 	backdrop-filter: blur(10px);
-	border-radius: var(--radius-lg);
-	margin: 0 auto 20px auto;
-	padding: 6px;
+	margin: 0 auto clamp(12px, 2vw, 20px) auto;
 	width: fit-content;
+	max-width: 100%;
 	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
@@ -184,17 +200,10 @@ h3 {
 	background-color: transparent;
 	border: none;
 	outline: none;
-	border-radius: var(--radius-md);
-	padding: 10px 24px;
-	font-family: var(--font-primary);
-	font-size: 0.95rem;
-	font-weight: 600;
 	color: var(--text-muted);
-	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	transition: var(--transition);
 }
 
 .inventory__toggle:hover {
@@ -346,11 +355,9 @@ body.page--view-only .inventory__form {
 	justify-content: center;
 	align-items: stretch;
 	background-color: rgba(252, 249, 244, 0.45);
-	border-radius: var(--radius-lg);
-	margin: 0 auto 20px auto;
-	padding: 6px;
+	margin: 0 auto clamp(12px, 2vw, 20px) auto;
 	width: 100%;
-	max-width: 500px;
+	max-width: min(500px, 100%);
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
@@ -358,18 +365,10 @@ body.page--view-only .inventory__form {
 	background-color: transparent;
 	border: none;
 	outline: none;
-	cursor: pointer;
-	padding: 10px clamp(6px, 2vw, 20px);
-	font-size: clamp(0.85rem, 2.2vw, 0.95rem);
-	font-weight: 600;
-	font-family: var(--font-primary);
 	color: var(--text-muted);
-	transition: var(--transition);
-	border-radius: var(--radius-md);
 	flex: 1 1 0;
 	min-width: 0;
 	text-align: center;
-	white-space: nowrap;
 }
 
 .shed-tabs__btn:hover {
@@ -421,10 +420,11 @@ body.page--view-only .inventory__form {
 	overflow-x: auto;
 	overflow-y: hidden;
 	overscroll-behavior-x: contain;
-	overscroll-behavior-y: none;
+	overscroll-behavior-y: auto;
 	scrollbar-width: thin;
 	scrollbar-color: var(--color-primary-light) transparent;
 	-webkit-overflow-scrolling: touch;
+	touch-action: auto;
 	cursor: grab;
 	transition: height 0.35s ease-out;
 }
@@ -547,7 +547,9 @@ body.page--view-only .inventory__form {
 
 /* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
 .hay-stack {
-	height: calc(var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100);
+	height: calc(
+		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
+	);
 	flex-shrink: 0;
 	padding: 5px 6px;
 	border-radius: var(--radius-sm);
@@ -652,6 +654,12 @@ body.page--view-only .inventory__form {
 
 body.page--dragging .shed__columns {
 	cursor: grabbing;
+}
+
+@media (pointer: coarse) {
+	.shed__columns {
+		cursor: auto;
+	}
 }
 
 @keyframes popIn {
@@ -959,6 +967,7 @@ body.page--dragging .shed__columns {
 .page-footer {
 	text-align: left;
 	flex-shrink: 0;
+	margin-top: 100px;
 	padding: clamp(10px, 2vw, 16px);
 	padding-bottom: max(
 		clamp(10px, 2vw, 16px),
@@ -1070,18 +1079,10 @@ body.page--dragging .shed__columns {
 }
 
 .auth-bar__btn {
-	padding: clamp(8px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
-	font-family: var(--font-primary);
-	font-size: clamp(0.8rem, 2vw, 0.9rem);
-	font-weight: 600;
 	color: var(--color-on-primary);
 	background: var(--color-primary);
 	border: none;
-	border-radius: var(--radius-sm);
-	cursor: pointer;
-	transition: var(--transition);
 	box-shadow: 0 4px 6px var(--color-primary-shadow);
-	white-space: nowrap;
 	flex-shrink: 0;
 }
 
@@ -1268,6 +1269,10 @@ body.page--view-only .hay-stack {
 	cursor: default;
 	user-select: auto;
 	touch-action: auto;
+}
+
+body.page--view-only .hay-stack--selected {
+	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
 /* Responsiveness */

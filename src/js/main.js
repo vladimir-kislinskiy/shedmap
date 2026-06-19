@@ -137,7 +137,11 @@ function setActiveShedTab(panelId, btn) {
 }
 
 function initGrabToScroll() {
+	const useGrabScroll = window.matchMedia("(pointer: fine)").matches;
+
 	document.querySelectorAll(".shed__columns").forEach((slider) => {
+		if (!useGrabScroll) return;
+
 		let isDown = false;
 		let startX;
 		let scrollLeft;
@@ -171,7 +175,7 @@ function initGrabToScroll() {
 		});
 
 		slider.addEventListener("pointerdown", (e) => {
-			if (shouldSkip(e)) return;
+			if (shouldSkip(e) || e.pointerType === "touch") return;
 			isDown = true;
 			activePointerId = e.pointerId;
 			slider.classList.add("shed__columns--grabbing");
@@ -190,7 +194,7 @@ function initGrabToScroll() {
 		slider.addEventListener("pointercancel", stopGrab);
 
 		slider.addEventListener("pointermove", (e) => {
-			if (!isDown || e.pointerId !== activePointerId) return;
+			if (!isDown || e.pointerId !== activePointerId || e.pointerType === "touch") return;
 			e.preventDefault();
 			const x = e.pageX - slider.offsetLeft;
 			slider.scrollLeft = scrollLeft - (x - startX) * 2;
@@ -223,6 +227,8 @@ function setIsleCheckboxes(isle) {
 }
 
 function fillFormFromStack(stackEl) {
+	if (!isEditMode) return;
+
 	const bayStack = stackEl.closest(".shed__bay-stack");
 	if (!bayStack) return;
 
@@ -254,10 +260,16 @@ function fillFormFromStack(stackEl) {
 function bindStackSelect(stackEl) {
 	if (stackEl._selectBound) return;
 	stackEl._selectBound = true;
-	stackEl.classList.add("hay-stack--selectable");
 	stackEl.addEventListener("click", () => {
-		if (stackEl._justDragged) return;
+		if (!isEditMode || stackEl._justDragged) return;
 		fillFormFromStack(stackEl);
+	});
+}
+
+function updateStackSelectability() {
+	document.querySelectorAll(".hay-stack").forEach((stack) => {
+		stack.classList.toggle("hay-stack--selectable", isEditMode);
+		if (!isEditMode) stack.classList.remove("hay-stack--selected");
 	});
 }
 
@@ -301,6 +313,7 @@ function makeStackDraggable(stackEl) {
 		},
 	});
 	stackEl.classList.toggle("hay-stack--draggable", isEditMode);
+	stackEl.classList.toggle("hay-stack--selectable", isEditMode);
 }
 
 function getReportedByValue() {
@@ -883,6 +896,7 @@ function setEditMode(enabled, person = null) {
 
 	setStacksDraggable(enabled);
 	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
+	updateStackSelectability();
 }
 
 function handleAuthChange(authenticated, person) {
@@ -1244,6 +1258,7 @@ window.addEventListener("load", () => {
 	initInventoryForm();
 	initLogFilters();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
+	updateStackSelectability();
 	syncAllShedLayoutsAfterPaint();
 });
 
