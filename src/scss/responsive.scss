@@ -63,6 +63,10 @@
 		font-size: clamp(1rem, 4.5vw, 1.35rem);
 	}
 
+	.location-tabs__btn {
+		min-width: clamp(4rem, 22vw, 5.5rem);
+	}
+
 	.auth-bar__user {
 		max-width: clamp(64px, 22vw, 140px);
 	}

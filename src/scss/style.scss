@@ -70,6 +70,7 @@ h3 {
 
 /* Shared sizing — auth, main tabs, inventory toggle, shed tabs */
 .auth-bar__btn,
+.location-tabs__btn,
 .tabs__btn,
 .inventory__toggle,
 .shed-tabs__btn {
@@ -90,6 +91,7 @@ h3 {
 }
 
 .tabs,
+.location-tabs,
 .inventory__toggle-wrap,
 .shed-tabs {
 	padding: var(--ctrl-bar-pad);
@@ -1132,6 +1134,47 @@ body.page--dragging .shed__bay-stack {
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
+}
+
+.location-tabs {
+	display: inline-flex;
+	align-items: stretch;
+	flex: 0 1 auto;
+	min-width: 0;
+	padding: var(--ctrl-bar-pad);
+	gap: var(--ctrl-bar-gap);
+	border-radius: var(--ctrl-bar-radius);
+	background-color: rgba(255, 255, 255, 0.55);
+	border: 1px solid var(--border-color);
+}
+
+.location-tabs__btn {
+	background-color: transparent;
+	border: none;
+	outline: none;
+	color: var(--text-muted);
+	flex: 0 0 auto;
+	min-width: clamp(4.5rem, 14vw, 6.5rem);
+	text-align: center;
+}
+
+.location-tabs__btn:hover {
+	color: var(--text-main);
+	background-color: rgba(252, 249, 244, 0.65);
+}
+
+.location-tabs__btn--active {
+	background-color: var(--color-surface);
+	color: var(--color-primary);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.location-panel {
+	width: 100%;
+}
+
+.location-panel[hidden] {
+	display: none !important;
 }
 
 .auth-bar__actions {

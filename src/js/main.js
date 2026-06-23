@@ -1236,6 +1236,34 @@ function initAuthUI() {
 	});
 }
 
+function setActiveLocation(locationId, btn) {
+	document.querySelectorAll(".location-tabs__btn").forEach((tabBtn) => {
+		tabBtn.classList.remove("location-tabs__btn--active");
+	});
+	btn?.classList.add("location-tabs__btn--active");
+
+	document.querySelectorAll(".location-panel").forEach((panel) => {
+		const isActive = panel.id === `location-${locationId}`;
+		panel.classList.toggle("location-panel--active", isActive);
+		panel.hidden = !isActive;
+		if (isActive) {
+			panel.removeAttribute("inert");
+		} else {
+			panel.setAttribute("inert", "");
+		}
+	});
+
+	if (locationId === "olds") {
+		syncAllShedLayoutsAfterPaint();
+	}
+}
+
+function initLocationTabs() {
+	document.querySelectorAll(".location-tabs__btn").forEach((btn) => {
+		btn.addEventListener("click", () => setActiveLocation(btn.dataset.location, btn));
+	});
+}
+
 function initTabs() {
 	document.querySelectorAll(".tabs__btn").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab, btn));
@@ -1463,6 +1491,7 @@ window.resetAllBays = resetAllBays;
 window.addEventListener("load", () => {
 	initGrabToScroll();
 	initAuthUI();
+	initLocationTabs();
 	initTabs();
 	initReports();
 	initInventoryForm();
