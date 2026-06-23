@@ -16,6 +16,7 @@ import {
 	getBayFillPercent,
 	getBayDisplayNumber,
 	BAYS_PER_SHED,
+	MAX_BALES_PER_BAY,
 	getHayTypeLabel,
 	getIsleContainer,
 	getIsleMaxBales,
@@ -33,8 +34,6 @@ const app = initializeApp(getFirebaseConfig());
 const db = getDatabase(app);
 const auth = initAuth(app, handleAuthChange);
 
-const MAX_BALES_PER_BAY = 2000;
-const MAX_BALES_PER_ISLE = 1000;
 const SHEDS = ["west", "north", "east"];
 const BAY_COUNT = BAYS_PER_SHED;
 

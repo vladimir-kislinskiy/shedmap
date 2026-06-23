@@ -41,16 +41,22 @@
 	--color-bay-border-hover: #cfc4b4;
 
 	/* Hay bale types */
-	--color-alfalfa-solid: #6289a8;
-	--color-alfalfa: linear-gradient(135deg, #6289a8 0%, #85a4be 100%);
-	--color-timothy-solid: #588f66;
-	--color-timothy: linear-gradient(135deg, #588f66 0%, #78ad84 100%);
+	--color-alfalfa-solid: #588f66;
+	--color-alfalfa: linear-gradient(135deg, #588f66 0%, #78ad84 100%);
+	--color-timothy-solid: #6289a8;
+	--color-timothy: linear-gradient(135deg, #6289a8 0%, #85a4be 100%);
 	--color-wheat-straw-solid: #b89428;
 	--color-wheat-straw: linear-gradient(135deg, #b89428 0%, #c9a440 100%);
 	--color-barley-straw-solid: #a8561f;
 	--color-barley-straw: linear-gradient(135deg, #8f4618 0%, #c46a2a 100%);
 	--color-mixed-hay-solid: #7a6898;
 	--color-mixed-hay: linear-gradient(135deg, #7a6898 0%, #9688b3 100%);
+	--color-tmr-solid: #5c5548;
+	--color-tmr: linear-gradient(135deg, #5c5548 0%, #7a7264 100%);
+	--color-timothy-straw-solid: #6b6f2a;
+	--color-timothy-straw: linear-gradient(135deg, #6b6f2a 0%, #8a8f42 100%);
+	--color-dehy-timothy-solid: #6e3840;
+	--color-dehy-timothy: linear-gradient(135deg, #633238 0%, #854248 100%);
 
 	/* Layout */
 	--tabs-gutter: clamp(18px, 2.5vw, 22px);

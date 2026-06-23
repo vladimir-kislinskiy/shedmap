@@ -700,6 +700,21 @@ body.page--dragging .shed__bay-stack {
 	background-image: var(--color-mixed-hay);
 }
 
+.hay-stack--tmr {
+	background-color: var(--color-tmr-solid);
+	background-image: var(--color-tmr);
+}
+
+.hay-stack--timothy-straw {
+	background-color: var(--color-timothy-straw-solid);
+	background-image: var(--color-timothy-straw);
+}
+
+.hay-stack--dehy-timothy {
+	background-color: var(--color-dehy-timothy-solid);
+	background-image: var(--color-dehy-timothy);
+}
+
 .hay-stack__count {
 	font-weight: 800;
 	font-size: 0.75rem;

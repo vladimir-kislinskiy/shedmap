@@ -3,11 +3,14 @@ export function capitalize(word) {
 }
 
 export const HAY_TYPES = [
-	{ id: "alfalfa", label: "Alfalfa" },
-	{ id: "timothy", label: "Timothy" },
+	{ id: "alfalfa", label: "Alfalfa Hay", stackLabel: "Alfalfa" },
+	{ id: "timothy-straw", label: "Timothy Straw", stackLabel: "Tim Str" },
+	{ id: "dehy-timothy", label: "Dehy Timothy", stackLabel: "Dehy Tim" },
+	{ id: "timothy", label: "Timothy Hay", stackLabel: "Timothy" },
 	{ id: "wheat-straw", label: "Wheat Straw", stackLabel: "Wht Str" },
 	{ id: "barley-straw", label: "Barley Straw", stackLabel: "Barl Str" },
 	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
+	{ id: "tmr", label: "TMR", stackLabel: "TMR" },
 ];
 
 export function getHayTypeLabel(type) {
@@ -35,6 +38,9 @@ export function parseStackKey(stackKey = "") {
 
 export const BAYS_PER_SHED = 12;
 
+export const MAX_BALES_PER_BAY = 1400;
+export const MAX_BALES_PER_ISLE = MAX_BALES_PER_BAY / 2;
+
 export const SHED_BAY_START = {
 	west: 1,
 	north: 25,
@@ -48,7 +54,7 @@ export function getBayDisplayNumber(shed, bayIndex) {
 }
 
 export function getIsleMaxBales(isle) {
-	return isle === "both" ? 2000 : 1000;
+	return isle === "both" ? MAX_BALES_PER_BAY : MAX_BALES_PER_ISLE;
 }
 
 const LAYOUT = {
@@ -61,7 +67,7 @@ const LAYOUT = {
 	bayChrome: 64,
 	minStack: 48,
 	baleStep: 10,
-	baleSegmentMax: 1000,
+	baleSegmentMax: MAX_BALES_PER_ISLE,
 	textBasePx: 10.4,
 };
 
@@ -125,7 +131,7 @@ function percentForTiers(tier, maxTier, maxPercent, areaBudget) {
 	return Math.max(getMinStackPercent(areaBudget), Math.round(pct * 100) / 100);
 }
 
-/** % of shed__bay-stack area: 2000 bales = 100%, 1000 bales = 50% */
+/** % of shed__bay-stack area: 1400 bales = 100%, 700 bales = 50% */
 export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop) {
 	if (baleCount <= 0) return 0;
 
