@@ -384,8 +384,8 @@ export function measureBayStackContent(bayStackEl) {
 
 	let total = fullHeight + islesHeight;
 
-	if (fullStacks.length > 0) {
-		total += fullStacks.length * LAYOUT.stackGap;
+	if (fullHeight > 0 && islesHeight > 0) {
+		total += LAYOUT.stackGap;
 	}
 
 	const { top, bottom } = getBayStackPadding(bayStackEl);
@@ -421,6 +421,44 @@ function applyUniformBayStackHeights(columns, contentHeight) {
 	});
 }
 
+function measureBayStackRenderedHeight(bayStackEl) {
+	if (!bayStackEl) return 0;
+	return Math.max(bayStackEl.scrollHeight, measureBayStackContent(bayStackEl));
+}
+
+function measureMaxBayStackRenderedHeight(columns) {
+	let maxContent = getStandardBayStackContentHeight();
+
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		maxContent = Math.max(maxContent, measureBayStackRenderedHeight(bayStack));
+	});
+
+	return maxContent;
+}
+
+function reconcileColumnsLayout(columns) {
+	const chrome = getBayChromeForColumns(columns);
+	let maxContent = measureMaxBayStackRenderedHeight(columns);
+
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		const rendered = measureBayStackRenderedHeight(bayStack);
+		const height = Math.max(maxContent, rendered);
+		bayStack.style.height = `${height}px`;
+		bayStack.style.minHeight = `${height}px`;
+		maxContent = Math.max(maxContent, height);
+	});
+
+	let tallestBay = 0;
+	columns.querySelectorAll(".shed__bay").forEach((bay) => {
+		tallestBay = Math.max(tallestBay, bay.offsetHeight);
+	});
+
+	const columnsHeight = Math.max(getBaseColumnHeight(), maxContent + chrome + 12, tallestBay);
+	columns.style.height = `${Math.ceil(columnsHeight)}px`;
+
+	return maxContent;
+}
+
 function syncShedColumnsLayout(columns) {
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
@@ -429,9 +467,9 @@ function syncShedColumnsLayout(columns) {
 		applyAllStackHeights(bayStack);
 	});
 
-	const maxStackContent = measureMaxBayStackContentHeight(columns);
+	let maxStackContent = measureMaxBayStackContentHeight(columns);
 	const chrome = getBayChromeForColumns(columns);
-	const columnsHeight = Math.max(getBaseColumnHeight(), maxStackContent + chrome + 4);
+	let columnsHeight = Math.max(getBaseColumnHeight(), maxStackContent + chrome + 12);
 
 	columns.style.height = `${Math.round(columnsHeight)}px`;
 	columns.offsetHeight;
@@ -442,26 +480,13 @@ function syncShedColumnsLayout(columns) {
 		finalizeBayStackLayout(bayStack);
 	});
 
-	let boostedMax = measureMaxBayStackContentHeight(columns);
-	if (boostedMax > maxStackContent + 1) {
-		applyUniformBayStackHeights(columns, boostedMax);
-		columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-			finalizeBayStackLayout(bayStack);
-		});
-		boostedMax = measureMaxBayStackContentHeight(columns);
-	}
+	maxStackContent = reconcileColumnsLayout(columns);
 
-	let tallestBay = 0;
-	columns.querySelectorAll(".shed__bay").forEach((bay) => {
-		tallestBay = Math.max(tallestBay, bay.offsetHeight);
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalizeBayStackLayout(bayStack);
 	});
 
-	if (tallestBay > columnsHeight) {
-		columns.style.height = `${Math.round(tallestBay)}px`;
-		columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-			finalizeBayStackLayout(bayStack);
-		});
-	}
+	reconcileColumnsLayout(columns);
 }
 
 export function refreshAllStackHeights() {

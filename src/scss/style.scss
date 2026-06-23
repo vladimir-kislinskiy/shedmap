@@ -158,7 +158,7 @@ h3 {
 	min-height: auto;
 	min-width: 0;
 	max-width: 100%;
-	overflow: hidden;
+	overflow: visible;
 }
 
 #Log.tabs__panel--active,
@@ -456,7 +456,9 @@ body.page--view-only .inventory__form {
 	min-height: 584px;
 	height: auto;
 	overflow-x: auto;
-	overflow-y: hidden;
+	overflow-y: visible;
+	padding-bottom: 8px;
+	box-sizing: border-box;
 	overscroll-behavior-x: contain;
 	overscroll-behavior-y: auto;
 	scrollbar-width: thin;
@@ -474,13 +476,12 @@ body.page--view-only .inventory__form {
 .shed__bay {
 	flex: 1 0 130px;
 	min-width: 130px;
-	height: 100%;
+	height: auto;
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;
 	align-items: center;
 	position: relative;
-	min-height: 0;
 	cursor: default;
 }
 
