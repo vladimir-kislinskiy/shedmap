@@ -6,6 +6,8 @@ import { getFirebaseConfig } from "./firebase-config.js";
 import { openReportPdf } from "./report-pdf.js";
 import {
 	capitalize,
+	applyStackComment,
+	applyStackRejected,
 	createHayStack,
 	createLogRow,
 	createReportRow,
@@ -21,12 +23,14 @@ import {
 	getIsleContainer,
 	getIsleMaxBales,
 	getStackType,
+	normalizeStackComment,
 	parseStackKey,
 	restoreHayStack,
 	restoreStackPosition,
 	sumBalesInContainer,
 	syncAllShedLayouts,
 	syncAllShedLayoutsAfterPaint,
+	sanitizeCommentInput,
 	updateHayStack,
 } from "./dom.js";
 
@@ -226,6 +230,21 @@ function setIsleCheckboxes(isle) {
 	isle2.checked = isle === "both" || isle === "2";
 }
 
+function syncInventoryActionFields() {
+	const action = document.getElementById("actionSelect")?.value;
+	const baleCount = document.getElementById("baleCount");
+	if (!baleCount) return;
+
+	if (action === "update") {
+		baleCount.value = "";
+		baleCount.placeholder = "—";
+		baleCount.disabled = true;
+	} else {
+		baleCount.placeholder = "Bales";
+		baleCount.disabled = false;
+	}
+}
+
 function resetInventoryFormFields() {
 	const reportedBy = document.getElementById("reportedBy");
 	if (reportedBy) reportedBy.value = "";
@@ -239,10 +258,18 @@ function resetInventoryFormFields() {
 	const baleCount = document.getElementById("baleCount");
 	if (baleCount) baleCount.value = "";
 
+	const rejectCheck = document.getElementById("rejectCheck");
+	if (rejectCheck) rejectCheck.checked = false;
+
+	const stackComment = document.getElementById("stackComment");
+	if (stackComment) stackComment.value = "";
+
 	setIsleCheckboxes("both");
 
 	const actionSelect = document.getElementById("actionSelect");
-	if (actionSelect) actionSelect.value = "add";
+	if (actionSelect) actionSelect.value = "";
+
+	syncInventoryActionFields();
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
 		el.classList.remove("hay-stack--selected");
@@ -300,6 +327,13 @@ function fillFormFromStack(stackEl) {
 	document.getElementById("shedSelect").value = shed;
 	setIsleCheckboxes(isle);
 
+	const rejected = stackEl.dataset.rejected === "true";
+	const rejectCheck = document.getElementById("rejectCheck");
+	if (rejectCheck) rejectCheck.checked = rejected;
+
+	const stackCommentEl = document.getElementById("stackComment");
+	if (stackCommentEl) stackCommentEl.value = stackEl.dataset.comment || "";
+
 	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
 	if (tabBtn) {
 		setActiveShedTab(`${shed}-shed-tab`, tabBtn, { bay });
@@ -311,6 +345,10 @@ function fillFormFromStack(stackEl) {
 		el.classList.remove("hay-stack--selected");
 	});
 	stackEl.classList.add("hay-stack--selected");
+
+	const actionSelect = document.getElementById("actionSelect");
+	if (actionSelect) actionSelect.value = "";
+	syncInventoryActionFields();
 
 	if (isEditMode) setInventoryControlsOpen(true);
 }
@@ -415,11 +453,14 @@ function handleHay() {
 
 	const type = document.getElementById("hayType").value;
 	const contract = document.getElementById("contractNumber").value.trim();
-	const baleCount = parseInt(document.getElementById("baleCount").value, 10);
+	const baleCountRaw = document.getElementById("baleCount").value.trim();
+	const baleCount = baleCountRaw === "" ? NaN : parseInt(baleCountRaw, 10);
 	const shed = document.getElementById("shedSelect").value;
 	const bay = document.getElementById("baySelect").value;
 	const action = document.getElementById("actionSelect").value;
 	const reportedBy = getReportedByValue();
+	const rejected = document.getElementById("rejectCheck")?.checked ?? false;
+	const stackComment = normalizeStackComment(document.getElementById("stackComment")?.value || "");
 
 	if (!reportedBy) {
 		alert("Please select who reported this change (or N/A).");
@@ -436,8 +477,8 @@ function handleHay() {
 		return;
 	}
 
-	if (!Number.isFinite(baleCount) || baleCount < 1) {
-		alert("Please enter at least 1 bale.");
+	if (!action) {
+		alert("Please select an action.");
 		return;
 	}
 
@@ -445,6 +486,51 @@ function handleHay() {
 	if (!bayStackEl) return;
 
 	const stackKey = formatStackKey(type, contract);
+
+	if (action === "update") {
+		const isle = getSelectedIsle();
+		if (!isle) return;
+
+		const targetContainer = getIsleContainer(bayStackEl, isle);
+		const foundStack = findStackInContainer(targetContainer, stackKey);
+
+		if (!foundStack) {
+			alert("No matching stack found in the selected isle. Check product, contract, shed, bay, and isle.");
+			return;
+		}
+
+		const foundIsle = foundStack.dataset.isle || "both";
+		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
+
+		applyStackRejected(foundStack, rejected);
+		applyStackComment(foundStack, stackComment);
+
+		const updateNotes = [];
+		if (rejected) updateNotes.push("Rejected");
+		if (stackComment) updateNotes.push(stackComment);
+		logChange(
+			currentPerson,
+			"Update",
+			type,
+			contract,
+			getBayDisplayNumber(shed, bay),
+			foundIsle,
+			shed,
+			currentBales,
+			updateNotes.join(" — ") || "Stack updated",
+		);
+
+		updateBayStats(bayStackEl);
+		syncAllShedLayouts();
+		saveState();
+		resetInventoryForm();
+		return;
+	}
+
+	if (!Number.isFinite(baleCount) || baleCount < 1) {
+		alert("Please enter at least 1 bale.");
+		return;
+	}
 
 	if (action === "add") {
 		const isle = getSelectedIsle();
@@ -478,12 +564,20 @@ function handleHay() {
 		if (existingStack) {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;
 			updateHayStack(existingStack, type, contract, newCount);
+			if (rejected) applyStackRejected(existingStack, true);
+			if (stackComment) applyStackComment(existingStack, stackComment);
 		} else {
-			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl);
+			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
+				rejected,
+				comment: stackComment,
+			});
 			makeStackDraggable(stack);
 		}
 
-		logChange(currentPerson, "Add", type, contract, getBayDisplayNumber(shed, bay), isle, shed, baleCount);
+		const addNotes = [];
+		if (rejected) addNotes.push("Rejected");
+		if (stackComment) addNotes.push(stackComment);
+		logChange(currentPerson, "Add", type, contract, getBayDisplayNumber(shed, bay), isle, shed, baleCount, addNotes.join(" — "));
 	}
 
 	if (action === "remove") {
@@ -916,6 +1010,8 @@ function saveState() {
 				stackKey: stack.dataset.stackKey,
 				bales: stack.dataset.bales,
 				isle: stack.dataset.isle || "both",
+				rejected: stack.dataset.rejected === "true",
+				comment: stack.dataset.comment || "",
 			}));
 		}
 		state.sheds[shed] = colsData;
@@ -1327,6 +1423,17 @@ function initBayNumbers() {
 	});
 }
 
+function bindStackCommentInput(input) {
+	if (!input) return;
+
+	input.addEventListener("input", () => {
+		const sanitized = sanitizeCommentInput(input.value);
+		if (input.value !== sanitized) {
+			input.value = sanitized;
+		}
+	});
+}
+
 function initInventoryForm() {
 	document.getElementById("submitHay")?.addEventListener("click", handleHay);
 
@@ -1336,6 +1443,11 @@ function initInventoryForm() {
 		maxDigits: 4,
 		minValue: 1,
 	});
+
+	bindStackCommentInput(document.getElementById("stackComment"));
+
+	document.getElementById("actionSelect")?.addEventListener("change", syncInventoryActionFields);
+	syncInventoryActionFields();
 
 	const toggleBtn = document.getElementById("toggleControls");
 	const controls = document.getElementById("inventoryControls");

@@ -342,6 +342,44 @@ body.page--view-only .inventory__form {
 	cursor: pointer;
 }
 
+.inventory__reject {
+	display: inline-flex;
+	align-items: center;
+	flex: 0 0 auto;
+	flex-wrap: nowrap;
+	gap: 8px;
+	margin: 0;
+	padding: 0 12px;
+	height: 42px;
+	box-sizing: border-box;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	background: var(--color-surface);
+	align-self: center;
+}
+
+.inventory__reject-option {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.9rem;
+	color: var(--text-main);
+	cursor: pointer;
+	user-select: none;
+	white-space: nowrap;
+}
+
+.inventory__reject-check {
+	width: 16px;
+	height: 16px;
+	accent-color: var(--color-rejected-solid);
+	cursor: pointer;
+}
+
+.inventory__field--comment {
+	width: clamp(120px, 16vw, 160px);
+}
+
 /* Shed tabs */
 #Sheds .inventory__toggle-wrap,
 #Sheds .inventory__form,
@@ -713,6 +751,53 @@ body.page--dragging .shed__bay-stack {
 .hay-stack--dehy-timothy {
 	background-color: var(--color-dehy-timothy-solid);
 	background-image: var(--color-dehy-timothy);
+}
+
+.hay-stack--rejected,
+.hay-stack--rejected.hay-stack--alfalfa,
+.hay-stack--rejected.hay-stack--timothy,
+.hay-stack--rejected.hay-stack--wheat-straw,
+.hay-stack--rejected.hay-stack--barley-straw,
+.hay-stack--rejected.hay-stack--mixed-hay,
+.hay-stack--rejected.hay-stack--tmr,
+.hay-stack--rejected.hay-stack--timothy-straw,
+.hay-stack--rejected.hay-stack--dehy-timothy {
+	background-color: var(--color-rejected-solid);
+	background-image: var(--color-rejected);
+}
+
+.hay-stack__comment {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: center;
+	align-items: center;
+	column-gap: 0.25em;
+	row-gap: 1px;
+	width: 100%;
+	max-width: 100%;
+	margin-top: 4px;
+	font-size: inherit;
+	font-weight: inherit;
+	line-height: 1.15;
+	text-align: center;
+}
+
+.hay-stack__comment-word {
+	max-width: 100%;
+	overflow-wrap: anywhere;
+}
+
+.hay-stack__comment-word:first-child:not(:last-child) {
+	white-space: nowrap;
+}
+
+.hay-stack__comment-word:last-child:not(:first-child) {
+	white-space: normal;
+	word-break: break-word;
+}
+
+.hay-stack__comment[hidden] {
+	display: none;
 }
 
 .hay-stack__count {

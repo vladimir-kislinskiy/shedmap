@@ -439,7 +439,75 @@ export function restoreStackPosition(stackEl, origin) {
 	}
 }
 
-export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
+export function normalizeStackComment(value = "") {
+	const words = String(value).trim().split(/\s+/).filter(Boolean).slice(0, 2);
+	return words.join(" ");
+}
+
+export function sanitizeCommentInput(value = "") {
+	let v = String(value).replace(/^\s+/, "").replace(/\s+/g, " ");
+	const parts = v.split(" ");
+	const first = parts[0] || "";
+
+	if (parts.length === 1) {
+		return v.endsWith(" ") && first ? `${first} ` : first;
+	}
+
+	const second = parts.slice(1).join("").replace(/\s/g, "").slice(0, 24);
+	return second ? `${first} ${second}`.slice(0, 24) : (v.endsWith(" ") && first ? `${first} ` : first);
+}
+
+function renderStackCommentElement(commentEl, normalizedComment) {
+	commentEl.replaceChildren();
+
+	if (!normalizedComment) {
+		commentEl.hidden = true;
+		return;
+	}
+
+	normalizedComment.split(" ").forEach((word) => {
+		const wordEl = document.createElement("span");
+		wordEl.className = "hay-stack__comment-word";
+		wordEl.textContent = word;
+		commentEl.appendChild(wordEl);
+	});
+
+	commentEl.hidden = false;
+}
+
+export function formatStackCountLabel(baleCount, rejected = false) {
+	const count = String(baleCount);
+	return rejected ? `${count} - Rej.` : count;
+}
+
+function updateStackCountDisplay(stackEl, baleCount = stackEl?.dataset.bales) {
+	if (!stackEl) return;
+	const countEl = stackEl.querySelector(".hay-stack__count");
+	if (!countEl) return;
+	const rejected = stackEl.dataset.rejected === "true";
+	countEl.textContent = formatStackCountLabel(baleCount, rejected);
+}
+
+export function applyStackRejected(stackEl, rejected) {
+	if (!stackEl) return;
+	stackEl.classList.toggle("hay-stack--rejected", rejected);
+	stackEl.dataset.rejected = rejected ? "true" : "false";
+	updateStackCountDisplay(stackEl);
+}
+
+export function applyStackComment(stackEl, comment = "") {
+	if (!stackEl) return;
+
+	const normalizedComment = normalizeStackComment(comment);
+	stackEl.dataset.comment = normalizedComment;
+
+	const commentEl = stackEl.querySelector(".hay-stack__comment");
+	if (commentEl) {
+		renderStackCommentElement(commentEl, normalizedComment);
+	}
+}
+
+export function createHayStack(type, contract, baleCount, isle, bayStackEl, { rejected = false, comment = "" } = {}) {
 	const tpl = document.getElementById("hayStackTemplate");
 	if (!tpl || !bayStackEl) return null;
 
@@ -449,7 +517,9 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
 	stack.dataset.bales = String(baleCount);
 	stack.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
 	stack.querySelector(".hay-stack__contract").textContent = contract;
-	stack.querySelector(".hay-stack__count").textContent = baleCount;
+	applyStackRejected(stack, rejected);
+	applyStackComment(stack, comment);
+	updateStackCountDisplay(stack, baleCount);
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle));
 	applyIsleLayout(stack, isle, bayStackEl);
 	return stack;
@@ -463,7 +533,7 @@ export function updateHayStack(stackEl, type, contract, baleCount) {
 	stackEl.dataset.bales = String(baleCount);
 	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
 	stackEl.querySelector(".hay-stack__contract").textContent = contract;
-	stackEl.querySelector(".hay-stack__count").textContent = baleCount;
+	updateStackCountDisplay(stackEl, baleCount);
 	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle));
 }
 
@@ -562,8 +632,10 @@ export function restoreHayStack(stackData, bayStackEl) {
 	const contract = parsed.contract || "";
 	const bales = parseInt(stackData.bales, 10) || 0;
 	const isle = stackData.isle || "both";
+	const rejected = stackData.rejected === true || stackData.rejected === "true";
+	const comment = stackData.comment || "";
 
-	const stack = createHayStack(type, contract, bales, isle, bayStackEl);
+	const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, comment });
 	if (!stack) return null;
 
 	if (stackData.desc && !contract) {

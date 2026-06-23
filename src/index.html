@@ -85,7 +85,17 @@
 
 						<input type="text" id="baleCount" class="inventory__field inventory__field--bales"
 							placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
-							pattern="[1-9][0-9]*" title="Minimum 1 bale" required>
+							pattern="[1-9][0-9]*" title="Minimum 1 bale for Add/Remove">
+
+						<fieldset class="inventory__reject" id="rejectFieldset">
+							<label class="inventory__reject-option">
+								<input type="checkbox" class="inventory__reject-check" id="rejectCheck">
+								<span class="inventory__reject-text">Rejected</span>
+							</label>
+						</fieldset>
+
+						<input type="text" id="stackComment" class="inventory__field inventory__field--comment"
+							placeholder="Comment" maxlength="24" autocomplete="off" spellcheck="false">
 
 						<select id="shedSelect" class="inventory__field inventory__field--select">
 							<option value="west">West Shed</option>
@@ -106,9 +116,11 @@
 							</label>
 						</fieldset>
 
-						<select id="actionSelect" class="inventory__field inventory__field--select">
+						<select id="actionSelect" class="inventory__field inventory__field--select" required>
+							<option value="" selected disabled>Action</option>
 							<option value="add">Add</option>
 							<option value="remove">Remove</option>
+							<option value="update">Update</option>
 						</select>
 
 						<button type="button" id="submitHay" class="inventory__submit">Submit</button>
@@ -226,6 +238,7 @@
 				<span class="hay-stack__contract"></span>
 			</div>
 			<span class="hay-stack__count"></span>
+			<span class="hay-stack__comment" hidden></span>
 		</div>
 	</template>
 
