@@ -282,6 +282,10 @@ body.page--view-only .inventory__form {
 	width: 100px;
 }
 
+.inventory__field--grade {
+	width: clamp(120px, 16vw, 150px);
+}
+
 .inventory__field:focus {
 	border-color: var(--color-primary);
 	box-shadow: 0 0 0 3px var(--color-primary-focus);
@@ -649,6 +653,7 @@ body.page--view-only .inventory__form {
 
 .hay-stack__type,
 .hay-stack__contract,
+.hay-stack__grade,
 .hay-stack__count {
 	display: block;
 	width: max-content;
@@ -769,6 +774,20 @@ body.page--dragging .shed__bay-stack {
 .hay-stack--rejected.hay-stack--dehy-timothy {
 	background-color: var(--color-rejected-solid);
 	background-image: var(--color-rejected);
+}
+
+.hay-stack__grade {
+	font-size: inherit;
+	font-weight: 600;
+	line-height: 1.1;
+	opacity: 0.95;
+	max-width: 100%;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.hay-stack__grade[hidden] {
+	display: none;
 }
 
 .hay-stack__comment {

@@ -7,6 +7,7 @@ import { openReportPdf } from "./report-pdf.js";
 import {
 	capitalize,
 	applyStackComment,
+	applyStackGrade,
 	applyStackRejected,
 	createHayStack,
 	createLogRow,
@@ -23,7 +24,9 @@ import {
 	getIsleContainer,
 	getIsleMaxBales,
 	getStackType,
+	getStackGradeLabel,
 	normalizeStackComment,
+	normalizeStackGrade,
 	parseStackKey,
 	restoreHayStack,
 	restoreStackPosition,
@@ -264,6 +267,9 @@ function resetInventoryFormFields() {
 	const stackComment = document.getElementById("stackComment");
 	if (stackComment) stackComment.value = "";
 
+	const stackGrade = document.getElementById("stackGrade");
+	if (stackGrade) stackGrade.value = "";
+
 	setIsleCheckboxes("both");
 
 	const actionSelect = document.getElementById("actionSelect");
@@ -333,6 +339,9 @@ function fillFormFromStack(stackEl) {
 
 	const stackCommentEl = document.getElementById("stackComment");
 	if (stackCommentEl) stackCommentEl.value = stackEl.dataset.comment || "";
+
+	const stackGradeEl = document.getElementById("stackGrade");
+	if (stackGradeEl) stackGradeEl.value = stackEl.dataset.grade || "";
 
 	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
 	if (tabBtn) {
@@ -461,6 +470,7 @@ function handleHay() {
 	const reportedBy = getReportedByValue();
 	const rejected = document.getElementById("rejectCheck")?.checked ?? false;
 	const stackComment = normalizeStackComment(document.getElementById("stackComment")?.value || "");
+	const stackGrade = normalizeStackGrade(document.getElementById("stackGrade")?.value || "");
 
 	if (!reportedBy) {
 		alert("Please select who reported this change (or N/A).");
@@ -504,9 +514,11 @@ function handleHay() {
 
 		applyStackRejected(foundStack, rejected);
 		applyStackComment(foundStack, stackComment);
+		applyStackGrade(foundStack, stackGrade);
 
 		const updateNotes = [];
 		if (rejected) updateNotes.push("Rejected");
+		if (stackGrade) updateNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) updateNotes.push(stackComment);
 		logChange(
 			currentPerson,
@@ -566,16 +578,19 @@ function handleHay() {
 			updateHayStack(existingStack, type, contract, newCount);
 			if (rejected) applyStackRejected(existingStack, true);
 			if (stackComment) applyStackComment(existingStack, stackComment);
+			if (stackGrade) applyStackGrade(existingStack, stackGrade);
 		} else {
 			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
 				rejected,
 				comment: stackComment,
+				grade: stackGrade,
 			});
 			makeStackDraggable(stack);
 		}
 
 		const addNotes = [];
 		if (rejected) addNotes.push("Rejected");
+		if (stackGrade) addNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) addNotes.push(stackComment);
 		logChange(currentPerson, "Add", type, contract, getBayDisplayNumber(shed, bay), isle, shed, baleCount, addNotes.join(" — "));
 	}
@@ -1012,6 +1027,7 @@ function saveState() {
 				isle: stack.dataset.isle || "both",
 				rejected: stack.dataset.rejected === "true",
 				comment: stack.dataset.comment || "",
+				grade: stack.dataset.grade || "",
 			}));
 		}
 		state.sheds[shed] = colsData;

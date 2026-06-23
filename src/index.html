@@ -82,6 +82,17 @@
 							<option value="wheat-straw">Wheat Straw</option>
 						</select>
 
+						<select id="stackGrade" class="inventory__field inventory__field--select inventory__field--grade">
+							<option value="" selected>Grade</option>
+							<option value="premium">Premium</option>
+							<option value="low-premium">Low Premium</option>
+							<option value="1a">#1A</option>
+							<option value="1">#1</option>
+							<option value="low-1">Low #1</option>
+							<option value="standard">Standard</option>
+							<option value="economy">Economy</option>
+						</select>
+
 						<input type="text" id="contractNumber" class="inventory__field inventory__field--contract"
 							placeholder="26-2222" maxlength="8" inputmode="text" autocomplete="off"
 							autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
@@ -243,6 +254,7 @@
 			<div class="hay-stack__desc">
 				<span class="hay-stack__type"></span>
 				<span class="hay-stack__contract"></span>
+				<span class="hay-stack__grade" hidden></span>
 			</div>
 			<span class="hay-stack__count"></span>
 			<span class="hay-stack__comment" hidden></span>
