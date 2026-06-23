@@ -603,8 +603,8 @@ body.page--view-only .inventory__form {
 	gap: 2px;
 	font-size: 0.65rem;
 	line-height: 1.15;
-	min-height: calc(9.6 * var(--stack-area-height, 500px) / 100);
-	overflow: hidden;
+	min-height: calc(var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100);
+	overflow: visible;
 	margin-bottom: 0;
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
