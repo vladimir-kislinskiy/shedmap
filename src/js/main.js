@@ -1103,11 +1103,20 @@ function setInventoryControlsOpen(open) {
 	const toggleBtn = document.getElementById("toggleControls");
 	if (!controls || !toggleBtn) return;
 
+	if (open) {
+		const shedsBtn = document.querySelector('.tabs__btn[data-tab="Sheds"]');
+		if (shedsBtn && !shedsBtn.classList.contains("tabs__btn--active")) {
+			setActiveTab("Sheds", shedsBtn);
+		}
+	}
+
 	controls.hidden = !open;
 	controls.classList.toggle("inventory__form--hidden", !open);
-	toggleBtn.classList.toggle("inventory__toggle--active", open);
-	const label = toggleBtn.querySelector(".inventory__toggle-label");
-	if (label) label.textContent = open ? "Close Management" : "Manage Inventory";
+	toggleBtn.classList.toggle("inventory-settings--active", open);
+	toggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
+	const label = open ? "Close inventory management" : "Manage inventory";
+	toggleBtn.setAttribute("aria-label", label);
+	toggleBtn.title = label;
 }
 
 function setEditMode(enabled, person = null) {
@@ -1115,8 +1124,8 @@ function setEditMode(enabled, person = null) {
 	currentPerson = person;
 	document.body.classList.toggle("page--view-only", !enabled);
 
-	const toggleWrap = document.getElementById("inventoryToggleWrap");
-	if (toggleWrap) toggleWrap.hidden = !enabled;
+	const toggleBtn = document.getElementById("toggleControls");
+	if (toggleBtn) toggleBtn.hidden = !enabled;
 
 	if (!enabled) setInventoryControlsOpen(false);
 
@@ -1145,13 +1154,17 @@ function updateAuthUI(authenticated, person) {
 
 	if (authenticated && person) {
 		authUserName.textContent = `Hi, ${person}`;
-		authBtn.textContent = "Sign Out";
-		authBtn.classList.add("auth-bar__btn--out");
+		authBtn.setAttribute("aria-label", "Sign out");
+		authBtn.title = "Sign out";
+		authBtn.classList.remove("auth-action--sign-in");
+		authBtn.classList.add("auth-action--sign-out");
 		closeAuthModal();
 	} else {
 		authUserName.textContent = "";
-		authBtn.textContent = "Sign In";
-		authBtn.classList.remove("auth-bar__btn--out");
+		authBtn.setAttribute("aria-label", "Sign in");
+		authBtn.title = "Sign in";
+		authBtn.classList.add("auth-action--sign-in");
+		authBtn.classList.remove("auth-action--sign-out");
 	}
 }
 
@@ -1273,7 +1286,7 @@ function initAuthUI() {
 }
 
 function setActiveLocation(locationId, btn) {
-	document.querySelectorAll(".location-tabs__btn").forEach((tabBtn) => {
+	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((tabBtn) => {
 		tabBtn.classList.remove("location-tabs__btn--active");
 	});
 	btn?.classList.add("location-tabs__btn--active");
@@ -1295,7 +1308,7 @@ function setActiveLocation(locationId, btn) {
 }
 
 function initLocationTabs() {
-	document.querySelectorAll(".location-tabs__btn").forEach((btn) => {
+	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveLocation(btn.dataset.location, btn));
 	});
 }
