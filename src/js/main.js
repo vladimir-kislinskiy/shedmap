@@ -248,6 +248,24 @@ function syncInventoryActionFields() {
 	}
 }
 
+const GRADE_ELIGIBLE_TYPES = new Set(["alfalfa", "timothy"]);
+
+function isGradeEligibleType(type) {
+	return GRADE_ELIGIBLE_TYPES.has(type);
+}
+
+function syncGradeFieldVisibility(type = document.getElementById("hayType")?.value || "") {
+	const gradeEl = document.getElementById("stackGrade");
+	if (!gradeEl) return;
+
+	const show = isGradeEligibleType(type);
+	gradeEl.hidden = !show;
+
+	if (!show) {
+		gradeEl.value = "";
+	}
+}
+
 function resetInventoryFormFields() {
 	const reportedBy = document.getElementById("reportedBy");
 	if (reportedBy) reportedBy.value = "";
@@ -276,6 +294,7 @@ function resetInventoryFormFields() {
 	if (actionSelect) actionSelect.value = "";
 
 	syncInventoryActionFields();
+	syncGradeFieldVisibility("");
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
 		el.classList.remove("hay-stack--selected");
@@ -328,6 +347,7 @@ function fillFormFromStack(stackEl) {
 	const bay = bayStack.dataset.bay;
 
 	document.getElementById("hayType").value = type;
+	syncGradeFieldVisibility(type);
 	document.getElementById("contractNumber").value = contract;
 	document.getElementById("baleCount").value = bales;
 	document.getElementById("shedSelect").value = shed;
@@ -1489,6 +1509,12 @@ function initInventoryForm() {
 	});
 
 	bindStackCommentInput(document.getElementById("stackComment"));
+
+	document.getElementById("hayType")?.addEventListener("change", (e) => {
+		syncGradeFieldVisibility(e.target.value);
+	});
+
+	syncGradeFieldVisibility("");
 
 	document.getElementById("actionSelect")?.addEventListener("change", syncInventoryActionFields);
 	syncInventoryActionFields();

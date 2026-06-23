@@ -286,6 +286,10 @@ body.page--view-only .inventory__form {
 	width: clamp(120px, 16vw, 150px);
 }
 
+.inventory__field--grade[hidden] {
+	display: none;
+}
+
 .inventory__field:focus {
 	border-color: var(--color-primary);
 	box-shadow: 0 0 0 3px var(--color-primary-focus);
