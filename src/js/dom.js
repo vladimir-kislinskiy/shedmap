@@ -416,6 +416,23 @@ export function placeStackInContainer(stackEl, container, beforeStack, clientY) 
 	return true;
 }
 
+export function restoreStackPosition(stackEl, origin) {
+	if (!stackEl || !origin?.bayStack) return;
+
+	applyIsleLayout(stackEl, origin.fromIsle, origin.bayStack);
+	const container = getIsleContainer(origin.bayStack, origin.fromIsle);
+	if (!container) return;
+
+	const stacks = [...container.querySelectorAll(":scope > .hay-stack")].filter((el) => el !== stackEl);
+	const insertAt = Math.min(Math.max(origin.index ?? stacks.length, 0), stacks.length);
+
+	if (insertAt >= stacks.length) {
+		container.appendChild(stackEl);
+	} else {
+		container.insertBefore(stackEl, stacks[insertAt]);
+	}
+}
+
 export function createHayStack(type, contract, baleCount, isle, bayStackEl) {
 	const tpl = document.getElementById("hayStackTemplate");
 	if (!tpl || !bayStackEl) return null;

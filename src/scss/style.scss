@@ -443,6 +443,7 @@ body.page--view-only .inventory__form {
 	align-items: center;
 	position: relative;
 	min-height: 0;
+	cursor: default;
 }
 
 .shed__bay-label,
@@ -621,10 +622,6 @@ body.page--view-only .inventory__form {
 	-webkit-user-drag: none;
 }
 
-.hay-stack--selectable {
-	cursor: pointer;
-}
-
 .hay-stack--selected {
 	box-shadow:
 		0 0 0 3px rgba(255, 255, 255, 0.85),
@@ -653,6 +650,11 @@ body.page--view-only .inventory__form {
 }
 
 body.page--dragging .shed__columns {
+	cursor: grabbing;
+}
+
+body.page--dragging .shed__bay,
+body.page--dragging .shed__bay-stack {
 	cursor: grabbing;
 }
 
@@ -1265,6 +1267,8 @@ body.page--dragging .shed__columns {
 }
 
 /* View-only mode */
+body.page--view-only .shed__bay,
+body.page--view-only .shed__bay-stack,
 body.page--view-only .hay-stack {
 	cursor: default;
 	user-select: auto;

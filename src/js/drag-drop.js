@@ -144,10 +144,20 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 
 		if (session.pressTimer) clearTimeout(session.pressTimer);
 
+		const parent = stackEl.parentElement;
+		const siblings = parent
+			? [...parent.children].filter((el) => el.classList.contains("hay-stack"))
+			: [];
+
 		const rect = stackEl.getBoundingClientRect();
 		session.dragging = true;
 		session.dragContext = dragContext;
 		session.fromIsle = stackEl.dataset.isle || "both";
+		session.origin = {
+			bayStack: dragContext.bayStack,
+			fromIsle: session.fromIsle,
+			index: siblings.indexOf(stackEl),
+		};
 		session.offsetX = clientX - rect.left;
 		session.offsetY = clientY - rect.top;
 		session.ghost = createGhost(stackEl);
@@ -190,6 +200,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 					stackEl,
 					fromIsle: session.fromIsle,
 					toIsle: stackEl.dataset.isle || "both",
+					origin: session.origin,
 				});
 			} else {
 				markDragged(stackEl);

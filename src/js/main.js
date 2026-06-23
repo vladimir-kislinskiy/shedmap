@@ -1,7 +1,7 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue } from "firebase/database";
 import { initAuth, login, logout } from "./auth.js";
-import { bindStackDrag, setStacksDraggable } from "./drag-drop.js";
+import { bindStackDrag } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
 import { openReportPdf } from "./report-pdf.js";
 import {
@@ -22,6 +22,7 @@ import {
 	getStackType,
 	parseStackKey,
 	restoreHayStack,
+	restoreStackPosition,
 	sumBalesInContainer,
 	syncAllShedLayouts,
 	syncAllShedLayoutsAfterPaint,
@@ -116,7 +117,7 @@ function setActiveTab(panelId, btn) {
 	}
 }
 
-function setActiveShedTab(panelId, btn) {
+function setActiveShedTab(panelId, btn, { bay } = {}) {
 	document.querySelectorAll(".shed-tabs__panel").forEach((panel) => {
 		panel.classList.remove("shed-tabs__panel--active");
 	});
@@ -130,7 +131,7 @@ function setActiveShedTab(panelId, btn) {
 	if (shedSelect && panelId) {
 		const shed = panelId.replace("-shed-tab", "");
 		shedSelect.value = shed;
-		updateBaySelectForShed(shed);
+		updateBaySelectForShed(shed, bay);
 	}
 
 	requestAnimationFrame(() => syncAllShedLayouts());
@@ -226,6 +227,61 @@ function setIsleCheckboxes(isle) {
 	isle2.checked = isle === "both" || isle === "2";
 }
 
+function resetInventoryFormFields() {
+	const reportedBy = document.getElementById("reportedBy");
+	if (reportedBy) reportedBy.value = "";
+
+	const hayType = document.getElementById("hayType");
+	if (hayType) hayType.value = "";
+
+	const contractNumber = document.getElementById("contractNumber");
+	if (contractNumber) contractNumber.value = "";
+
+	const baleCount = document.getElementById("baleCount");
+	if (baleCount) baleCount.value = "";
+
+	setIsleCheckboxes("both");
+
+	const actionSelect = document.getElementById("actionSelect");
+	if (actionSelect) actionSelect.value = "add";
+
+	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
+		el.classList.remove("hay-stack--selected");
+	});
+
+	updateStackInteractionState();
+}
+
+function setInventoryShedAndBay(shed, bay) {
+	const shedSelect = document.getElementById("shedSelect");
+	if (shedSelect) shedSelect.value = shed;
+
+	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
+	if (tabBtn) {
+		setActiveShedTab(`${shed}-shed-tab`, tabBtn, { bay });
+	} else {
+		updateBaySelectForShed(shed, bay);
+	}
+}
+
+function resetInventoryForm() {
+	resetInventoryFormFields();
+	setInventoryShedAndBay("west", "0");
+}
+
+function fillFormFromEmptyBay(bayStackEl) {
+	if (!isEditMode || !bayStackEl) return;
+	if (getBayStacks(bayStackEl).length > 0) return;
+
+	const shed = bayStackEl.dataset.shed;
+	const bay = bayStackEl.dataset.bay;
+	if (!shed || bay === undefined) return;
+
+	resetInventoryFormFields();
+	setInventoryShedAndBay(shed, bay);
+	setInventoryControlsOpen(true);
+}
+
 function fillFormFromStack(stackEl) {
 	if (!isEditMode) return;
 
@@ -243,11 +299,14 @@ function fillFormFromStack(stackEl) {
 	document.getElementById("contractNumber").value = contract;
 	document.getElementById("baleCount").value = bales;
 	document.getElementById("shedSelect").value = shed;
-	document.getElementById("baySelect").value = bay;
 	setIsleCheckboxes(isle);
 
 	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
-	if (tabBtn) setActiveShedTab(`${shed}-shed-tab`, tabBtn);
+	if (tabBtn) {
+		setActiveShedTab(`${shed}-shed-tab`, tabBtn, { bay });
+	} else {
+		updateBaySelectForShed(shed, bay);
+	}
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
 		el.classList.remove("hay-stack--selected");
@@ -255,6 +314,25 @@ function fillFormFromStack(stackEl) {
 	stackEl.classList.add("hay-stack--selected");
 
 	if (isEditMode) setInventoryControlsOpen(true);
+}
+
+function bindEmptyBaySelect(bayEl) {
+	if (bayEl._emptyBayBound) return;
+	bayEl._emptyBayBound = true;
+
+	const bayStack = bayEl.matches(".shed__bay-stack")
+		? bayEl
+		: bayEl.querySelector(".shed__bay-stack");
+	if (!bayStack) return;
+
+	bayEl.addEventListener("click", (e) => {
+		if (!isEditMode || e.target.closest(".hay-stack")) return;
+		fillFormFromEmptyBay(bayStack);
+	});
+}
+
+function initEmptyBaySelect() {
+	document.querySelectorAll(".shed__bay").forEach(bindEmptyBaySelect);
 }
 
 function bindStackSelect(stackEl) {
@@ -266,9 +344,10 @@ function bindStackSelect(stackEl) {
 	});
 }
 
-function updateStackSelectability() {
+function updateStackInteractionState() {
 	document.querySelectorAll(".hay-stack").forEach((stack) => {
 		stack.classList.toggle("hay-stack--selectable", isEditMode);
+		stack.classList.toggle("hay-stack--draggable", isEditMode);
 		if (!isEditMode) stack.classList.remove("hay-stack--selected");
 	});
 }
@@ -286,13 +365,30 @@ function updateBayStats(bayStackEl) {
 	}
 }
 
+function getReportedByValue() {
+	return document.getElementById("reportedBy")?.value.trim() || "";
+}
+
+function canDragStack() {
+	return isEditMode;
+}
+
 function makeStackDraggable(stackEl) {
 	bindStackSelect(stackEl);
 	bindStackDrag(stackEl, {
-		canDrag: () => isEditMode,
-		onReorder: ({ stackEl: movedStack, fromIsle, toIsle }) => {
+		canDrag: canDragStack,
+		onReorder: ({ stackEl: movedStack, fromIsle, toIsle, origin }) => {
 			const bayStack = movedStack.closest(".shed__bay-stack");
-			updateBayStats(bayStack);
+
+			if (!getReportedByValue()) {
+				alert("Please select who reported this change (or N/A).");
+				restoreStackPosition(movedStack, origin);
+				if (bayStack) updateBayStats(bayStack);
+				syncAllShedLayouts();
+				return;
+			}
+
+			if (bayStack) updateBayStats(bayStack);
 			syncAllShedLayouts();
 
 			if (isEditMode && currentPerson && bayStack) {
@@ -310,14 +406,9 @@ function makeStackDraggable(stackEl) {
 			}
 
 			saveState();
+			resetInventoryForm();
 		},
 	});
-	stackEl.classList.toggle("hay-stack--draggable", isEditMode);
-	stackEl.classList.toggle("hay-stack--selectable", isEditMode);
-}
-
-function getReportedByValue() {
-	return document.getElementById("reportedBy")?.value.trim() || "";
 }
 
 function handleHay() {
@@ -333,6 +424,11 @@ function handleHay() {
 
 	if (!reportedBy) {
 		alert("Please select who reported this change (or N/A).");
+		return;
+	}
+
+	if (!type) {
+		alert("Please select a product.");
 		return;
 	}
 
@@ -426,8 +522,7 @@ function handleHay() {
 	syncAllShedLayouts();
 	saveState();
 	updateReportsTable();
-	document.getElementById("contractNumber").value = "";
-	document.getElementById("baleCount").value = "";
+	resetInventoryForm();
 }
 
 function logChange(person, action, type, contract, bay, isle, shed, bales, note = "") {
@@ -894,9 +989,8 @@ function setEditMode(enabled, person = null) {
 
 	if (!enabled) setInventoryControlsOpen(false);
 
-	setStacksDraggable(enabled);
 	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
-	updateStackSelectability();
+	updateStackInteractionState();
 }
 
 function handleAuthChange(authenticated, person) {
@@ -1063,6 +1157,7 @@ function initTabs() {
 	});
 
 	initBayNumbers();
+	initEmptyBaySelect();
 	updateBaySelectForShed(document.getElementById("shedSelect")?.value || "west");
 }
 
@@ -1203,7 +1298,7 @@ function bindContractInput(input) {
 	input.addEventListener("input", applyFormat);
 }
 
-function updateBaySelectForShed(shed) {
+function updateBaySelectForShed(shed, selectedBay = null) {
 	const select = document.getElementById("baySelect");
 	if (!select) return;
 
@@ -1215,6 +1310,10 @@ function updateBaySelectForShed(shed) {
 			return option;
 		}),
 	);
+
+	if (selectedBay !== null && selectedBay !== undefined && selectedBay !== "") {
+		select.value = String(selectedBay);
+	}
 }
 
 function initBayNumbers() {
@@ -1258,7 +1357,7 @@ window.addEventListener("load", () => {
 	initInventoryForm();
 	initLogFilters();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
-	updateStackSelectability();
+	updateStackInteractionState();
 	syncAllShedLayoutsAfterPaint();
 });
 
