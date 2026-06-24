@@ -14,6 +14,7 @@ import {
 	createReportRow,
 	findStackInContainer,
 	formatIsleLabel,
+	formatStackCountLabel,
 	formatStackKey,
 	getBayStacks,
 	getBayFillPercent,
@@ -30,6 +31,7 @@ import {
 	parseStackKey,
 	restoreHayStack,
 	restoreStackPosition,
+	STACK_GRADES,
 	sumBalesInContainer,
 	syncAllShedLayouts,
 	syncAllShedLayoutsAfterPaint,
@@ -874,8 +876,38 @@ function resetLogFilters() {
 	syncLogMonthSelectWidth();
 }
 
-function collectProductReport(typeId) {
+function getGradeSortIndex(gradeId = "") {
+	if (!gradeId) return STACK_GRADES.length;
+	const index = STACK_GRADES.findIndex((entry) => entry.id === gradeId);
+	return index === -1 ? STACK_GRADES.length : index;
+}
+
+function getReportFilterOptions() {
+	return {
+		gradeFilter: document.getElementById("reportGradeFilter")?.value || "all",
+		includeRejected: document.getElementById("reportIncludeRejected")?.checked ?? false,
+	};
+}
+
+function syncReportGradeFilterVisibility(productId = document.getElementById("reportProductFilter")?.value || "") {
+	const wrap = document.getElementById("reportGradeFilterWrap");
+	const gradeEl = document.getElementById("reportGradeFilter");
+	if (!wrap || !gradeEl) return;
+
+	const show = isGradeEligibleType(productId);
+	wrap.hidden = !show;
+	if (!show) gradeEl.value = "all";
+}
+
+function setReportGradeColumnVisible(show) {
+	document.querySelectorAll(".reports__col-grade").forEach((el) => {
+		el.hidden = !show;
+	});
+}
+
+function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false } = {}) {
 	const rows = [];
+	const sortByGrade = isGradeEligibleType(typeId);
 
 	SHEDS.forEach((shed, shedOrder) => {
 		for (let bayIndex = 0; bayIndex < BAY_COUNT; bayIndex++) {
@@ -884,6 +916,12 @@ function collectProductReport(typeId) {
 
 			getBayStacks(colEl).forEach((stack) => {
 				if (getStackType(stack) !== typeId) return;
+
+				const rejected = stack.dataset.rejected === "true";
+				if (!includeRejected && rejected) return;
+
+				const grade = stack.dataset.grade || "";
+				if (sortByGrade && gradeFilter !== "all" && grade !== gradeFilter) return;
 
 				const { contract } = parseStackKey(stack.dataset.stackKey || "");
 				const bales = parseInt(stack.dataset.bales, 10) || 0;
@@ -894,6 +932,8 @@ function collectProductReport(typeId) {
 					shed: `${capitalize(shed)} Shed`,
 					bay: getBayDisplayNumber(shed, bayIndex),
 					bales,
+					grade,
+					rejected,
 					shedOrder,
 					bayIndex,
 				});
@@ -902,6 +942,10 @@ function collectProductReport(typeId) {
 	});
 
 	rows.sort((a, b) => {
+		if (sortByGrade) {
+			const gradeDiff = getGradeSortIndex(a.grade) - getGradeSortIndex(b.grade);
+			if (gradeDiff !== 0) return gradeDiff;
+		}
 		if (a.shedOrder !== b.shedOrder) return a.shedOrder - b.shedOrder;
 		if (a.bayIndex !== b.bayIndex) return a.bayIndex - b.bayIndex;
 		return a.contract.localeCompare(b.contract, undefined, { numeric: true });
@@ -929,6 +973,10 @@ function updateReportsTable() {
 	const reportEmpty = document.getElementById("reportEmpty");
 	if (!filterEl || !reportBody || !reportSummary || !reportTableWrap || !reportEmpty) return;
 
+	syncReportGradeFilterVisibility(productId);
+	const showGrade = isGradeEligibleType(productId);
+	setReportGradeColumnVisible(showGrade);
+
 	reportBody.replaceChildren();
 
 	if (!productId) {
@@ -940,7 +988,8 @@ function updateReportsTable() {
 		return;
 	}
 
-	const rows = collectProductReport(productId);
+	const { gradeFilter, includeRejected } = getReportFilterOptions();
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected });
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 	const productLabel = getHayTypeLabel(productId);
 	syncReportPrintButton(productId);
@@ -949,7 +998,10 @@ function updateReportsTable() {
 		reportSummary.hidden = true;
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
-		reportEmpty.textContent = `No ${productLabel} found in any shed.`;
+		const gradeLabel = gradeFilter !== "all" ? getStackGradeLabel(gradeFilter) : "";
+		const filterNote = gradeLabel ? ` for ${gradeLabel}` : "";
+		const rejectNote = includeRejected ? "" : " (rejected excluded)";
+		reportEmpty.textContent = `No ${productLabel} found${filterNote}${rejectNote}.`;
 		return;
 	}
 
@@ -959,7 +1011,7 @@ function updateReportsTable() {
 	reportTableWrap.hidden = false;
 
 	rows.forEach((entry) => {
-		const row = createReportRow(entry);
+		const row = createReportRow(entry, { showGrade });
 		if (row) reportBody.appendChild(row);
 	});
 }
@@ -972,9 +1024,16 @@ function printCurrentReportPdf() {
 		return;
 	}
 
+	const { gradeFilter, includeRejected } = getReportFilterOptions();
 	const productLabel = getHayTypeLabel(productId);
-	const rows = collectProductReport(productId);
-	openReportPdf({ productLabel, rows });
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected });
+	openReportPdf({
+		productLabel,
+		rows,
+		showGrade: isGradeEligibleType(productId),
+		gradeFilter,
+		includeRejected,
+	});
 }
 
 function initReports() {
@@ -984,6 +1043,8 @@ function initReports() {
 	const refresh = () => updateReportsTable();
 	filterEl.addEventListener("change", refresh);
 	filterEl.addEventListener("input", refresh);
+	document.getElementById("reportGradeFilter")?.addEventListener("change", refresh);
+	document.getElementById("reportIncludeRejected")?.addEventListener("change", refresh);
 	document.getElementById("reportPrintPdf")?.addEventListener("click", printCurrentReportPdf);
 	refresh();
 }

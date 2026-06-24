@@ -193,10 +193,18 @@
 		flex-shrink: 0;
 	}
 
-	#reportProductFilter {
+	#reportProductFilter,
+	#reportGradeFilter {
 		min-width: 0;
 		width: 100%;
 		max-width: 100%;
+	}
+
+	.reports__include-reject {
+		width: 100%;
+		justify-content: flex-start;
+		height: 42px;
+		min-height: 42px;
 	}
 
 	.reports__filters {

@@ -9,6 +9,7 @@ export const HAY_TYPES = [
 	{ id: "timothy", label: "Timothy Hay", stackLabel: "Timothy" },
 	{ id: "wheat-straw", label: "Wheat Straw", stackLabel: "Wht Str" },
 	{ id: "barley-straw", label: "Barley Straw", stackLabel: "Barl Str" },
+	{ id: "canola-straw", label: "Canola Straw", stackLabel: "Can Str" },
 	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
 	{ id: "tmr", label: "TMR", stackLabel: "TMR" },
 ];
@@ -804,7 +805,7 @@ export function formatIsleLabel(isle) {
 	return isle;
 }
 
-export function createReportRow(entry) {
+export function createReportRow(entry, { showGrade = false } = {}) {
 	const tpl = document.getElementById("reportRowTemplate");
 	if (!tpl) return null;
 
@@ -813,13 +814,22 @@ export function createReportRow(entry) {
 		contract: entry.contract,
 		shed: entry.shed,
 		bay: entry.bay,
-		bales: entry.bales,
+		bales: formatStackCountLabel(entry.bales, entry.rejected),
+		grade: getStackGradeLabel(entry.grade) || "—",
 	};
 
 	row.querySelectorAll("[data-field]").forEach((cell) => {
 		const key = cell.dataset.field;
 		if (key in fields) cell.textContent = fields[key];
 	});
+
+	row.querySelectorAll(".reports__col-grade").forEach((cell) => {
+		cell.hidden = !showGrade;
+	});
+
+	if (entry.rejected) {
+		row.classList.add("log-table__row--rejected");
+	}
 
 	return row;
 }

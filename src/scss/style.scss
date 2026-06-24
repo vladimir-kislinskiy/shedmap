@@ -802,6 +802,12 @@ body.page--dragging .shed__bay-stack {
 	background-image: var(--color-barley-straw);
 }
 
+.hay-stack--canola-straw {
+	background-color: var(--color-canola-straw-solid);
+	background-image: var(--color-canola-straw);
+	color: #4a4528;
+}
+
 .hay-stack--mixed-hay {
 	background-color: var(--color-mixed-hay-solid);
 	background-image: var(--color-mixed-hay);
@@ -827,6 +833,7 @@ body.page--dragging .shed__bay-stack {
 .hay-stack--rejected.hay-stack--timothy,
 .hay-stack--rejected.hay-stack--wheat-straw,
 .hay-stack--rejected.hay-stack--barley-straw,
+.hay-stack--rejected.hay-stack--canola-straw,
 .hay-stack--rejected.hay-stack--mixed-hay,
 .hay-stack--rejected.hay-stack--tmr,
 .hay-stack--rejected.hay-stack--timothy-straw,
@@ -913,10 +920,48 @@ body.page--dragging .shed__bay-stack {
 	display: block;
 }
 
-#reportProductFilter {
+#reportProductFilter,
+#reportGradeFilter {
 	min-width: 180px;
 	width: auto;
 	max-width: 100%;
+}
+
+.reports__filter--grade[hidden] {
+	display: none !important;
+}
+
+.reports__include-reject {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	box-sizing: border-box;
+	height: 42px;
+	min-height: 42px;
+	padding: 0 12px;
+	border: 1px solid var(--border-color-strong);
+	border-radius: var(--radius-sm);
+	background: var(--color-surface);
+	white-space: nowrap;
+}
+
+.reports__include-reject-check {
+	width: 16px;
+	height: 16px;
+	margin: 0;
+	accent-color: var(--color-rejected-solid);
+	cursor: pointer;
+}
+
+.reports__include-reject-text {
+	font-size: 0.9rem;
+	color: var(--text-main);
+	cursor: pointer;
+	user-select: none;
+}
+
+.reports__col-grade[hidden] {
+	display: none !important;
 }
 
 .reports__filters {
@@ -1142,6 +1187,14 @@ body.page--dragging .shed__bay-stack {
 
 .log-table__body .log-table__row:hover .log-table__cell {
 	background-color: var(--color-row-hover);
+}
+
+.log-table__body .log-table__row--rejected .log-table__cell {
+	background-color: var(--color-rejected-row);
+}
+
+.log-table__body .log-table__row--rejected:hover .log-table__cell {
+	background-color: var(--color-rejected-row-hover);
 }
 
 .log-table__body .log-table__row:last-child .log-table__cell {
