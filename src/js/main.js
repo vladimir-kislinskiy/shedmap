@@ -317,7 +317,6 @@ function setInventoryShedAndBay(shed, bay) {
 
 function resetInventoryForm() {
 	resetInventoryFormFields();
-	setInventoryShedAndBay("west", "0");
 }
 
 function fillFormFromEmptyBay(bayStackEl) {
