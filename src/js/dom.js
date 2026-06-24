@@ -4,12 +4,12 @@ export function capitalize(word) {
 
 export const HAY_TYPES = [
 	{ id: "alfalfa", label: "Alfalfa Hay", stackLabel: "Alfalfa" },
-	{ id: "timothy-straw", label: "Timothy Straw", stackLabel: "Tim Str" },
+	{ id: "timothy-straw", label: "Timothy Straw" },
 	{ id: "dehy-timothy", label: "Dehy Timothy", stackLabel: "Dehy Tim" },
 	{ id: "timothy", label: "Timothy Hay", stackLabel: "Timothy" },
-	{ id: "wheat-straw", label: "Wheat Straw", stackLabel: "Wht Str" },
-	{ id: "barley-straw", label: "Barley Straw", stackLabel: "Barl Str" },
-	{ id: "canola-straw", label: "Canola Straw", stackLabel: "Can Str" },
+	{ id: "wheat-straw", label: "Wheat Straw" },
+	{ id: "barley-straw", label: "Barley Straw" },
+	{ id: "canola-straw", label: "Canola Straw" },
 	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
 	{ id: "tmr", label: "TMR", stackLabel: "TMR" },
 ];
@@ -20,7 +20,13 @@ export function getHayTypeLabel(type) {
 
 export function getHayTypeStackLabel(type) {
 	const entry = HAY_TYPES.find((item) => item.id === type);
-	return entry?.stackLabel ?? entry?.label ?? capitalize(type.replace(/-/g, " "));
+	const label = entry?.label ?? capitalize(type.replace(/-/g, " "));
+
+	if (/\bstraw\b/i.test(label)) {
+		return label.replace(/\bStraw\b/, "Str");
+	}
+
+	return entry?.stackLabel ?? label;
 }
 
 export function formatStackKey(type, contract) {
