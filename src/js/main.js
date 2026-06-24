@@ -134,6 +134,8 @@ let currentUserEmail = null;
 let currentPerson = null;
 let transferSource = null;
 let firebaseConnected = true;
+let offlineBannerTimer = null;
+const OFFLINE_BANNER_DELAY_MS = 4000;
 let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
 let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
 let adminBackupModule = null;
@@ -1390,7 +1392,7 @@ function applyAppState(locationId, state) {
 	updateReportsTable(locationId);
 }
 
-function updateSyncBanner() {
+function renderSyncBanner() {
 	const banner = document.getElementById("syncBanner");
 	const textEl = document.getElementById("syncBannerText");
 	if (!banner || !textEl) return;
@@ -1413,6 +1415,25 @@ function updateSyncBanner() {
 
 	banner.hidden = true;
 	document.body.classList.remove("page--offline");
+}
+
+function updateSyncBanner() {
+	if (firebaseConnected) {
+		if (offlineBannerTimer) {
+			clearTimeout(offlineBannerTimer);
+			offlineBannerTimer = null;
+		}
+		renderSyncBanner();
+		return;
+	}
+
+	// Firebase reports "disconnected" on initial load before the socket opens.
+	// Wait out a grace period so the banner only appears on a genuine outage.
+	if (offlineBannerTimer) return;
+	offlineBannerTimer = setTimeout(() => {
+		offlineBannerTimer = null;
+		if (!firebaseConnected) renderSyncBanner();
+	}, OFFLINE_BANNER_DELAY_MS);
 }
 
 async function initLocalCache() {
