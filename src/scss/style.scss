@@ -1372,7 +1372,7 @@ body.page--offline .inventory__form {
 	letter-spacing: 0.04em;
 	color: var(--color-badge-text);
 	background: var(--color-badge-bg);
-	border-radius: 999px;
+	border-radius: var(--ctrl-radius);
 	white-space: nowrap;
 }
 
