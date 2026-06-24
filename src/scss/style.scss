@@ -652,6 +652,7 @@ body.page--view-only .inventory__form {
 
 /* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
 .hay-stack {
+	--stack-font-size: 0.65rem;
 	height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
 	);
@@ -667,7 +668,7 @@ body.page--view-only .inventory__form {
 	justify-content: center;
 	align-items: center;
 	gap: 2px;
-	font-size: 0.65rem;
+	font-size: var(--stack-font-size);
 	line-height: 1.15;
 	min-height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
@@ -696,6 +697,15 @@ body.page--view-only .inventory__form {
 	width: 100%;
 	flex-shrink: 0;
 	align-self: stretch;
+	font-size: calc(var(--stack-font-size) * 1.2);
+}
+
+.hay-stack--full .hay-stack__type,
+.hay-stack--full .hay-stack__contract,
+.hay-stack--full .hay-stack__grade,
+.hay-stack--full .hay-stack__count,
+.hay-stack--full .hay-stack__comment {
+	font-size: inherit;
 }
 
 .hay-stack__desc {
@@ -738,6 +748,7 @@ body.page--view-only .inventory__form {
 .hay-stack--dragging {
 	opacity: 0.35;
 	cursor: grabbing;
+	pointer-events: none;
 }
 
 .hay-stack--drop-target {
@@ -749,6 +760,10 @@ body.page--view-only .inventory__form {
 .hay-stack__ghost {
 	position: fixed;
 	z-index: 10000;
+	left: var(--ghost-left, 0);
+	top: var(--ghost-top, 0);
+	width: var(--ghost-width, auto);
+	height: var(--ghost-height, auto);
 	pointer-events: none;
 	opacity: 0.92;
 	box-shadow: 0 12px 28px rgba(0, 0, 0, 0.22);
@@ -877,6 +892,10 @@ body.page--dragging .shed__bay-stack {
 	overflow-wrap: anywhere;
 }
 
+.hay-stack__comment-word--second[hidden] {
+	display: none;
+}
+
 .hay-stack__comment-word:first-child:not(:last-child) {
 	white-space: nowrap;
 }
@@ -892,7 +911,7 @@ body.page--dragging .shed__bay-stack {
 
 .hay-stack__count {
 	font-weight: 800;
-	font-size: 0.75rem;
+	font-size: 1.154em;
 	margin-top: 0;
 }
 
@@ -1042,6 +1061,9 @@ body.page--dragging .shed__bay-stack {
 }
 
 .log__filter-input--select {
+	width: fit-content;
+	max-width: 100%;
+	field-sizing: content;
 	padding-right: 34px;
 	cursor: pointer;
 	background-image: url("../img/icons/chevron-down.svg");
@@ -1058,20 +1080,16 @@ body.page--dragging .shed__bay-stack {
 }
 
 #logFilterYear {
-	min-width: 96px;
-	width: 96px;
+	min-width: 4.5ch;
 }
 
 #logFilterMonth {
-	width: auto;
-	min-width: 0;
-	max-width: 100%;
+	min-width: 9ch;
 	flex-shrink: 0;
 }
 
 #logFilterDay {
-	min-width: 72px;
-	width: auto;
+	min-width: 2.5ch;
 }
 
 #logFilterDay:disabled {

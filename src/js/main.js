@@ -105,6 +105,26 @@ let pendingResetAll = new URLSearchParams(location.search).get("reset") === "all
 const changeLog = [];
 let isEditMode = false;
 let currentPerson = null;
+let transferSource = null;
+
+function clearTransferSource() {
+	transferSource = null;
+}
+
+function setTransferSource(stackEl) {
+	const bayStack = stackEl?.closest(".shed__bay-stack");
+	if (!bayStack) {
+		clearTransferSource();
+		return;
+	}
+
+	transferSource = {
+		stackEl,
+		shed: bayStack.dataset.shed,
+		bay: bayStack.dataset.bay,
+		isle: stackEl.dataset.isle || "both",
+	};
+}
 
 function setActiveTab(panelId, btn) {
 	document.querySelectorAll(".tabs__panel").forEach((panel) => {
@@ -215,6 +235,18 @@ function getBayColumn(shed, bay) {
 	return document.getElementById(`${shed}-col-${bay}`);
 }
 
+function findRejectedStackInContainer(container, stackKey, excludeStack = null) {
+	if (!container) return null;
+
+	return [...container.children]
+		.filter((el) => el.classList.contains("hay-stack"))
+		.find(
+			(stack) => stack.dataset.stackKey === stackKey
+				&& stack.dataset.rejected === "true"
+				&& stack !== excludeStack,
+		) || null;
+}
+
 function getSelectedIsle() {
 	const isle1 = document.getElementById("isle1")?.checked;
 	const isle2 = document.getElementById("isle2")?.checked;
@@ -244,6 +276,9 @@ function syncInventoryActionFields() {
 		baleCount.value = "";
 		baleCount.placeholder = "—";
 		baleCount.disabled = true;
+	} else if (action === "transfer") {
+		baleCount.placeholder = "Bales to transfer";
+		baleCount.disabled = false;
 	} else {
 		baleCount.placeholder = "Bales";
 		baleCount.disabled = false;
@@ -302,6 +337,7 @@ function resetInventoryFormFields() {
 		el.classList.remove("hay-stack--selected");
 	});
 
+	clearTransferSource();
 	updateStackInteractionState();
 }
 
@@ -331,6 +367,7 @@ function fillFormFromEmptyBay(bayStackEl) {
 
 	resetInventoryFormFields();
 	setInventoryShedAndBay(shed, bay);
+	clearTransferSource();
 	setInventoryControlsOpen(true);
 }
 
@@ -375,6 +412,7 @@ function fillFormFromStack(stackEl) {
 		el.classList.remove("hay-stack--selected");
 	});
 	stackEl.classList.add("hay-stack--selected");
+	setTransferSource(stackEl);
 
 	const actionSelect = document.getElementById("actionSelect");
 	if (actionSelect) actionSelect.value = "";
@@ -560,6 +598,152 @@ function handleHay() {
 		return;
 	}
 
+	if (action === "transfer") {
+		if (!transferSource?.stackEl?.isConnected) {
+			alert("Select a stack on the map to transfer from.");
+			return;
+		}
+
+		if (!Number.isFinite(baleCount) || baleCount < 1) {
+			alert("Please enter at least 1 bale to transfer.");
+			return;
+		}
+
+		const sourceStack = transferSource.stackEl;
+		const sourceShed = transferSource.shed;
+		const sourceBay = transferSource.bay;
+		const sourceIsle = transferSource.isle;
+		const sourceBayStackEl = getBayColumn(sourceShed, sourceBay);
+		if (!sourceBayStackEl) return;
+
+		const sourceType = getStackType(sourceStack);
+		const { contract: sourceContract } = parseStackKey(sourceStack.dataset.stackKey || "");
+		if (type !== sourceType || contract !== sourceContract) {
+			alert("Product and contract must match the selected source stack.");
+			return;
+		}
+
+		const destIsle = getSelectedIsle();
+		if (!destIsle) return;
+
+		const isSameBay = sourceShed === shed && sourceBay === bay;
+		const isSameIsle = sourceIsle === destIsle;
+
+		if (isSameBay && isSameIsle && !rejected) {
+			alert("Choose a different bay or isle for the transfer destination.");
+			return;
+		}
+
+		const sourceContainer = getIsleContainer(sourceBayStackEl, sourceIsle);
+		const foundSource = findStackInContainer(sourceContainer, stackKey);
+		if (!foundSource || foundSource !== sourceStack) {
+			alert("Source stack not found. Reselect the stack to transfer.");
+			return;
+		}
+
+		const currentSourceBales = parseInt(foundSource.dataset.bales, 10) || 0;
+		if (baleCount > currentSourceBales) {
+			alert(`Cannot transfer more than ${currentSourceBales} bales from this stack.`);
+			return;
+		}
+
+		const destBayStackEl = getBayColumn(shed, bay);
+		if (!destBayStackEl) return;
+
+		const destContainer = getIsleContainer(destBayStackEl, destIsle);
+		const isRejectSplitInPlace = isSameBay && isSameIsle && rejected;
+
+		if (!isRejectSplitInPlace) {
+			const destBayTotal = sumBalesInContainer(destBayStackEl);
+			const destIsleTotal = destIsle === "both" ? destBayTotal : sumBalesInContainer(destContainer);
+			const destIsleMax = getIsleMaxBales(destIsle);
+
+			if (destBayTotal + baleCount > MAX_BALES_PER_BAY) {
+				alert(`Cannot add more than ${MAX_BALES_PER_BAY} bales in the destination bay.`);
+				return;
+			}
+
+			if (destIsleTotal + baleCount > destIsleMax) {
+				alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
+				return;
+			}
+		} else if (isSameBay && !isSameIsle) {
+			const destIsleTotal = destIsle === "both"
+				? sumBalesInContainer(destBayStackEl)
+				: sumBalesInContainer(destContainer);
+			const destIsleMax = getIsleMaxBales(destIsle);
+
+			if (destIsleTotal + baleCount > destIsleMax) {
+				alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
+				return;
+			}
+		}
+
+		const sourceGrade = foundSource.dataset.grade || "";
+		const sourceComment = foundSource.dataset.comment || "";
+		const transferGrade = stackGrade || sourceGrade;
+		const transferComment = stackComment || sourceComment;
+
+		const newSourceCount = currentSourceBales - baleCount;
+		if (newSourceCount === 0) {
+			foundSource.remove();
+		} else {
+			updateHayStack(foundSource, sourceType, contract, newSourceCount);
+		}
+		updateBayStats(sourceBayStackEl);
+
+		let existingDest = null;
+		if (isRejectSplitInPlace) {
+			existingDest = findRejectedStackInContainer(destContainer, stackKey, foundSource);
+		} else {
+			existingDest = findStackInContainer(destContainer, stackKey);
+		}
+
+		if (existingDest) {
+			const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
+			updateHayStack(existingDest, type, contract, newDestCount);
+			if (rejected) applyStackRejected(existingDest, true);
+			if (transferComment) applyStackComment(existingDest, transferComment);
+			if (transferGrade) applyStackGrade(existingDest, transferGrade);
+		} else {
+			const stack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
+				rejected,
+				comment: transferComment,
+				grade: transferGrade,
+			});
+			makeStackDraggable(stack);
+		}
+		updateBayStats(destBayStackEl);
+
+		const sourceBayLabel = getBayDisplayNumber(sourceShed, sourceBay);
+		const destBayLabel = getBayDisplayNumber(shed, bay);
+		const transferNotes = [
+			isRejectSplitInPlace
+				? `Rejected split in ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`
+				: `From ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`,
+		];
+		if (rejected) transferNotes.push("Rejected");
+		if (transferGrade) transferNotes.push(getStackGradeLabel(transferGrade));
+		if (transferComment) transferNotes.push(transferComment);
+		logChange(
+			currentPerson,
+			"Transfer",
+			type,
+			contract,
+			`${sourceBayLabel} → ${destBayLabel}`,
+			destIsle,
+			shed,
+			baleCount,
+			transferNotes.join(" — "),
+		);
+
+		syncAllShedLayouts();
+		saveState();
+		updateReportsTable();
+		resetInventoryForm();
+		return;
+	}
+
 	if (!Number.isFinite(baleCount) || baleCount < 1) {
 		alert("Please enter at least 1 bale.");
 		return;
@@ -739,20 +923,6 @@ function updateLogTable() {
 }
 
 const LOG_START_YEAR = 2026;
-const LOG_MONTH_NAMES = [
-	"January",
-	"February",
-	"March",
-	"April",
-	"May",
-	"June",
-	"July",
-	"August",
-	"September",
-	"October",
-	"November",
-	"December",
-];
 
 function getLogYearRange() {
 	const currentYear = new Date().getFullYear();
@@ -760,45 +930,13 @@ function getLogYearRange() {
 	return { start: LOG_START_YEAR, end: endYear };
 }
 
-function isLogFilterCompact() {
-	return window.matchMedia("(max-width: 768px)").matches;
-}
-
-function syncSelectWidth(el, { selectedOnly = false } = {}) {
-	if (!el) return;
-
-	const measure = document.createElement("span");
-	measure.style.position = "absolute";
-	measure.style.visibility = "hidden";
-	measure.style.whiteSpace = "nowrap";
-	measure.style.font = getComputedStyle(el).font;
-	document.body.appendChild(measure);
-
-	let maxTextWidth = 0;
-	const options =
-		selectedOnly && el.selectedIndex >= 0
-			? [el.options[el.selectedIndex]]
-			: [...el.options];
-
-	for (const option of options) {
-		if (!option) continue;
-		measure.textContent = option.text;
-		maxTextWidth = Math.max(maxTextWidth, measure.offsetWidth);
-	}
-
-	measure.remove();
-
-	const style = getComputedStyle(el);
-	const padLeft = parseFloat(style.paddingLeft) || 0;
-	const padRight = parseFloat(style.paddingRight) || 0;
-	el.style.width = `${Math.ceil(maxTextWidth + padLeft + padRight + 2)}px`;
-}
-
-function syncLogMonthSelectWidth() {
-	const compact = isLogFilterCompact();
-	syncSelectWidth(document.getElementById("logFilterYear"));
-	syncSelectWidth(document.getElementById("logFilterMonth"), { selectedOnly: compact });
-	syncSelectWidth(document.getElementById("logFilterDay"), { selectedOnly: compact });
+function cloneLogFilterYearOption(year) {
+	const tpl = document.getElementById("logFilterYearOptionTemplate");
+	if (!tpl) return null;
+	const option = tpl.content.firstElementChild.cloneNode(true);
+	option.value = String(year);
+	option.textContent = String(year);
+	return option;
 }
 
 function updateLogDayOptions() {
@@ -810,13 +948,13 @@ function updateLogDayOptions() {
 	const monthVal = monthEl.value;
 	const prevDay = dayEl.value;
 
-	dayEl.replaceChildren();
-	dayEl.append(new Option("All days", "all"));
-
 	if (monthVal === "all") {
 		dayEl.value = "all";
 		dayEl.disabled = true;
-		syncLogMonthSelectWidth();
+		for (const option of dayEl.options) {
+			if (option.value === "all") continue;
+			option.hidden = false;
+		}
 		return;
 	}
 
@@ -825,8 +963,10 @@ function updateLogDayOptions() {
 	const month = Number(monthVal);
 	const maxDay = new Date(year, month, 0).getDate();
 
-	for (let day = 1; day <= maxDay; day++) {
-		dayEl.append(new Option(String(day), String(day)));
+	for (const option of dayEl.options) {
+		if (option.value === "all") continue;
+		const day = Number(option.value);
+		option.hidden = day > maxDay;
 	}
 
 	if (prevDay === "all") {
@@ -835,28 +975,21 @@ function updateLogDayOptions() {
 		const prev = Number(prevDay) || 1;
 		dayEl.value = String(Math.min(prev, maxDay));
 	}
-
-	syncLogMonthSelectWidth();
 }
 
 function populateLogFilterOptions() {
 	const yearEl = document.getElementById("logFilterYear");
-	const monthEl = document.getElementById("logFilterMonth");
-	if (!yearEl || !monthEl) return;
+	if (!yearEl) return;
+
+	const tpl = document.getElementById("logFilterYearOptionTemplate");
+	if (!tpl) return;
 
 	const { start, end } = getLogYearRange();
 	yearEl.replaceChildren();
 	for (let year = start; year <= end; year++) {
-		yearEl.append(new Option(String(year), String(year)));
+		const option = cloneLogFilterYearOption(year);
+		if (option) yearEl.append(option);
 	}
-
-	monthEl.replaceChildren();
-	monthEl.append(new Option("All months", "all"));
-	for (let month = 1; month <= 12; month++) {
-		monthEl.append(new Option(LOG_MONTH_NAMES[month - 1], String(month)));
-	}
-
-	syncLogMonthSelectWidth();
 }
 
 function resetLogFilters() {
@@ -873,7 +1006,6 @@ function resetLogFilters() {
 	monthEl.value = String(now.getMonth() + 1);
 	updateLogDayOptions();
 	dayEl.value = "all";
-	syncLogMonthSelectWidth();
 }
 
 function getGradeSortIndex(gradeId = "") {
@@ -1062,29 +1194,21 @@ function initLogFilters() {
 
 	yearEl?.addEventListener("change", () => {
 		updateLogDayOptions();
-		syncLogMonthSelectWidth();
 		refresh();
 	});
 
 	monthEl?.addEventListener("change", () => {
 		updateLogDayOptions();
-		syncLogMonthSelectWidth();
 		refresh();
 	});
 
-	dayEl?.addEventListener("change", () => {
-		syncLogMonthSelectWidth();
-		refresh();
-	});
-
-	window.addEventListener("resize", syncLogMonthSelectWidth);
+	dayEl?.addEventListener("change", refresh);
 
 	resetBtn?.addEventListener("click", () => {
 		resetLogFilters();
 		updateLogTable();
 	});
 
-	syncLogMonthSelectWidth();
 	updateLogTable();
 }
 
@@ -1388,7 +1512,6 @@ function initTabs() {
 		if (tabBtn) setActiveShedTab(`${e.target.value}-shed-tab`, tabBtn);
 	});
 
-	initBayNumbers();
 	initEmptyBaySelect();
 	updateBaySelectForShed(document.getElementById("shedSelect")?.value || "west");
 }
@@ -1534,30 +1657,16 @@ function updateBaySelectForShed(shed, selectedBay = null) {
 	const select = document.getElementById("baySelect");
 	if (!select) return;
 
-	select.replaceChildren(
-		...Array.from({ length: BAY_COUNT }, (_, index) => {
-			const option = document.createElement("option");
-			option.value = String(index);
-			option.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
-			return option;
-		}),
-	);
+	for (let index = 0; index < BAY_COUNT; index++) {
+		const option = select.options[index];
+		if (!option) continue;
+		option.value = String(index);
+		option.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
+	}
 
 	if (selectedBay !== null && selectedBay !== undefined && selectedBay !== "") {
 		select.value = String(selectedBay);
 	}
-}
-
-function initBayNumbers() {
-	SHEDS.forEach((shed) => {
-		for (let index = 0; index < BAY_COUNT; index++) {
-			const bayStack = document.getElementById(`${shed}-col-${index}`);
-			const bayEl = bayStack?.closest(".shed__bay");
-			const label = bayEl?.querySelector(".shed__bay-label");
-			if (label) label.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
-			if (bayEl) bayEl.dataset.bayNumber = getBayDisplayNumber(shed, index);
-		}
-	});
 }
 
 function bindStackCommentInput(input) {

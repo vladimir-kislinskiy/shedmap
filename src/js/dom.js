@@ -69,7 +69,6 @@ const LAYOUT = {
 	minStack: 48,
 	baleStep: 10,
 	baleSegmentMax: MAX_BALES_PER_ISLE,
-	textBasePx: 10.4,
 };
 
 function isMobileStackLayout() {
@@ -163,20 +162,6 @@ export function getBayFillPercent(total, maxBales = getIsleMaxBales("both")) {
 function getDirectStacks(container) {
 	if (!container) return [];
 	return [...container.children].filter((el) => el.classList.contains("hay-stack"));
-}
-
-function resetStackText(stackEl) {
-	stackEl.querySelectorAll(".hay-stack__type, .hay-stack__contract, .hay-stack__count").forEach((el) => {
-		el.style.fontSize = `${LAYOUT.textBasePx}px`;
-		el.style.lineHeight = "1.15";
-		el.style.whiteSpace = "nowrap";
-	});
-}
-
-function scheduleResetStackText() {
-	requestAnimationFrame(() => {
-		document.querySelectorAll(".shed-tabs__panel--active .hay-stack").forEach(resetStackText);
-	});
 }
 
 function applyAllStackHeights(bayStackEl) {
@@ -500,8 +485,6 @@ export function syncAllShedLayouts() {
 	repairAllBayLayouts();
 
 	document.querySelectorAll(".shed__columns").forEach(syncShedColumnsLayout);
-
-	scheduleResetStackText();
 }
 
 export function syncAllShedLayoutsAfterPaint() {
@@ -677,19 +660,31 @@ export function sanitizeCommentInput(value = "") {
 }
 
 function renderStackCommentElement(commentEl, normalizedComment) {
-	commentEl.replaceChildren();
+	const firstEl = commentEl.querySelector(".hay-stack__comment-word--first");
+	const secondEl = commentEl.querySelector(".hay-stack__comment-word--second");
 
 	if (!normalizedComment) {
 		commentEl.hidden = true;
+		if (firstEl) firstEl.textContent = "";
+		if (secondEl) {
+			secondEl.textContent = "";
+			secondEl.hidden = true;
+		}
 		return;
 	}
 
-	normalizedComment.split(" ").forEach((word) => {
-		const wordEl = document.createElement("span");
-		wordEl.className = "hay-stack__comment-word";
-		wordEl.textContent = word;
-		commentEl.appendChild(wordEl);
-	});
+	const [first, second] = normalizedComment.split(" ");
+
+	if (firstEl) firstEl.textContent = first;
+	if (secondEl) {
+		if (second) {
+			secondEl.textContent = second;
+			secondEl.hidden = false;
+		} else {
+			secondEl.textContent = "";
+			secondEl.hidden = true;
+		}
+	}
 
 	commentEl.hidden = false;
 }

@@ -113,7 +113,20 @@
 							<option value="east">East Shed</option>
 						</select>
 
-						<select id="baySelect" class="inventory__field inventory__field--select"></select>
+						<select id="baySelect" class="inventory__field inventory__field--select">
+							<option value="0">Bay 1-2</option>
+							<option value="1">Bay 3-4</option>
+							<option value="2">Bay 5-6</option>
+							<option value="3">Bay 7-8</option>
+							<option value="4">Bay 9-10</option>
+							<option value="5">Bay 11-12</option>
+							<option value="6">Bay 13-14</option>
+							<option value="7">Bay 15-16</option>
+							<option value="8">Bay 17-18</option>
+							<option value="9">Bay 19-20</option>
+							<option value="10">Bay 21-22</option>
+							<option value="11">Bay 23-24</option>
+						</select>
 
 						<div class="inventory__checks-row">
 							<fieldset class="inventory__isles" id="isleFieldset">
@@ -143,6 +156,7 @@
 							<option value="add">Add</option>
 							<option value="remove">Remove</option>
 							<option value="update">Update</option>
+							<option value="transfer">Transfer</option>
 						</select>
 
 						<button type="button" id="submitHay" class="inventory__submit">Submit</button>
@@ -237,11 +251,58 @@
 						</label>
 						<label class="log__filter">
 							<span class="log__filter-label">Month</span>
-							<select id="logFilterMonth" class="log__filter-input log__filter-input--select"></select>
+							<select id="logFilterMonth" class="log__filter-input log__filter-input--select">
+								<option value="all">All months</option>
+								<option value="1">January</option>
+								<option value="2">February</option>
+								<option value="3">March</option>
+								<option value="4">April</option>
+								<option value="5">May</option>
+								<option value="6">June</option>
+								<option value="7">July</option>
+								<option value="8">August</option>
+								<option value="9">September</option>
+								<option value="10">October</option>
+								<option value="11">November</option>
+								<option value="12">December</option>
+							</select>
 						</label>
 						<label class="log__filter">
 							<span class="log__filter-label">Day</span>
-							<select id="logFilterDay" class="log__filter-input log__filter-input--select"></select>
+							<select id="logFilterDay" class="log__filter-input log__filter-input--select">
+								<option value="all">All days</option>
+								<option value="1">1</option>
+								<option value="2">2</option>
+								<option value="3">3</option>
+								<option value="4">4</option>
+								<option value="5">5</option>
+								<option value="6">6</option>
+								<option value="7">7</option>
+								<option value="8">8</option>
+								<option value="9">9</option>
+								<option value="10">10</option>
+								<option value="11">11</option>
+								<option value="12">12</option>
+								<option value="13">13</option>
+								<option value="14">14</option>
+								<option value="15">15</option>
+								<option value="16">16</option>
+								<option value="17">17</option>
+								<option value="18">18</option>
+								<option value="19">19</option>
+								<option value="20">20</option>
+								<option value="21">21</option>
+								<option value="22">22</option>
+								<option value="23">23</option>
+								<option value="24">24</option>
+								<option value="25">25</option>
+								<option value="26">26</option>
+								<option value="27">27</option>
+								<option value="28">28</option>
+								<option value="29">29</option>
+								<option value="30">30</option>
+								<option value="31">31</option>
+							</select>
 						</label>
 						<button type="button" id="logFilterReset" class="log__filter-reset">Reset</button>
 					</div>
@@ -286,8 +347,15 @@
 				<span class="hay-stack__grade" hidden></span>
 			</div>
 			<span class="hay-stack__count"></span>
-			<span class="hay-stack__comment" hidden></span>
+			<span class="hay-stack__comment" hidden>
+				<span class="hay-stack__comment-word hay-stack__comment-word--first"></span>
+				<span class="hay-stack__comment-word hay-stack__comment-word--second" hidden></span>
+			</span>
 		</div>
+	</template>
+
+	<template id="logFilterYearOptionTemplate">
+		<option></option>
 	</template>
 
 	<template id="reportRowTemplate">

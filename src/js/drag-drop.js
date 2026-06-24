@@ -30,15 +30,15 @@ function createGhost(stackEl) {
 	ghost.classList.add("hay-stack__ghost");
 	ghost.setAttribute("aria-hidden", "true");
 	const rect = stackEl.getBoundingClientRect();
-	ghost.style.width = `${rect.width}px`;
-	ghost.style.height = `${rect.height}px`;
+	ghost.style.setProperty("--ghost-width", `${rect.width}px`);
+	ghost.style.setProperty("--ghost-height", `${rect.height}px`);
 	document.body.appendChild(ghost);
 	return ghost;
 }
 
 function moveGhost(ghost, clientX, clientY, offsetX, offsetY) {
-	ghost.style.left = `${clientX - offsetX}px`;
-	ghost.style.top = `${clientY - offsetY}px`;
+	ghost.style.setProperty("--ghost-left", `${clientX - offsetX}px`);
+	ghost.style.setProperty("--ghost-top", `${clientY - offsetY}px`);
 }
 
 function getDropTarget(clientX, clientY, dragContext) {
@@ -118,7 +118,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (session.ghost) session.ghost.remove();
 		detach();
 		stackEl.classList.remove("hay-stack--dragging");
-		stackEl.style.pointerEvents = "";
 		clearDropHighlights();
 		document.body.classList.remove("page--dragging");
 		session = null;
@@ -163,7 +162,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		session.ghost = createGhost(stackEl);
 
 		stackEl.classList.add("hay-stack--dragging");
-		stackEl.style.pointerEvents = "none";
 		document.body.classList.add("page--dragging");
 		moveGhost(session.ghost, clientX, clientY, session.offsetX, session.offsetY);
 	};
