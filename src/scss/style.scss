@@ -1120,6 +1120,29 @@ body.page--dragging .shed__bay-stack {
 	border-color: var(--border-color-strong);
 }
 
+.sync-banner {
+	margin: 0;
+	padding: 10px 16px;
+	background: #fff4df;
+	border-bottom: 1px solid #e8c98d;
+	color: #6a4d12;
+}
+
+.sync-banner[hidden] {
+	display: none;
+}
+
+.sync-banner__text {
+	margin: 0;
+	font-size: 0.9rem;
+	line-height: 1.4;
+	text-align: center;
+}
+
+body.page--offline .inventory__form {
+	opacity: 0.72;
+}
+
 .log-table-wrap {
 	width: 100%;
 	max-width: 100%;

@@ -1,0 +1,94 @@
+name: Database backup
+
+on:
+  schedule:
+    # 05:59 UTC ≈ 11:59 PM Alberta (MDT). In winter (MST) this is 10:59 PM local.
+    - cron: "59 5 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: database-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Export hayShedState
+        env:
+          DB_SECRET: ${{ secrets.FIREBASE_DATABASE_URL }}
+          SHEDMAP_SECRET: ${{ secrets.SHEDMAP }}
+          DB_VAR: ${{ vars.FIREBASE_DATABASE_URL }}
+          SHEDMAP_VAR: ${{ vars.SHEDMAP }}
+        run: |
+          FIREBASE_DATABASE_URL="${DB_SECRET:-${SHEDMAP_SECRET:-${DB_VAR:-$SHEDMAP_VAR}}}"
+          if [ -z "$FIREBASE_DATABASE_URL" ]; then
+            echo "Add SHEDMAP (or FIREBASE_DATABASE_URL) as a repository variable or secret." >&2
+            exit 1
+          fi
+
+          BASE_URL="${FIREBASE_DATABASE_URL%/}"
+          STAMP="$(TZ=America/Edmonton date +%Y-%m-%d)"
+          OUT_FILE="hay-shed-backup-${STAMP}.json"
+
+          curl -fsSL "$BASE_URL/hayShedState.json" -o "$OUT_FILE"
+          python3 -m json.tool "$OUT_FILE" > /dev/null
+          echo "Exported $(wc -c < "$OUT_FILE") bytes to $OUT_FILE (Alberta date: $STAMP)"
+
+      - name: Store backup on GitHub (backups branch)
+        env:
+          RETENTION_DAYS: "365"
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          BACKUP_FILE="hay-shed-backup-$(TZ=America/Edmonton date +%Y-%m-%d).json"
+
+          if git ls-remote --heads origin backups | grep -q backups; then
+            git fetch origin backups
+            git checkout backups
+          else
+            git checkout --orphan backups
+            git rm -rf . 2>/dev/null || true
+            printf '%s\n' "# Hay shed backups" "" "Automated daily JSON exports from Firebase Realtime Database." "" "Files are in \`daily/\`. Do not edit manually." > README.md
+            mkdir -p daily
+            git add README.md
+            git commit -m "Initialize backups branch"
+          fi
+
+          mkdir -p daily
+          cp "$BACKUP_FILE" "daily/$BACKUP_FILE"
+
+          CUTOFF="$(TZ=America/Edmonton date -d "${RETENTION_DAYS} days ago" +%Y-%m-%d)"
+          for f in daily/hay-shed-backup-*.json; do
+            [ -f "$f" ] || continue
+            FILE_DATE="$(basename "$f" .json | sed 's/hay-shed-backup-//')"
+            if [[ "$FILE_DATE" < "$CUTOFF" ]]; then
+              rm -f "$f"
+            fi
+          done
+
+          git add daily/
+          if git diff --cached --quiet; then
+            echo "No changes to commit (backup for today may already exist)."
+          else
+            git commit -m "backup $(TZ=America/Edmonton date +%Y-%m-%d)"
+          fi
+
+          git push origin backups
+
+      - name: Upload quick-download artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: hay-shed-backup-${{ github.run_id }}
+          path: hay-shed-backup-*.json
+          retention-days: 14
+          if-no-files-found: error

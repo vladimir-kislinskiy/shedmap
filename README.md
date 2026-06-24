@@ -143,7 +143,32 @@ gulpfile.js           # Build config
 |---------------|--------------------------|
 | `npm run dev` | Dev server with live reload |
 | `npm run build` | Production build       |
+| `npm run backup` | Download JSON backup from Firebase (uses `.env`) |
 | `npm run cache` | Asset fingerprinting   |
+
+## Backups
+
+The app stores everything in Firebase Realtime Database (`hayShedState`). Three layers protect against outages or bad writes:
+
+1. **In the app (Change Log tab, admin only)** — after signing in as `operations@barr-ag.com`, a backup panel is injected dynamically. Other users never receive this UI or its JavaScript chunk.
+2. **On your machine** — `npm run backup` saves `backups/hayShedState-<timestamp>.json` using `FIREBASE_DATABASE_URL` from `.env`.
+3. **GitHub Actions (automatic, free)** — every day at **~11:59 PM Alberta time** commits a JSON file to branch **`backups`** (`daily/hay-shed-backup-YYYY-MM-DD.json`). Keeps 365 days. No Google Cloud or billing required.
+
+Details: [docs/backup-storage-setup.md](docs/backup-storage-setup.md)
+
+### GitHub configuration
+
+| Item | Type | Value |
+|------|------|--------|
+| `SHEDMAP` | **Variable** (or secret) | `https://YOUR-PROJECT-default-rtdb.firebaseio.com` |
+
+That is all that is required. After push: **Actions → Database backup → Run workflow** once to create the `backups` branch.
+
+### Restore procedure
+
+1. Get a `.json` file (admin export in app, branch `backups` on GitHub, or Actions artifact).
+2. Sign in as admin → **Change Log** → **Restore from file**.
+3. Verify sheds and change log in the UI.
 
 ## License
 

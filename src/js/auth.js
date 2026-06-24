@@ -23,6 +23,10 @@ export function isAuthorizedEmail(email) {
 	return !!getPersonFromEmail(email);
 }
 
+export function isAdminUser(email) {
+	return email?.toLowerCase() === "operations@barr-ag.com";
+}
+
 export function initAuth(app, onAuthChange) {
 	const auth = getAuth(app);
 
@@ -30,13 +34,13 @@ export function initAuth(app, onAuthChange) {
 		if (user) {
 			const person = getPersonFromEmail(user.email);
 			if (person) {
-				onAuthChange(true, person);
+				onAuthChange(true, person, user.email);
 			} else {
 				signOut(auth);
-				onAuthChange(false, null);
+				onAuthChange(false, null, null);
 			}
 		} else {
-			onAuthChange(false, null);
+			onAuthChange(false, null, null);
 		}
 	});
 

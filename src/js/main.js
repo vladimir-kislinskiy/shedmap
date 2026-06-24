@@ -1,9 +1,16 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue } from "firebase/database";
-import { initAuth, login, logout } from "./auth.js";
+import { initAuth, login, logout, isAdminUser } from "./auth.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
 import { openReportPdf } from "./report-pdf.js";
+import {
+	cacheHayShedState,
+	formatCacheTimestamp,
+	loadCachedHayShedState,
+	validateHayShedState,
+	normalizeHayShedState,
+} from "./state-cache.js";
 import {
 	capitalize,
 	applyStackComment,
@@ -106,6 +113,28 @@ const changeLog = [];
 let isEditMode = false;
 let currentPerson = null;
 let transferSource = null;
+let firebaseConnected = true;
+let cacheSavedAt = null;
+let hasRemoteState = false;
+let adminBackupModule = null;
+
+async function syncAdminBackupUI(authenticated, email) {
+	if (!authenticated || !isAdminUser(email)) {
+		adminBackupModule?.unmountAdminBackup();
+		adminBackupModule = null;
+		return;
+	}
+
+	if (!adminBackupModule) {
+		adminBackupModule = await import("./admin-backup.js");
+	}
+
+	adminBackupModule.mountAdminBackup(email, {
+		collectAppState,
+		restoreState: restoreAppStateToFirebase,
+		exportedBy: currentPerson,
+	});
+}
 
 function clearTransferSource() {
 	transferSource = null;
@@ -1212,10 +1241,8 @@ function initLogFilters() {
 	updateLogTable();
 }
 
-function saveState() {
-	if (!isEditMode) return;
-
-	const state = { changeLog, sheds: {} };
+function collectAppState() {
+	const state = { changeLog: [...changeLog], sheds: {} };
 
 	SHEDS.forEach((shed) => {
 		const colsData = {};
@@ -1237,50 +1264,120 @@ function saveState() {
 		state.sheds[shed] = colsData;
 	});
 
-	set(ref(db, "hayShedState"), state).catch((err) => console.error("Error saving state:", err));
+	return state;
 }
 
-onValue(ref(db, "hayShedState"), (snapshot) => {
-	const state = snapshot.val();
-	if (!state) return;
+function applyAppState(state) {
+	const normalized = normalizeHayShedState(state);
 
-	try {
-		if (Array.isArray(state.changeLog)) {
-			changeLog.length = 0;
-			changeLog.push(...state.changeLog);
-			updateLogTable();
-		}
-
-		if (state.sheds) {
-			SHEDS.forEach((shed) => {
-				if (!state.sheds[shed]) return;
-
-				for (let i = 0; i < BAY_COUNT; i++) {
-					const colId = `${shed}-col-${i}`;
-					const colEl = document.getElementById(colId);
-					const savedStacks = state.sheds[shed][colId];
-					if (!colEl) continue;
-
-					colEl.querySelectorAll(".hay-stack").forEach((stack) => stack.remove());
-
-					if (Array.isArray(savedStacks)) {
-						savedStacks.forEach((stackData) => {
-							const stack = restoreHayStack(stackData, colEl);
-							if (stack) makeStackDraggable(stack);
-						});
-					}
-
-					updateBayStats(colEl);
-				}
-			});
-			syncAllShedLayoutsAfterPaint();
-		}
-
-		updateReportsTable();
-	} catch (e) {
-		console.error("Error syncing state:", e);
+	if (Array.isArray(normalized.changeLog)) {
+		changeLog.length = 0;
+		changeLog.push(...normalized.changeLog);
+		updateLogTable();
 	}
-});
+
+	if (normalized.sheds) {
+		SHEDS.forEach((shed) => {
+			if (!normalized.sheds[shed]) return;
+
+			for (let i = 0; i < BAY_COUNT; i++) {
+				const colId = `${shed}-col-${i}`;
+				const colEl = document.getElementById(colId);
+				const savedStacks = normalized.sheds[shed][colId];
+				if (!colEl) continue;
+
+				colEl.querySelectorAll(".hay-stack").forEach((stack) => stack.remove());
+
+				if (Array.isArray(savedStacks)) {
+					savedStacks.forEach((stackData) => {
+						const stack = restoreHayStack(stackData, colEl);
+						if (stack) makeStackDraggable(stack);
+					});
+				}
+
+				updateBayStats(colEl);
+			}
+		});
+		syncAllShedLayoutsAfterPaint();
+	}
+
+	updateReportsTable();
+}
+
+function updateSyncBanner() {
+	const banner = document.getElementById("syncBanner");
+	const textEl = document.getElementById("syncBannerText");
+	if (!banner || !textEl) return;
+
+	if (!firebaseConnected) {
+		const cacheHint = cacheSavedAt
+			? ` Showing data cached at ${formatCacheTimestamp(cacheSavedAt)}.`
+			: hasRemoteState
+				? ""
+				: " No cached data is available yet.";
+
+		textEl.textContent = `Firebase is unreachable.${cacheHint} Viewing works; saving changes requires a connection.`;
+		banner.hidden = false;
+		document.body.classList.add("page--offline");
+		return;
+	}
+
+	banner.hidden = true;
+	document.body.classList.remove("page--offline");
+}
+
+async function initLocalCache() {
+	const cached = await loadCachedHayShedState();
+	if (!cached?.state || !validateHayShedState(cached.state)) return;
+
+	cacheSavedAt = cached.savedAt;
+	applyAppState(cached.state);
+}
+
+function initSyncStatus() {
+	onValue(
+		ref(db, ".info/connected"),
+		(snap) => {
+			firebaseConnected = snap.val() === true;
+			updateSyncBanner();
+		},
+		(err) => console.error("Connection status error:", err),
+	);
+}
+
+function saveState() {
+	if (!isEditMode) return;
+
+	const state = collectAppState();
+
+	set(ref(db, "hayShedState"), state).catch((err) => {
+		console.error("Error saving state:", err);
+	});
+	cacheHayShedState(state);
+}
+
+onValue(
+	ref(db, "hayShedState"),
+	(snapshot) => {
+		const state = snapshot.val();
+		if (!state) return;
+
+		try {
+			hasRemoteState = true;
+			applyAppState(state);
+			cacheHayShedState(state).then(() => {
+				cacheSavedAt = Date.now();
+				updateSyncBanner();
+			});
+		} catch (e) {
+			console.error("Error syncing state:", e);
+		}
+	},
+	(err) => {
+		console.error("Firebase read error:", err);
+		updateSyncBanner();
+	},
+);
 
 function setInventoryControlsOpen(open) {
 	const controls = document.getElementById("inventoryControls");
@@ -1317,9 +1414,19 @@ function setEditMode(enabled, person = null) {
 	updateStackInteractionState();
 }
 
-function handleAuthChange(authenticated, person) {
+async function restoreAppStateToFirebase(state) {
+	await set(ref(db, "hayShedState"), state);
+	await cacheHayShedState(state);
+	hasRemoteState = true;
+	cacheSavedAt = Date.now();
+	applyAppState(state);
+	updateSyncBanner();
+}
+
+function handleAuthChange(authenticated, person, email = null) {
 	setEditMode(authenticated, person);
 	updateAuthUI(authenticated, person);
+	syncAdminBackupUI(authenticated, email);
 
 	if (authenticated && pendingResetAll) {
 		pendingResetAll = false;
@@ -1712,7 +1819,7 @@ function initInventoryForm() {
 
 window.resetAllBays = resetAllBays;
 
-window.addEventListener("load", () => {
+window.addEventListener("load", async () => {
 	initGrabToScroll();
 	initAuthUI();
 	initLocationTabs();
@@ -1720,9 +1827,12 @@ window.addEventListener("load", () => {
 	initReports();
 	initInventoryForm();
 	initLogFilters();
+	initSyncStatus();
+	await initLocalCache();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	updateStackInteractionState();
 	syncAllShedLayoutsAfterPaint();
+	updateSyncBanner();
 });
 
 let resizeTimer;
