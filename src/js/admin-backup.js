@@ -1,8 +1,4 @@
-import {
-	cacheHayShedState,
-	downloadHayShedStateBackup,
-	readHayShedStateFile,
-} from "./state-backup.js";
+import { downloadHayShedStateBackup, readHayShedStateFile } from "./state-backup.js";
 
 const ADMIN_EMAIL = "operations@barr-ag.com";
 const STYLE_ID = "adt-styles";
