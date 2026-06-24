@@ -85,6 +85,7 @@ const cleanHashedAssets = () => {
 	return del(
 		[
 			"dist/js/app-*.js",
+			"dist/js/chunks/**",
 			"dist/css/style-*.css",
 			"dist/fonts/*-*.woff",
 			"dist/fonts/*-*.woff2",
@@ -170,6 +171,7 @@ const cache = () => {
 			"dist/**/*.{css,js,svg,jpg,jpeg,webp,woff2,woff}",
 			"dist/img/**/*.png",
 			"!dist/favicon/**",
+			"!dist/js/chunks/**",
 		],
 		{
 			base: "dist",
