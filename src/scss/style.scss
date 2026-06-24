@@ -371,6 +371,10 @@ body.page--view-only .inventory__form {
 	box-shadow: 0 2px 4px var(--color-primary-shadow);
 }
 
+.inventory__checks-row {
+	display: contents;
+}
+
 .inventory__isles {
 	display: inline-flex;
 	align-items: center;

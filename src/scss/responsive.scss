@@ -103,24 +103,30 @@
 		gap: 1px;
 	}
 
-	.inventory__isles {
-		width: auto;
-		align-self: center;
+	.inventory__checks-row {
+		display: flex;
+		flex-direction: row;
+		align-items: stretch;
+		gap: 12px;
+		width: 100%;
 	}
 
-	.inventory__reject {
+	.inventory__checks-row .inventory__isles,
+	.inventory__checks-row .inventory__reject {
+		flex: 1 1 0;
+		min-width: 0;
 		width: auto;
-		align-self: center;
-		flex-wrap: wrap;
-		justify-content: center;
-		height: auto;
+		align-self: stretch;
+		height: 42px;
 		min-height: 42px;
-		padding-block: 8px;
+		padding-block: 0;
+		justify-content: center;
 	}
 
 	.inventory__field--comment {
 		width: 100%;
-		flex: 1 1 140px;
+		flex: 0 0 auto;
+		height: 42px;
 	}
 
 	.inventory__form {
