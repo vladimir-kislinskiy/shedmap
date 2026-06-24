@@ -63,7 +63,7 @@ async function restoreBackup(file) {
 
 		if (
 			!window.confirm(
-				`Replace all sheds and the change log with data from "${exportedAt}"? This cannot be undone.`,
+				`Replace all sheds and change logs (Olds and Siksika) with data from "${exportedAt}"? This cannot be undone.`,
 			)
 		) {
 			return;

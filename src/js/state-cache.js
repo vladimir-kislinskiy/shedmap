@@ -1,8 +1,8 @@
+import { getLocationConfig, LOCATION_IDS } from "./locations.js";
+
 const IDB_NAME = "hay-shed-map";
-const IDB_VERSION = 1;
+const IDB_VERSION = 2;
 const IDB_STORE = "cache";
-const CACHE_KEY = "hayShedState";
-const SHED_IDS = ["west", "north", "east"];
 
 function openCacheDb() {
 	return new Promise((resolve, reject) => {
@@ -14,7 +14,10 @@ function openCacheDb() {
 		const request = indexedDB.open(IDB_NAME, IDB_VERSION);
 
 		request.onupgradeneeded = () => {
-			request.result.createObjectStore(IDB_STORE);
+			const db = request.result;
+			if (!db.objectStoreNames.contains(IDB_STORE)) {
+				db.createObjectStore(IDB_STORE);
+			}
 		};
 
 		request.onsuccess = () => resolve(request.result);
@@ -29,17 +32,21 @@ function idbRequestToPromise(request) {
 	});
 }
 
-export async function cacheHayShedState(state) {
-	if (!state) return;
+function getCacheKey(locationId) {
+	return `hayShedState:${locationId}`;
+}
+
+export async function cacheHayShedState(locationId, state) {
+	if (!state || !locationId) return;
 
 	try {
 		const db = await openCacheDb();
 		const tx = db.transaction(IDB_STORE, "readwrite");
 		const payload = {
 			savedAt: Date.now(),
-			state: normalizeHayShedState(state),
+			state: normalizeHayShedState(state, locationId),
 		};
-		tx.objectStore(IDB_STORE).put(payload, CACHE_KEY);
+		tx.objectStore(IDB_STORE).put(payload, getCacheKey(locationId));
 
 		await new Promise((resolve, reject) => {
 			tx.oncomplete = () => resolve();
@@ -48,40 +55,50 @@ export async function cacheHayShedState(state) {
 
 		db.close();
 	} catch (err) {
-		console.warn("Could not cache state locally:", err);
+		console.warn(`Could not cache state for ${locationId}:`, err);
 	}
 }
 
-export async function loadCachedHayShedState() {
+export async function loadCachedHayShedState(locationId) {
 	try {
 		const db = await openCacheDb();
 		const tx = db.transaction(IDB_STORE, "readonly");
-		const payload = await idbRequestToPromise(tx.objectStore(IDB_STORE).get(CACHE_KEY));
+		const payload = await idbRequestToPromise(tx.objectStore(IDB_STORE).get(getCacheKey(locationId)));
 
 		db.close();
 
 		if (!payload?.state) return null;
 		return payload;
 	} catch (err) {
-		console.warn("Could not read cached state:", err);
+		console.warn(`Could not read cached state for ${locationId}:`, err);
 		return null;
 	}
 }
 
-export function normalizeHayShedState(state) {
+export async function loadAllCachedHayShedStates() {
+	const results = {};
+	for (const locationId of LOCATION_IDS) {
+		results[locationId] = await loadCachedHayShedState(locationId);
+	}
+	return results;
+}
+
+export function normalizeHayShedState(state, locationId = "olds") {
 	return {
 		changeLog: Array.isArray(state?.changeLog) ? state.changeLog : [],
 		sheds: state?.sheds && typeof state.sheds === "object" ? state.sheds : {},
+		locationId,
 	};
 }
 
-export function validateHayShedState(state) {
-	const normalized = normalizeHayShedState(state);
+export function validateHayShedState(state, locationId = "olds") {
+	const normalized = normalizeHayShedState(state, locationId);
+	const config = getLocationConfig(locationId);
 
 	if (!Array.isArray(normalized.changeLog)) return false;
 	if (!normalized.sheds || typeof normalized.sheds !== "object") return false;
 
-	for (const shedId of SHED_IDS) {
+	for (const shedId of config.sheds) {
 		const shed = normalized.sheds[shedId];
 		if (!shed || typeof shed !== "object") return false;
 
@@ -97,6 +114,10 @@ export function validateHayShedState(state) {
 	}
 
 	return true;
+}
+
+export function isLegacyHayShedRoot(state) {
+	return !!(state?.sheds && Array.isArray(state?.changeLog) && !state?.olds && !state?.siksika);
 }
 
 export function formatCacheTimestamp(savedAt) {

@@ -1,16 +1,36 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue } from "firebase/database";
-import { initAuth, login, logout, isAdminUser } from "./auth.js";
+import {
+	initAuth,
+	login,
+	logout,
+	isAdminUser,
+	canEditLocation,
+} from "./auth.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
 import { openReportPdf } from "./report-pdf.js";
 import {
 	cacheHayShedState,
 	formatCacheTimestamp,
-	loadCachedHayShedState,
+	loadAllCachedHayShedStates,
 	validateHayShedState,
 	normalizeHayShedState,
+	isLegacyHayShedRoot,
 } from "./state-cache.js";
+import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath } from "./locations.js";
+import {
+	getCurrentLocationId,
+	setCurrentLocationId,
+	loc,
+	locQuery,
+	locQueryAll,
+	getLocationPanel,
+	getBayColumnEl,
+	getBayDisplayNumberForLocation,
+	getShedLabel,
+	scopedId,
+} from "./location-ui.js";
 import {
 	capitalize,
 	applyStackComment,
@@ -25,8 +45,6 @@ import {
 	formatStackKey,
 	getBayStacks,
 	getBayFillPercent,
-	getBayDisplayNumber,
-	BAYS_PER_SHED,
 	MAX_BALES_PER_BAY,
 	getHayTypeLabel,
 	getIsleContainer,
@@ -50,15 +68,13 @@ const app = initializeApp(getFirebaseConfig());
 const db = getDatabase(app);
 const auth = initAuth(app, handleAuthChange);
 
-const SHEDS = ["west", "north", "east"];
-const BAY_COUNT = BAYS_PER_SHED;
-
-function buildEmptyShedState() {
+function buildEmptyShedState(locationId = getCurrentLocationId()) {
+	const locationConfig = getLocationConfig(locationId);
 	const sheds = {};
 
-	SHEDS.forEach((shed) => {
+	locationConfig.sheds.forEach((shed) => {
 		const colsData = {};
-		for (let i = 0; i < BAY_COUNT; i++) {
+		for (let i = 0; i < locationConfig.bayCount; i++) {
 			colsData[`${shed}-col-${i}`] = [];
 		}
 		sheds[shed] = colsData;
@@ -67,23 +83,25 @@ function buildEmptyShedState() {
 	return { changeLog: [], sheds };
 }
 
-function clearAllBaysUI() {
-	SHEDS.forEach((shed) => {
-		for (let i = 0; i < BAY_COUNT; i++) {
-			const colEl = document.getElementById(`${shed}-col-${i}`);
+function clearAllBaysUI(locationId = getCurrentLocationId()) {
+	const locationConfig = getLocationConfig(locationId);
+	locationConfig.sheds.forEach((shed) => {
+		for (let i = 0; i < locationConfig.bayCount; i++) {
+			const colEl = getBayColumnEl(shed, i, locationId);
 			if (!colEl) continue;
 			colEl.querySelectorAll(".hay-stack").forEach((stack) => stack.remove());
 			updateBayStats(colEl);
 		}
 	});
 
-	changeLog.length = 0;
-	updateLogTable();
+	changeLogs[locationId] = [];
+	updateLogTable(locationId);
 	syncAllShedLayouts();
 }
 
 async function resetAllBays({ confirm = true } = {}) {
-	if (!isEditMode) {
+	const locationId = getCurrentLocationId();
+	if (!canEdit(locationId)) {
 		alert("Sign in to reset all bays.");
 		return false;
 	}
@@ -92,10 +110,11 @@ async function resetAllBays({ confirm = true } = {}) {
 		return false;
 	}
 
-	clearAllBaysUI();
+	clearAllBaysUI(locationId);
 
 	try {
-		await set(ref(db, "hayShedState"), buildEmptyShedState());
+		await set(ref(db, getLocationFirebasePath(locationId)), buildEmptyShedState(locationId));
+		await cacheHayShedState(locationId, buildEmptyShedState(locationId));
 		if (location.search.includes("reset=all")) {
 			history.replaceState(null, "", location.pathname);
 		}
@@ -109,14 +128,38 @@ async function resetAllBays({ confirm = true } = {}) {
 
 let pendingResetAll = new URLSearchParams(location.search).get("reset") === "all";
 
-const changeLog = [];
-let isEditMode = false;
+const changeLogs = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
+let isAuthenticated = false;
+let currentUserEmail = null;
 let currentPerson = null;
 let transferSource = null;
 let firebaseConnected = true;
-let cacheSavedAt = null;
-let hasRemoteState = false;
+let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
+let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
 let adminBackupModule = null;
+
+function getCurrentLocation() {
+	return getCurrentLocationId();
+}
+
+function getCurrentLocationConfig() {
+	return getLocationConfig(getCurrentLocation());
+}
+
+function getLocationChangeLog(locationId = getCurrentLocation()) {
+	if (!Array.isArray(changeLogs[locationId])) {
+		changeLogs[locationId] = [];
+	}
+	return changeLogs[locationId];
+}
+
+function canEdit(locationId = getCurrentLocation()) {
+	return isAuthenticated && canEditLocation(currentUserEmail, locationId);
+}
+
+function getScopedElement(id, locationId = getCurrentLocation()) {
+	return loc(id, locationId) || document.getElementById(id);
+}
 
 async function syncAdminBackupUI(authenticated, email) {
 	if (!authenticated || !isAdminUser(email)) {
@@ -130,7 +173,7 @@ async function syncAdminBackupUI(authenticated, email) {
 	}
 
 	adminBackupModule.mountAdminBackup(email, {
-		collectAppState,
+		collectAppState: collectAllAppState,
 		restoreState: restoreAppStateToFirebase,
 		exportedBy: currentPerson,
 	});
@@ -149,20 +192,24 @@ function setTransferSource(stackEl) {
 
 	transferSource = {
 		stackEl,
+		locationId: bayStack.dataset.location || getCurrentLocation(),
 		shed: bayStack.dataset.shed,
 		bay: bayStack.dataset.bay,
 		isle: stackEl.dataset.isle || "both",
 	};
 }
 
-function setActiveTab(panelId, btn) {
-	document.querySelectorAll(".tabs__panel").forEach((panel) => {
+function setActiveTab(panelId, btn, locationId = getCurrentLocation()) {
+	const panelRoot = getLocationPanel(locationId);
+	if (!panelRoot) return;
+
+	panelRoot.querySelectorAll(".tabs__panel").forEach((panel) => {
 		panel.classList.remove("tabs__panel--active");
 	});
-	document.querySelectorAll(".tabs__btn").forEach((tabBtn) => {
+	panelRoot.querySelectorAll(".tabs__btn").forEach((tabBtn) => {
 		tabBtn.classList.remove("tabs__btn--active");
 	});
-	document.getElementById(panelId)?.classList.add("tabs__panel--active");
+	loc(panelId, locationId)?.classList.add("tabs__panel--active");
 	btn?.classList.add("tabs__btn--active");
 
 	if (panelId === "Sheds") {
@@ -170,25 +217,29 @@ function setActiveTab(panelId, btn) {
 	}
 
 	if (panelId === "Reports") {
-		updateReportsTable();
+		updateReportsTable(locationId);
 	}
 }
 
-function setActiveShedTab(panelId, btn, { bay } = {}) {
-	document.querySelectorAll(".shed-tabs__panel").forEach((panel) => {
+function setActiveShedTab(panelId, btn, { bay } = {}, locationId = getCurrentLocation()) {
+	const panelRoot = getLocationPanel(locationId);
+	if (!panelRoot) return;
+
+	panelRoot.querySelectorAll(".shed-tabs__panel").forEach((panel) => {
 		panel.classList.remove("shed-tabs__panel--active");
 	});
-	document.querySelectorAll(".shed-tabs__btn").forEach((tabBtn) => {
+	panelRoot.querySelectorAll(".shed-tabs__btn").forEach((tabBtn) => {
 		tabBtn.classList.remove("shed-tabs__btn--active");
 	});
 	document.getElementById(panelId)?.classList.add("shed-tabs__panel--active");
 	btn?.classList.add("shed-tabs__btn--active");
 
-	const shedSelect = document.getElementById("shedSelect");
+	const shedSelect = getScopedElement("shedSelect", locationId);
 	if (shedSelect && panelId) {
-		const shed = panelId.replace("-shed-tab", "");
+		const config = getLocationConfig(locationId);
+		const shed = config.sheds.find((shedId) => panelId.endsWith(`${shedId}-shed-tab`)) || config.defaultShed;
 		shedSelect.value = shed;
-		updateBaySelectForShed(shed, bay);
+		updateBaySelectForShed(shed, selectedBayOrNull(bay), locationId);
 	}
 
 	requestAnimationFrame(() => syncAllShedLayouts());
@@ -260,8 +311,12 @@ function initGrabToScroll() {
 	});
 }
 
+function selectedBayOrNull(bay) {
+	return bay === undefined ? null : bay;
+}
+
 function getBayColumn(shed, bay) {
-	return document.getElementById(`${shed}-col-${bay}`);
+	return getBayColumnEl(shed, bay, getCurrentLocation());
 }
 
 function findRejectedStackInContainer(container, stackKey, excludeStack = null) {
@@ -276,9 +331,9 @@ function findRejectedStackInContainer(container, stackKey, excludeStack = null) 
 		) || null;
 }
 
-function getSelectedIsle() {
-	const isle1 = document.getElementById("isle1")?.checked;
-	const isle2 = document.getElementById("isle2")?.checked;
+function getSelectedIsle(locationId = getCurrentLocation()) {
+	const isle1 = getScopedElement("isle1", locationId)?.checked;
+	const isle2 = getScopedElement("isle2", locationId)?.checked;
 
 	if (!isle1 && !isle2) {
 		alert("Select at least one isle.");
@@ -288,17 +343,17 @@ function getSelectedIsle() {
 	return isle1 ? "1" : "2";
 }
 
-function setIsleCheckboxes(isle) {
-	const isle1 = document.getElementById("isle1");
-	const isle2 = document.getElementById("isle2");
+function setIsleCheckboxes(isle, locationId = getCurrentLocation()) {
+	const isle1 = getScopedElement("isle1", locationId);
+	const isle2 = getScopedElement("isle2", locationId);
 	if (!isle1 || !isle2) return;
 	isle1.checked = isle === "both" || isle === "1";
 	isle2.checked = isle === "both" || isle === "2";
 }
 
-function syncInventoryActionFields() {
-	const action = document.getElementById("actionSelect")?.value;
-	const baleCount = document.getElementById("baleCount");
+function syncInventoryActionFields(locationId = getCurrentLocation()) {
+	const action = getScopedElement("actionSelect", locationId)?.value;
+	const baleCount = getScopedElement("baleCount", locationId);
 	if (!baleCount) return;
 
 	if (action === "update") {
@@ -320,8 +375,8 @@ function isGradeEligibleType(type) {
 	return GRADE_ELIGIBLE_TYPES.has(type);
 }
 
-function syncGradeFieldVisibility(type = document.getElementById("hayType")?.value || "") {
-	const gradeEl = document.getElementById("stackGrade");
+function syncGradeFieldVisibility(type = getScopedElement("hayType")?.value || "", locationId = getCurrentLocation()) {
+	const gradeEl = getScopedElement("stackGrade", locationId);
 	if (!gradeEl) return;
 
 	const show = isGradeEligibleType(type);
@@ -333,34 +388,35 @@ function syncGradeFieldVisibility(type = document.getElementById("hayType")?.val
 }
 
 function resetInventoryFormFields() {
-	const reportedBy = document.getElementById("reportedBy");
+	const locationId = getCurrentLocation();
+	const reportedBy = getScopedElement("reportedBy", locationId);
 	if (reportedBy) reportedBy.value = "";
 
-	const hayType = document.getElementById("hayType");
+	const hayType = getScopedElement("hayType", locationId);
 	if (hayType) hayType.value = "";
 
-	const contractNumber = document.getElementById("contractNumber");
+	const contractNumber = getScopedElement("contractNumber", locationId);
 	if (contractNumber) contractNumber.value = "";
 
-	const baleCount = document.getElementById("baleCount");
+	const baleCount = getScopedElement("baleCount", locationId);
 	if (baleCount) baleCount.value = "";
 
-	const rejectCheck = document.getElementById("rejectCheck");
+	const rejectCheck = getScopedElement("rejectCheck", locationId);
 	if (rejectCheck) rejectCheck.checked = false;
 
-	const stackComment = document.getElementById("stackComment");
+	const stackComment = getScopedElement("stackComment", locationId);
 	if (stackComment) stackComment.value = "";
 
-	const stackGrade = document.getElementById("stackGrade");
+	const stackGrade = getScopedElement("stackGrade", locationId);
 	if (stackGrade) stackGrade.value = "";
 
-	setIsleCheckboxes("both");
+	setIsleCheckboxes("both", locationId);
 
-	const actionSelect = document.getElementById("actionSelect");
+	const actionSelect = getScopedElement("actionSelect", locationId);
 	if (actionSelect) actionSelect.value = "";
 
-	syncInventoryActionFields();
-	syncGradeFieldVisibility("");
+	syncInventoryActionFields(locationId);
+	syncGradeFieldVisibility("", locationId);
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
 		el.classList.remove("hay-stack--selected");
@@ -370,15 +426,15 @@ function resetInventoryFormFields() {
 	updateStackInteractionState();
 }
 
-function setInventoryShedAndBay(shed, bay) {
-	const shedSelect = document.getElementById("shedSelect");
+function setInventoryShedAndBay(shed, bay, locationId = getCurrentLocation()) {
+	const shedSelect = getScopedElement("shedSelect", locationId);
 	if (shedSelect) shedSelect.value = shed;
 
-	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
+	const tabBtn = locQuery(`.shed-tabs__btn[data-subtab$="${shed}-shed-tab"]`, locationId);
 	if (tabBtn) {
-		setActiveShedTab(`${shed}-shed-tab`, tabBtn, { bay });
+		setActiveShedTab(tabBtn.dataset.subtab || scopedId(`${shed}-shed-tab`, locationId), tabBtn, { bay }, locationId);
 	} else {
-		updateBaySelectForShed(shed, bay);
+		updateBaySelectForShed(shed, bay, locationId);
 	}
 }
 
@@ -387,24 +443,27 @@ function resetInventoryForm() {
 }
 
 function fillFormFromEmptyBay(bayStackEl) {
-	if (!isEditMode || !bayStackEl) return;
+	const locationId = bayStackEl?.dataset.location || getCurrentLocation();
+	if (!canEdit(locationId) || !bayStackEl) return;
 	if (getBayStacks(bayStackEl).length > 0) return;
 
 	const shed = bayStackEl.dataset.shed;
 	const bay = bayStackEl.dataset.bay;
 	if (!shed || bay === undefined) return;
 
+	setCurrentLocationId(locationId);
 	resetInventoryFormFields();
-	setInventoryShedAndBay(shed, bay);
+	setInventoryShedAndBay(shed, bay, locationId);
 	clearTransferSource();
 	setInventoryControlsOpen(true);
 }
 
 function fillFormFromStack(stackEl) {
-	if (!isEditMode) return;
-
 	const bayStack = stackEl.closest(".shed__bay-stack");
 	if (!bayStack) return;
+
+	const locationId = bayStack.dataset.location || getCurrentLocation();
+	if (!canEdit(locationId)) return;
 
 	const type = getStackType(stackEl);
 	const { contract } = parseStackKey(stackEl.dataset.stackKey || "");
@@ -413,28 +472,29 @@ function fillFormFromStack(stackEl) {
 	const shed = bayStack.dataset.shed;
 	const bay = bayStack.dataset.bay;
 
-	document.getElementById("hayType").value = type;
-	syncGradeFieldVisibility(type);
-	document.getElementById("contractNumber").value = contract;
-	document.getElementById("baleCount").value = bales;
-	document.getElementById("shedSelect").value = shed;
-	setIsleCheckboxes(isle);
+	setCurrentLocationId(locationId);
+	getScopedElement("hayType", locationId).value = type;
+	syncGradeFieldVisibility(type, locationId);
+	getScopedElement("contractNumber", locationId).value = contract;
+	getScopedElement("baleCount", locationId).value = bales;
+	getScopedElement("shedSelect", locationId).value = shed;
+	setIsleCheckboxes(isle, locationId);
 
 	const rejected = stackEl.dataset.rejected === "true";
-	const rejectCheck = document.getElementById("rejectCheck");
+	const rejectCheck = getScopedElement("rejectCheck", locationId);
 	if (rejectCheck) rejectCheck.checked = rejected;
 
-	const stackCommentEl = document.getElementById("stackComment");
+	const stackCommentEl = getScopedElement("stackComment", locationId);
 	if (stackCommentEl) stackCommentEl.value = stackEl.dataset.comment || "";
 
-	const stackGradeEl = document.getElementById("stackGrade");
+	const stackGradeEl = getScopedElement("stackGrade", locationId);
 	if (stackGradeEl) stackGradeEl.value = stackEl.dataset.grade || "";
 
-	const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${shed}-shed-tab"]`);
+	const tabBtn = locQuery(`.shed-tabs__btn[data-subtab$="${shed}-shed-tab"]`, locationId);
 	if (tabBtn) {
-		setActiveShedTab(`${shed}-shed-tab`, tabBtn, { bay });
+		setActiveShedTab(tabBtn.dataset.subtab || scopedId(`${shed}-shed-tab`, locationId), tabBtn, { bay }, locationId);
 	} else {
-		updateBaySelectForShed(shed, bay);
+		updateBaySelectForShed(shed, bay, locationId);
 	}
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
@@ -443,11 +503,11 @@ function fillFormFromStack(stackEl) {
 	stackEl.classList.add("hay-stack--selected");
 	setTransferSource(stackEl);
 
-	const actionSelect = document.getElementById("actionSelect");
+	const actionSelect = getScopedElement("actionSelect", locationId);
 	if (actionSelect) actionSelect.value = "";
-	syncInventoryActionFields();
+	syncInventoryActionFields(locationId);
 
-	if (isEditMode) setInventoryControlsOpen(true);
+	setInventoryControlsOpen(true);
 }
 
 function bindEmptyBaySelect(bayEl) {
@@ -460,29 +520,33 @@ function bindEmptyBaySelect(bayEl) {
 	if (!bayStack) return;
 
 	bayEl.addEventListener("click", (e) => {
-		if (!isEditMode || e.target.closest(".hay-stack")) return;
+		const locationId = bayStack?.dataset.location || getCurrentLocation();
+		if (!canEdit(locationId) || e.target.closest(".hay-stack")) return;
 		fillFormFromEmptyBay(bayStack);
 	});
 }
 
-function initEmptyBaySelect() {
-	document.querySelectorAll(".shed__bay").forEach(bindEmptyBaySelect);
+function initEmptyBaySelect(locationId = getCurrentLocation()) {
+	locQueryAll(".shed__bay", locationId).forEach(bindEmptyBaySelect);
 }
 
 function bindStackSelect(stackEl) {
 	if (stackEl._selectBound) return;
 	stackEl._selectBound = true;
 	stackEl.addEventListener("click", () => {
-		if (!isEditMode || stackEl._justDragged) return;
+		const locationId = stackEl.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
+		if (!canEdit(locationId) || stackEl._justDragged) return;
 		fillFormFromStack(stackEl);
 	});
 }
 
 function updateStackInteractionState() {
 	document.querySelectorAll(".hay-stack").forEach((stack) => {
-		stack.classList.toggle("hay-stack--selectable", isEditMode);
-		stack.classList.toggle("hay-stack--draggable", isEditMode);
-		if (!isEditMode) stack.classList.remove("hay-stack--selected");
+		const locationId = stack.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
+		const editable = canEdit(locationId);
+		stack.classList.toggle("hay-stack--selectable", editable);
+		stack.classList.toggle("hay-stack--draggable", editable);
+		if (!editable) stack.classList.remove("hay-stack--selected");
 	});
 }
 
@@ -499,22 +563,24 @@ function updateBayStats(bayStackEl) {
 	}
 }
 
-function getReportedByValue() {
-	return document.getElementById("reportedBy")?.value.trim() || "";
+function getReportedByValue(locationId = getCurrentLocation()) {
+	return getScopedElement("reportedBy", locationId)?.value.trim() || "";
 }
 
-function canDragStack() {
-	return isEditMode;
+function canDragStack(stackEl) {
+	const locationId = stackEl?.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
+	return canEdit(locationId);
 }
 
 function makeStackDraggable(stackEl) {
 	bindStackSelect(stackEl);
 	bindStackDrag(stackEl, {
-		canDrag: canDragStack,
+		canDrag: () => canDragStack(stackEl),
 		onReorder: ({ stackEl: movedStack, fromIsle, toIsle, origin }) => {
 			const bayStack = movedStack.closest(".shed__bay-stack");
+			const locationId = bayStack?.dataset.location || getCurrentLocation();
 
-			if (!getReportedByValue()) {
+			if (!getReportedByValue(locationId)) {
 				alert("Please select who reported this change (or N/A).");
 				restoreStackPosition(movedStack, origin);
 				if (bayStack) updateBayStats(bayStack);
@@ -525,20 +591,21 @@ function makeStackDraggable(stackEl) {
 			if (bayStack) updateBayStats(bayStack);
 			syncAllShedLayouts();
 
-			if (isEditMode && currentPerson && bayStack) {
+			if (canEdit(locationId) && currentPerson && bayStack) {
 				const type = getStackType(movedStack);
 				const { contract } = parseStackKey(movedStack.dataset.stackKey || "");
 				const bales = parseInt(movedStack.dataset.bales, 10) || 0;
 				const shed = bayStack.dataset.shed;
-				const bay = getBayDisplayNumber(shed, bayStack.dataset.bay);
+				const bay = getBayDisplayNumberForLocation(shed, bayStack.dataset.bay, locationId);
 				const typeLabel = getHayTypeLabel(type);
 				const note = fromIsle !== toIsle
 					? `${typeLabel} ${contract} (${bales} bales) moved from ${formatIsleLabel(fromIsle)} to ${formatIsleLabel(toIsle)}`
 					: `${typeLabel} ${contract} (${bales} bales) reordered in ${formatIsleLabel(toIsle)}`;
 
-				logChange(currentPerson, "Move", type, contract, bay, toIsle, shed, bales, note);
+				logChange(currentPerson, "Move", type, contract, bay, toIsle, shed, bales, note, locationId);
 			}
 
+			setCurrentLocationId(locationId);
 			saveState();
 			resetInventoryForm();
 		},
@@ -546,19 +613,20 @@ function makeStackDraggable(stackEl) {
 }
 
 function handleHay() {
-	if (!isEditMode || !currentPerson) return;
+	const locationId = getCurrentLocation();
+	if (!canEdit(locationId) || !currentPerson) return;
 
-	const type = document.getElementById("hayType").value;
-	const contract = document.getElementById("contractNumber").value.trim();
-	const baleCountRaw = document.getElementById("baleCount").value.trim();
+	const type = getScopedElement("hayType", locationId).value;
+	const contract = getScopedElement("contractNumber", locationId).value.trim();
+	const baleCountRaw = getScopedElement("baleCount", locationId).value.trim();
 	const baleCount = baleCountRaw === "" ? NaN : parseInt(baleCountRaw, 10);
-	const shed = document.getElementById("shedSelect").value;
-	const bay = document.getElementById("baySelect").value;
-	const action = document.getElementById("actionSelect").value;
-	const reportedBy = getReportedByValue();
-	const rejected = document.getElementById("rejectCheck")?.checked ?? false;
-	const stackComment = normalizeStackComment(document.getElementById("stackComment")?.value || "");
-	const stackGrade = normalizeStackGrade(document.getElementById("stackGrade")?.value || "");
+	const shed = getScopedElement("shedSelect", locationId).value;
+	const bay = getScopedElement("baySelect", locationId).value;
+	const action = getScopedElement("actionSelect", locationId).value;
+	const reportedBy = getReportedByValue(locationId);
+	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
+	const stackComment = normalizeStackComment(getScopedElement("stackComment", locationId)?.value || "");
+	const stackGrade = normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
 
 	if (!reportedBy) {
 		alert("Please select who reported this change (or N/A).");
@@ -613,7 +681,7 @@ function handleHay() {
 			"Update",
 			type,
 			contract,
-			getBayDisplayNumber(shed, bay),
+			getBayDisplayNumberForLocation(shed, bay, locationId),
 			foundIsle,
 			shed,
 			currentBales,
@@ -630,6 +698,10 @@ function handleHay() {
 	if (action === "transfer") {
 		if (!transferSource?.stackEl?.isConnected) {
 			alert("Select a stack on the map to transfer from.");
+			return;
+		}
+		if (transferSource.locationId !== locationId) {
+			alert("Select a source stack from the active location.");
 			return;
 		}
 
@@ -744,8 +816,8 @@ function handleHay() {
 		}
 		updateBayStats(destBayStackEl);
 
-		const sourceBayLabel = getBayDisplayNumber(sourceShed, sourceBay);
-		const destBayLabel = getBayDisplayNumber(shed, bay);
+		const sourceBayLabel = getBayDisplayNumberForLocation(sourceShed, sourceBay, locationId);
+		const destBayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
 		const transferNotes = [
 			isRejectSplitInPlace
 				? `Rejected split in ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`
@@ -782,7 +854,7 @@ function handleHay() {
 		const isle = getSelectedIsle();
 		if (!isle) return;
 
-		for (const stack of document.querySelectorAll(".hay-stack")) {
+		for (const stack of locQueryAll(".hay-stack", locationId)) {
 			const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
 			if (stackContract === contract && stackType !== type) {
 				alert(`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot add it as ${getHayTypeLabel(type)}.`);
@@ -826,7 +898,7 @@ function handleHay() {
 		if (rejected) addNotes.push("Rejected");
 		if (stackGrade) addNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) addNotes.push(stackComment);
-		logChange(currentPerson, "Add", type, contract, getBayDisplayNumber(shed, bay), isle, shed, baleCount, addNotes.join(" — "));
+		logChange(currentPerson, "Add", type, contract, getBayDisplayNumberForLocation(shed, bay, locationId), isle, shed, baleCount, addNotes.join(" — "));
 	}
 
 	if (action === "remove") {
@@ -857,7 +929,7 @@ function handleHay() {
 			updateHayStack(foundStack, foundType, contract, newCount);
 		}
 
-		logChange(currentPerson, "Remove", foundType, contract, getBayDisplayNumber(shed, bay), foundIsle, shed, baleCount);
+		logChange(currentPerson, "Remove", foundType, contract, getBayDisplayNumberForLocation(shed, bay, locationId), foundIsle, shed, baleCount);
 	}
 
 	updateBayStats(bayStackEl);
@@ -867,26 +939,26 @@ function handleHay() {
 	resetInventoryForm();
 }
 
-function logChange(person, action, type, contract, bay, isle, shed, bales, note = "") {
+function logChange(person, action, type, contract, bay, isle, shed, bales, note = "", locationId = getCurrentLocation()) {
 	const d = new Date();
 	const date = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 	const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
 
-	changeLog.push({
+	getLocationChangeLog(locationId).push({
 		timestamp: d.getTime(),
 		dateTime: `${date}, ${time}`,
 		person,
-		reportedBy: getReportedByValue() || "—",
+		reportedBy: getReportedByValue(locationId) || "—",
 		action,
 		type: getHayTypeLabel(type),
 		contract,
 		bay,
 		isle,
-		shed: capitalize(shed),
+		shed: getShedLabel(shed, locationId),
 		bales,
 		note,
 	});
-	updateLogTable();
+	updateLogTable(locationId);
 }
 
 function parseLogTimestamp(entry) {
@@ -913,12 +985,12 @@ function getLogEntryDateParts(entry) {
 	};
 }
 
-function getLogFilterValues() {
-	const monthVal = document.getElementById("logFilterMonth")?.value ?? "";
-	const dayVal = document.getElementById("logFilterDay")?.value ?? "";
+function getLogFilterValues(locationId = getCurrentLocation()) {
+	const monthVal = getScopedElement("logFilterMonth", locationId)?.value ?? "";
+	const dayVal = getScopedElement("logFilterDay", locationId)?.value ?? "";
 
 	return {
-		year: Number(document.getElementById("logFilterYear")?.value) || null,
+		year: Number(getScopedElement("logFilterYear", locationId)?.value) || null,
 		month: monthVal === "all" ? null : Number(monthVal),
 		day: dayVal === "all" ? null : Number(dayVal),
 	};
@@ -935,15 +1007,16 @@ function matchesLogFilter(entry, filters) {
 	return true;
 }
 
-function updateLogTable() {
-	const logBody = document.getElementById("logBody");
+function updateLogTable(locationId = getCurrentLocation()) {
+	const logBody = getScopedElement("logBody", locationId);
 	if (!logBody) return;
 
-	const filters = getLogFilterValues();
+	const filters = getLogFilterValues(locationId);
+	const locationLog = getLocationChangeLog(locationId);
 	logBody.replaceChildren();
 
-	for (let i = changeLog.length - 1; i >= 0; i--) {
-		const entry = changeLog[i];
+	for (let i = locationLog.length - 1; i >= 0; i--) {
+		const entry = locationLog[i];
 		if (!matchesLogFilter(entry, filters)) continue;
 
 		const row = createLogRow(entry);
@@ -968,10 +1041,10 @@ function cloneLogFilterYearOption(year) {
 	return option;
 }
 
-function updateLogDayOptions() {
-	const yearEl = document.getElementById("logFilterYear");
-	const monthEl = document.getElementById("logFilterMonth");
-	const dayEl = document.getElementById("logFilterDay");
+function updateLogDayOptions(locationId = getCurrentLocation()) {
+	const yearEl = getScopedElement("logFilterYear", locationId);
+	const monthEl = getScopedElement("logFilterMonth", locationId);
+	const dayEl = getScopedElement("logFilterDay", locationId);
 	if (!yearEl || !monthEl || !dayEl) return;
 
 	const monthVal = monthEl.value;
@@ -1006,8 +1079,8 @@ function updateLogDayOptions() {
 	}
 }
 
-function populateLogFilterOptions() {
-	const yearEl = document.getElementById("logFilterYear");
+function populateLogFilterOptions(locationId = getCurrentLocation()) {
+	const yearEl = getScopedElement("logFilterYear", locationId);
 	if (!yearEl) return;
 
 	const tpl = document.getElementById("logFilterYearOptionTemplate");
@@ -1021,19 +1094,19 @@ function populateLogFilterOptions() {
 	}
 }
 
-function resetLogFilters() {
+function resetLogFilters(locationId = getCurrentLocation()) {
 	const now = new Date();
-	const yearEl = document.getElementById("logFilterYear");
-	const monthEl = document.getElementById("logFilterMonth");
-	const dayEl = document.getElementById("logFilterDay");
+	const yearEl = getScopedElement("logFilterYear", locationId);
+	const monthEl = getScopedElement("logFilterMonth", locationId);
+	const dayEl = getScopedElement("logFilterDay", locationId);
 	if (!yearEl || !monthEl || !dayEl) return;
 
-	populateLogFilterOptions();
+	populateLogFilterOptions(locationId);
 
 	const year = Math.min(Math.max(now.getFullYear(), LOG_START_YEAR), getLogYearRange().end);
 	yearEl.value = String(year);
 	monthEl.value = String(now.getMonth() + 1);
-	updateLogDayOptions();
+	updateLogDayOptions(locationId);
 	dayEl.value = "all";
 }
 
@@ -1043,16 +1116,19 @@ function getGradeSortIndex(gradeId = "") {
 	return index === -1 ? STACK_GRADES.length : index;
 }
 
-function getReportFilterOptions() {
+function getReportFilterOptions(locationId = getCurrentLocation()) {
 	return {
-		gradeFilter: document.getElementById("reportGradeFilter")?.value || "all",
-		includeRejected: document.getElementById("reportIncludeRejected")?.checked ?? false,
+		gradeFilter: getScopedElement("reportGradeFilter", locationId)?.value || "all",
+		includeRejected: getScopedElement("reportIncludeRejected", locationId)?.checked ?? false,
 	};
 }
 
-function syncReportGradeFilterVisibility(productId = document.getElementById("reportProductFilter")?.value || "") {
-	const wrap = document.getElementById("reportGradeFilterWrap");
-	const gradeEl = document.getElementById("reportGradeFilter");
+function syncReportGradeFilterVisibility(
+	productId = getScopedElement("reportProductFilter")?.value || "",
+	locationId = getCurrentLocation(),
+) {
+	const wrap = getScopedElement("reportGradeFilterWrap", locationId);
+	const gradeEl = getScopedElement("reportGradeFilter", locationId);
 	if (!wrap || !gradeEl) return;
 
 	const show = isGradeEligibleType(productId);
@@ -1060,19 +1136,20 @@ function syncReportGradeFilterVisibility(productId = document.getElementById("re
 	if (!show) gradeEl.value = "all";
 }
 
-function setReportGradeColumnVisible(show) {
-	document.querySelectorAll(".reports__col-grade").forEach((el) => {
+function setReportGradeColumnVisible(show, locationId = getCurrentLocation()) {
+	locQueryAll(".reports__col-grade", locationId).forEach((el) => {
 		el.hidden = !show;
 	});
 }
 
-function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false } = {}) {
+function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false } = {}, locationId = getCurrentLocation()) {
 	const rows = [];
 	const sortByGrade = isGradeEligibleType(typeId);
+	const locationConfig = getLocationConfig(locationId);
 
-	SHEDS.forEach((shed, shedOrder) => {
-		for (let bayIndex = 0; bayIndex < BAY_COUNT; bayIndex++) {
-			const colEl = document.getElementById(`${shed}-col-${bayIndex}`);
+	locationConfig.sheds.forEach((shed, shedOrder) => {
+		for (let bayIndex = 0; bayIndex < locationConfig.bayCount; bayIndex++) {
+			const colEl = getBayColumnEl(shed, bayIndex, locationId);
 			if (!colEl) continue;
 
 			getBayStacks(colEl).forEach((stack) => {
@@ -1090,8 +1167,8 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 
 				rows.push({
 					contract,
-					shed: `${capitalize(shed)} Shed`,
-					bay: getBayDisplayNumber(shed, bayIndex),
+					shed: getShedLabel(shed, locationId),
+					bay: getBayDisplayNumberForLocation(shed, bayIndex, locationId),
 					bales,
 					grade,
 					rejected,
@@ -1115,8 +1192,8 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 	return rows;
 }
 
-function syncReportPrintButton(productId) {
-	const printBtn = document.getElementById("reportPrintPdf");
+function syncReportPrintButton(productId, locationId = getCurrentLocation()) {
+	const printBtn = getScopedElement("reportPrintPdf", locationId);
 	if (!printBtn) return;
 	printBtn.disabled = !productId;
 	printBtn.setAttribute("aria-disabled", productId ? "false" : "true");
@@ -1125,18 +1202,18 @@ function syncReportPrintButton(productId) {
 		: "Select a product to export a PDF report";
 }
 
-function updateReportsTable() {
-	const filterEl = document.getElementById("reportProductFilter");
+function updateReportsTable(locationId = getCurrentLocation()) {
+	const filterEl = getScopedElement("reportProductFilter", locationId);
 	const productId = filterEl?.value ?? "";
-	const reportBody = document.getElementById("reportBody");
-	const reportSummary = document.getElementById("reportSummary");
-	const reportTableWrap = document.getElementById("reportTableWrap");
-	const reportEmpty = document.getElementById("reportEmpty");
+	const reportBody = getScopedElement("reportBody", locationId);
+	const reportSummary = getScopedElement("reportSummary", locationId);
+	const reportTableWrap = getScopedElement("reportTableWrap", locationId);
+	const reportEmpty = getScopedElement("reportEmpty", locationId);
 	if (!filterEl || !reportBody || !reportSummary || !reportTableWrap || !reportEmpty) return;
 
-	syncReportGradeFilterVisibility(productId);
+	syncReportGradeFilterVisibility(productId, locationId);
 	const showGrade = isGradeEligibleType(productId);
-	setReportGradeColumnVisible(showGrade);
+	setReportGradeColumnVisible(showGrade, locationId);
 
 	reportBody.replaceChildren();
 
@@ -1145,15 +1222,15 @@ function updateReportsTable() {
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
 		reportEmpty.textContent = "Select a product to view inventory locations.";
-		syncReportPrintButton("");
+		syncReportPrintButton("", locationId);
 		return;
 	}
 
-	const { gradeFilter, includeRejected } = getReportFilterOptions();
-	const rows = collectProductReport(productId, { gradeFilter, includeRejected });
+	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 	const productLabel = getHayTypeLabel(productId);
-	syncReportPrintButton(productId);
+	syncReportPrintButton(productId, locationId);
 
 	if (rows.length === 0) {
 		reportSummary.hidden = true;
@@ -1177,17 +1254,17 @@ function updateReportsTable() {
 	});
 }
 
-function printCurrentReportPdf() {
-	const filterEl = document.getElementById("reportProductFilter");
+function printCurrentReportPdf(locationId = getCurrentLocation()) {
+	const filterEl = getScopedElement("reportProductFilter", locationId);
 	const productId = filterEl?.value ?? "";
 	if (!productId) {
 		alert("Select a product to export a PDF report.");
 		return;
 	}
 
-	const { gradeFilter, includeRejected } = getReportFilterOptions();
+	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
 	const productLabel = getHayTypeLabel(productId);
-	const rows = collectProductReport(productId, { gradeFilter, includeRejected });
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 	openReportPdf({
 		productLabel,
 		rows,
@@ -1197,58 +1274,59 @@ function printCurrentReportPdf() {
 	});
 }
 
-function initReports() {
-	const filterEl = document.getElementById("reportProductFilter");
+function initReports(locationId = getCurrentLocation()) {
+	const filterEl = getScopedElement("reportProductFilter", locationId);
 	if (!filterEl) return;
 
-	const refresh = () => updateReportsTable();
+	const refresh = () => updateReportsTable(locationId);
 	filterEl.addEventListener("change", refresh);
 	filterEl.addEventListener("input", refresh);
-	document.getElementById("reportGradeFilter")?.addEventListener("change", refresh);
-	document.getElementById("reportIncludeRejected")?.addEventListener("change", refresh);
-	document.getElementById("reportPrintPdf")?.addEventListener("click", printCurrentReportPdf);
+	getScopedElement("reportGradeFilter", locationId)?.addEventListener("change", refresh);
+	getScopedElement("reportIncludeRejected", locationId)?.addEventListener("change", refresh);
+	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));
 	refresh();
 }
 
-function initLogFilters() {
-	populateLogFilterOptions();
-	resetLogFilters();
+function initLogFilters(locationId = getCurrentLocation()) {
+	populateLogFilterOptions(locationId);
+	resetLogFilters(locationId);
 
-	const yearEl = document.getElementById("logFilterYear");
-	const monthEl = document.getElementById("logFilterMonth");
-	const dayEl = document.getElementById("logFilterDay");
-	const resetBtn = document.getElementById("logFilterReset");
+	const yearEl = getScopedElement("logFilterYear", locationId);
+	const monthEl = getScopedElement("logFilterMonth", locationId);
+	const dayEl = getScopedElement("logFilterDay", locationId);
+	const resetBtn = getScopedElement("logFilterReset", locationId);
 
-	const refresh = () => updateLogTable();
+	const refresh = () => updateLogTable(locationId);
 
 	yearEl?.addEventListener("change", () => {
-		updateLogDayOptions();
+		updateLogDayOptions(locationId);
 		refresh();
 	});
 
 	monthEl?.addEventListener("change", () => {
-		updateLogDayOptions();
+		updateLogDayOptions(locationId);
 		refresh();
 	});
 
 	dayEl?.addEventListener("change", refresh);
 
 	resetBtn?.addEventListener("click", () => {
-		resetLogFilters();
-		updateLogTable();
+		resetLogFilters(locationId);
+		updateLogTable(locationId);
 	});
 
-	updateLogTable();
+	updateLogTable(locationId);
 }
 
-function collectAppState() {
-	const state = { changeLog: [...changeLog], sheds: {} };
+function collectAppState(locationId = getCurrentLocation()) {
+	const locationConfig = getLocationConfig(locationId);
+	const state = { changeLog: [...getLocationChangeLog(locationId)], sheds: {} };
 
-	SHEDS.forEach((shed) => {
+	locationConfig.sheds.forEach((shed) => {
 		const colsData = {};
-		for (let i = 0; i < BAY_COUNT; i++) {
+		for (let i = 0; i < locationConfig.bayCount; i++) {
 			const colId = `${shed}-col-${i}`;
-			const colEl = document.getElementById(colId);
+			const colEl = getBayColumnEl(shed, i, locationId);
 			if (!colEl) continue;
 
 			colsData[colId] = Array.from(getBayStacks(colEl)).map((stack) => ({
@@ -1267,22 +1345,30 @@ function collectAppState() {
 	return state;
 }
 
-function applyAppState(state) {
-	const normalized = normalizeHayShedState(state);
+function collectAllAppState() {
+	const fullState = {};
+	LOCATION_IDS.forEach((locationId) => {
+		fullState[locationId] = collectAppState(locationId);
+	});
+	return fullState;
+}
+
+function applyAppState(locationId, state) {
+	const normalized = normalizeHayShedState(state, locationId);
+	const locationConfig = getLocationConfig(locationId);
 
 	if (Array.isArray(normalized.changeLog)) {
-		changeLog.length = 0;
-		changeLog.push(...normalized.changeLog);
-		updateLogTable();
+		changeLogs[locationId] = [...normalized.changeLog];
+		updateLogTable(locationId);
 	}
 
 	if (normalized.sheds) {
-		SHEDS.forEach((shed) => {
+		locationConfig.sheds.forEach((shed) => {
 			if (!normalized.sheds[shed]) return;
 
-			for (let i = 0; i < BAY_COUNT; i++) {
+			for (let i = 0; i < locationConfig.bayCount; i++) {
 				const colId = `${shed}-col-${i}`;
-				const colEl = document.getElementById(colId);
+				const colEl = getBayColumnEl(shed, i, locationId);
 				const savedStacks = normalized.sheds[shed][colId];
 				if (!colEl) continue;
 
@@ -1301,7 +1387,7 @@ function applyAppState(state) {
 		syncAllShedLayoutsAfterPaint();
 	}
 
-	updateReportsTable();
+	updateReportsTable(locationId);
 }
 
 function updateSyncBanner() {
@@ -1310,6 +1396,9 @@ function updateSyncBanner() {
 	if (!banner || !textEl) return;
 
 	if (!firebaseConnected) {
+		const activeLocation = getCurrentLocation();
+		const cacheSavedAt = cacheSavedAtByLocation[activeLocation];
+		const hasRemoteState = hasRemoteStateByLocation[activeLocation];
 		const cacheHint = cacheSavedAt
 			? ` Showing data cached at ${formatCacheTimestamp(cacheSavedAt)}.`
 			: hasRemoteState
@@ -1327,11 +1416,13 @@ function updateSyncBanner() {
 }
 
 async function initLocalCache() {
-	const cached = await loadCachedHayShedState();
-	if (!cached?.state || !validateHayShedState(cached.state)) return;
-
-	cacheSavedAt = cached.savedAt;
-	applyAppState(cached.state);
+	const cachedByLocation = await loadAllCachedHayShedStates();
+	LOCATION_IDS.forEach((locationId) => {
+		const cached = cachedByLocation[locationId];
+		if (!cached?.state || !validateHayShedState(cached.state, locationId)) return;
+		cacheSavedAtByLocation[locationId] = cached.savedAt;
+		applyAppState(locationId, cached.state);
+	});
 }
 
 function initSyncStatus() {
@@ -1346,28 +1437,37 @@ function initSyncStatus() {
 }
 
 function saveState() {
-	if (!isEditMode) return;
+	const locationId = getCurrentLocation();
+	if (!canEdit(locationId)) return;
 
-	const state = collectAppState();
+	const state = collectAppState(locationId);
 
-	set(ref(db, "hayShedState"), state).catch((err) => {
+	set(ref(db, getLocationFirebasePath(locationId)), state).catch((err) => {
 		console.error("Error saving state:", err);
 	});
-	cacheHayShedState(state);
+	cacheHayShedState(locationId, state);
 }
 
 onValue(
 	ref(db, "hayShedState"),
 	(snapshot) => {
-		const state = snapshot.val();
-		if (!state) return;
+		const rootState = snapshot.val();
+		if (!rootState) return;
 
 		try {
-			hasRemoteState = true;
-			applyAppState(state);
-			cacheHayShedState(state).then(() => {
-				cacheSavedAt = Date.now();
-				updateSyncBanner();
+			const normalizedRoot = isLegacyHayShedRoot(rootState)
+				? { olds: rootState }
+				: rootState;
+
+			LOCATION_IDS.forEach((locationId) => {
+				const locationState = normalizedRoot?.[locationId];
+				if (!locationState || !validateHayShedState(locationState, locationId)) return;
+				hasRemoteStateByLocation[locationId] = true;
+				applyAppState(locationId, locationState);
+				cacheHayShedState(locationId, locationState).then(() => {
+					cacheSavedAtByLocation[locationId] = Date.now();
+					updateSyncBanner();
+				});
 			});
 		} catch (e) {
 			console.error("Error syncing state:", e);
@@ -1380,14 +1480,15 @@ onValue(
 );
 
 function setInventoryControlsOpen(open) {
-	const controls = document.getElementById("inventoryControls");
+	const locationId = getCurrentLocation();
+	const controls = loc("inventoryControls", locationId);
 	const toggleBtn = document.getElementById("toggleControls");
 	if (!controls || !toggleBtn) return;
 
 	if (open) {
-		const shedsBtn = document.querySelector('.tabs__btn[data-tab="Sheds"]');
+		const shedsBtn = locQuery('.tabs__btn[data-tab="Sheds"]', locationId);
 		if (shedsBtn && !shedsBtn.classList.contains("tabs__btn--active")) {
-			setActiveTab("Sheds", shedsBtn);
+			setActiveTab("Sheds", shedsBtn, locationId);
 		}
 	}
 
@@ -1400,31 +1501,42 @@ function setInventoryControlsOpen(open) {
 	toggleBtn.title = label;
 }
 
-function setEditMode(enabled, person = null) {
-	isEditMode = enabled;
-	currentPerson = person;
-	document.body.classList.toggle("page--view-only", !enabled);
+function refreshEditAccess() {
+	const editable = canEdit();
+	document.body.classList.toggle("page--view-only", !editable);
 
 	const toggleBtn = document.getElementById("toggleControls");
-	if (toggleBtn) toggleBtn.hidden = !enabled;
+	if (toggleBtn) toggleBtn.hidden = !editable;
 
-	if (!enabled) setInventoryControlsOpen(false);
-
-	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
+	if (!editable) setInventoryControlsOpen(false);
 	updateStackInteractionState();
 }
 
+function setEditMode(authenticated, person = null, email = null) {
+	isAuthenticated = authenticated;
+	currentPerson = person;
+	currentUserEmail = email;
+
+	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
+	refreshEditAccess();
+}
+
 async function restoreAppStateToFirebase(state) {
-	await set(ref(db, "hayShedState"), state);
-	await cacheHayShedState(state);
-	hasRemoteState = true;
-	cacheSavedAt = Date.now();
-	applyAppState(state);
+	const rootState = isLegacyHayShedRoot(state) ? { olds: state } : state;
+	const targets = LOCATION_IDS.filter((locationId) => rootState?.[locationId]);
+	for (const locationId of targets) {
+		const locationState = normalizeHayShedState(rootState[locationId], locationId);
+		await set(ref(db, getLocationFirebasePath(locationId)), locationState);
+		await cacheHayShedState(locationId, locationState);
+		hasRemoteStateByLocation[locationId] = true;
+		cacheSavedAtByLocation[locationId] = Date.now();
+		applyAppState(locationId, locationState);
+	}
 	updateSyncBanner();
 }
 
 function handleAuthChange(authenticated, person, email = null) {
-	setEditMode(authenticated, person);
+	setEditMode(authenticated, person, email);
 	updateAuthUI(authenticated, person);
 	syncAdminBackupUI(authenticated, email);
 
@@ -1537,7 +1649,7 @@ function closeAuthModal() {
 
 function initAuthUI() {
 	document.getElementById("authBtn")?.addEventListener("click", () => {
-		if (isEditMode) {
+		if (isAuthenticated) {
 			logout(auth).catch((err) => console.error("Sign out error:", err));
 		} else {
 			openAuthModal();
@@ -1581,6 +1693,7 @@ function setActiveLocation(locationId, btn) {
 		tabBtn.classList.remove("location-tabs__btn--active");
 	});
 	btn?.classList.add("location-tabs__btn--active");
+	setCurrentLocationId(locationId);
 
 	document.querySelectorAll(".location-panel").forEach((panel) => {
 		const isActive = panel.id === `location-${locationId}`;
@@ -1593,34 +1706,44 @@ function setActiveLocation(locationId, btn) {
 		}
 	});
 
-	if (locationId === "olds") {
-		syncAllShedLayoutsAfterPaint();
-	}
+	syncAllShedLayoutsAfterPaint();
+	refreshEditAccess();
+	setInventoryControlsOpen(false);
+	updateLogTable(locationId);
+	updateReportsTable(locationId);
 }
 
 function initLocationTabs() {
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveLocation(btn.dataset.location, btn));
 	});
+	setCurrentLocationId("olds");
 }
 
-function initTabs() {
-	document.querySelectorAll(".tabs__btn").forEach((btn) => {
-		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab, btn));
+function initTabs(locationId = getCurrentLocation()) {
+	const panelRoot = getLocationPanel(locationId);
+	if (!panelRoot) return;
+
+	panelRoot.querySelectorAll(".tabs__btn").forEach((btn) => {
+		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab, btn, locationId));
 	});
 
-	document.querySelectorAll(".shed-tabs__btn").forEach((btn) => {
-		btn.addEventListener("click", () => setActiveShedTab(btn.dataset.subtab, btn));
+	panelRoot.querySelectorAll(".shed-tabs__btn").forEach((btn) => {
+		btn.addEventListener("click", () => setActiveShedTab(btn.dataset.subtab, btn, {}, locationId));
 	});
 
-	document.getElementById("shedSelect")?.addEventListener("change", (e) => {
-		updateBaySelectForShed(e.target.value);
-		const tabBtn = document.querySelector(`.shed-tabs__btn[data-subtab="${e.target.value}-shed-tab"]`);
-		if (tabBtn) setActiveShedTab(`${e.target.value}-shed-tab`, tabBtn);
+	getScopedElement("shedSelect", locationId)?.addEventListener("change", (e) => {
+		updateBaySelectForShed(e.target.value, null, locationId);
+		const tabBtn = panelRoot.querySelector(`.shed-tabs__btn[data-subtab$="${e.target.value}-shed-tab"]`);
+		if (tabBtn) setActiveShedTab(tabBtn.dataset.subtab, tabBtn, {}, locationId);
 	});
 
-	initEmptyBaySelect();
-	updateBaySelectForShed(document.getElementById("shedSelect")?.value || "west");
+	initEmptyBaySelect(locationId);
+	updateBaySelectForShed(
+		getScopedElement("shedSelect", locationId)?.value || getLocationConfig(locationId).defaultShed,
+		null,
+		locationId,
+	);
 }
 
 function bindDigitsOnlyInput(input, { maxDigits, format, minValue } = {}) {
@@ -1760,15 +1883,16 @@ function bindContractInput(input) {
 	input.addEventListener("input", applyFormat);
 }
 
-function updateBaySelectForShed(shed, selectedBay = null) {
-	const select = document.getElementById("baySelect");
+function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurrentLocation()) {
+	const select = getScopedElement("baySelect", locationId);
 	if (!select) return;
+	const locationConfig = getLocationConfig(locationId);
 
-	for (let index = 0; index < BAY_COUNT; index++) {
+	for (let index = 0; index < locationConfig.bayCount; index++) {
 		const option = select.options[index];
 		if (!option) continue;
 		option.value = String(index);
-		option.textContent = `Bay ${getBayDisplayNumber(shed, index)}`;
+		option.textContent = `Bay ${getBayDisplayNumberForLocation(shed, index, locationId)}`;
 	}
 
 	if (selectedBay !== null && selectedBay !== undefined && selectedBay !== "") {
@@ -1787,34 +1911,42 @@ function bindStackCommentInput(input) {
 	});
 }
 
-function initInventoryForm() {
-	document.getElementById("submitHay")?.addEventListener("click", handleHay);
+function initInventoryForm(locationId = getCurrentLocation()) {
+	getScopedElement("submitHay", locationId)?.addEventListener("click", () => {
+		setCurrentLocationId(locationId);
+		handleHay();
+	});
 
-	bindContractInput(document.getElementById("contractNumber"));
+	bindContractInput(getScopedElement("contractNumber", locationId));
 
-	bindDigitsOnlyInput(document.getElementById("baleCount"), {
+	bindDigitsOnlyInput(getScopedElement("baleCount", locationId), {
 		maxDigits: 4,
 		minValue: 1,
 	});
 
-	bindStackCommentInput(document.getElementById("stackComment"));
+	bindStackCommentInput(getScopedElement("stackComment", locationId));
 
-	document.getElementById("hayType")?.addEventListener("change", (e) => {
-		syncGradeFieldVisibility(e.target.value);
+	getScopedElement("hayType", locationId)?.addEventListener("change", (e) => {
+		syncGradeFieldVisibility(e.target.value, locationId);
 	});
 
-	syncGradeFieldVisibility("");
+	syncGradeFieldVisibility("", locationId);
 
-	document.getElementById("actionSelect")?.addEventListener("change", syncInventoryActionFields);
-	syncInventoryActionFields();
+	getScopedElement("actionSelect", locationId)?.addEventListener("change", () => syncInventoryActionFields(locationId));
+	syncInventoryActionFields(locationId);
 
+	if (locationId === getCurrentLocation()) {
+		setInventoryControlsOpen(false);
+	}
+}
+
+function initToggleControls() {
 	const toggleBtn = document.getElementById("toggleControls");
-	const controls = document.getElementById("inventoryControls");
 	toggleBtn?.addEventListener("click", () => {
-		if (!isEditMode) return;
-		setInventoryControlsOpen(controls.hidden);
+		if (!canEdit()) return;
+		const controls = loc("inventoryControls", getCurrentLocation());
+		setInventoryControlsOpen(Boolean(controls?.hidden));
 	});
-	setInventoryControlsOpen(false);
 }
 
 window.resetAllBays = resetAllBays;
@@ -1822,16 +1954,21 @@ window.resetAllBays = resetAllBays;
 window.addEventListener("load", async () => {
 	initGrabToScroll();
 	initAuthUI();
+	initToggleControls();
 	initLocationTabs();
-	initTabs();
-	initReports();
-	initInventoryForm();
-	initLogFilters();
+	LOCATION_IDS.forEach((locationId) => {
+		initTabs(locationId);
+		initReports(locationId);
+		initInventoryForm(locationId);
+		initLogFilters(locationId);
+	});
 	initSyncStatus();
 	await initLocalCache();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	updateStackInteractionState();
 	syncAllShedLayoutsAfterPaint();
+	updateLogTable(getCurrentLocation());
+	updateReportsTable(getCurrentLocation());
 	updateSyncBanner();
 });
 

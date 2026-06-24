@@ -1,0 +1,261 @@
+<div class="page__content">
+
+	<nav class="tabs" aria-label="Main navigation">
+		<div class="tabs__group">
+			<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
+			<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
+			<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
+		</div>
+	</nav>
+
+	<section id="siksika-Sheds" class="tabs__panel tabs__panel--active">
+		<form class="inventory__form" id="siksika-inventoryControls" hidden novalidate>
+			<select id="siksika-reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
+				required>
+				<option value="" selected disabled>Reported by</option>
+				<option value="N/A">N/A</option>
+				<option value="Jay">Jay</option>
+			</select>
+
+			<select id="siksika-hayType" class="inventory__field inventory__field--select" required>
+				<option value="" selected disabled>Product</option>
+				<option value="alfalfa">Alfalfa Hay</option>
+				<option value="barley-straw">Barley Straw</option>
+				<option value="canola-straw">Canola Straw</option>
+				<option value="mixed-hay">Mixed Hay</option>
+				<option value="timothy">Timothy Hay</option>
+				<option value="timothy-straw">Timothy Straw</option>
+				<option value="wheat-straw">Wheat Straw</option>
+			</select>
+
+			<select id="siksika-stackGrade" class="inventory__field inventory__field--select inventory__field--grade" hidden>
+				<option value="" selected>Grade</option>
+				<option value="premium">Premium</option>
+				<option value="low-premium">Low Premium</option>
+				<option value="1a">#1A</option>
+				<option value="1">#1</option>
+				<option value="low-1">Low #1</option>
+				<option value="standard">Standard</option>
+				<option value="economy">Economy</option>
+			</select>
+
+			<input type="text" id="siksika-contractNumber" class="inventory__field inventory__field--contract"
+				placeholder="26-2222" maxlength="8" inputmode="text" autocomplete="off"
+				autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
+				title="Format: 26-2222 or 26-2222A" required>
+
+			<input type="text" id="siksika-baleCount" class="inventory__field inventory__field--bales"
+				placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
+				pattern="[1-9][0-9]*" title="Minimum 1 bale for Add/Remove">
+
+			<select id="siksika-shedSelect" class="inventory__field inventory__field--select">
+				<option value="south">South Shed</option>
+				<option value="north">North Shed</option>
+			</select>
+
+			<select id="siksika-baySelect" class="inventory__field inventory__field--select">
+				<option value="0">Bay 1</option>
+				<option value="1">Bay 2</option>
+				<option value="2">Bay 3</option>
+				<option value="3">Bay 4</option>
+				<option value="4">Bay 5</option>
+				<option value="5">Bay 6</option>
+				<option value="6">Bay 7</option>
+				<option value="7">Bay 8</option>
+				<option value="8">Bay 9</option>
+				<option value="9">Bay 10</option>
+			</select>
+
+			<div class="inventory__checks-row">
+				<fieldset class="inventory__isles" id="siksika-isleFieldset">
+					<label class="inventory__isle-option">
+						<input type="checkbox" class="inventory__isle-check" id="siksika-isle1" value="1" checked>
+						<span class="inventory__isle-text">Isle 1</span>
+					</label>
+					<label class="inventory__isle-option">
+						<input type="checkbox" class="inventory__isle-check" id="siksika-isle2" value="2" checked>
+						<span class="inventory__isle-text">Isle 2</span>
+					</label>
+				</fieldset>
+
+				<fieldset class="inventory__reject" id="siksika-rejectFieldset">
+					<label class="inventory__reject-option">
+						<input type="checkbox" class="inventory__reject-check" id="siksika-rejectCheck">
+						<span class="inventory__reject-text">Rejected</span>
+					</label>
+				</fieldset>
+			</div>
+
+			<input type="text" id="siksika-stackComment" class="inventory__field inventory__field--comment"
+				placeholder="Comment" maxlength="24" autocomplete="off" spellcheck="false">
+
+			<select id="siksika-actionSelect" class="inventory__field inventory__field--select" required>
+				<option value="" selected disabled>Action</option>
+				<option value="add">Add</option>
+				<option value="remove">Remove</option>
+				<option value="update">Update</option>
+				<option value="transfer">Transfer</option>
+			</select>
+
+			<button type="button" id="siksika-submitHay" class="inventory__submit">Submit</button>
+		</form>
+
+		<nav class="shed-tabs" aria-label="Shed navigation">
+			<button type="button" class="shed-tabs__btn shed-tabs__btn--active"
+				data-subtab="siksika-south-shed-tab">South Shed</button>
+			<button type="button" class="shed-tabs__btn" data-subtab="siksika-north-shed-tab">North Shed</button>
+		</nav>
+
+		<div class="shed-tabs__panel shed-tabs__panel--active" id="siksika-south-shed-tab">
+			@include('shed-columns-siksika-south.html')
+		</div>
+
+		<div class="shed-tabs__panel" id="siksika-north-shed-tab">
+			@include('shed-columns-siksika-north.html')
+		</div>
+	</section>
+
+	<section id="siksika-Reports" class="tabs__panel">
+		<h2 class="log__title">Inventory Reports</h2>
+		<div class="log__filters reports__filters">
+			<label class="log__filter">
+				<span class="log__filter-label">Product</span>
+				<select id="siksika-reportProductFilter" class="log__filter-input log__filter-input--select">
+					<option value="" selected disabled>Product</option>
+					<option value="alfalfa">Alfalfa Hay</option>
+					<option value="timothy">Timothy Hay</option>
+					<option value="wheat-straw">Wheat Straw</option>
+					<option value="barley-straw">Barley Straw</option>
+					<option value="canola-straw">Canola Straw</option>
+					<option value="mixed-hay">Mixed Hay</option>
+					<option value="timothy-straw">Timothy Straw</option>
+				</select>
+			</label>
+			<label class="log__filter reports__filter--grade" id="siksika-reportGradeFilterWrap" hidden>
+				<span class="log__filter-label">Grade</span>
+				<select id="siksika-reportGradeFilter" class="log__filter-input log__filter-input--select">
+					<option value="all" selected>All grades</option>
+					<option value="premium">Premium</option>
+					<option value="low-premium">Low Premium</option>
+					<option value="1a">#1A</option>
+					<option value="1">#1</option>
+					<option value="low-1">Low #1</option>
+					<option value="standard">Standard</option>
+					<option value="economy">Economy</option>
+				</select>
+			</label>
+			<label class="log__filter reports__filter--reject">
+				<span class="log__filter-label">Display</span>
+				<span class="reports__include-reject">
+					<input type="checkbox" id="siksika-reportIncludeRejected" class="reports__include-reject-check">
+					<span class="reports__include-reject-text">Include rejected</span>
+				</span>
+			</label>
+			<button type="button" id="siksika-reportPrintPdf" class="reports__print-btn" disabled>
+				Print PDF
+			</button>
+		</div>
+		<p class="reports__summary" id="siksika-reportSummary" hidden></p>
+		<div class="log-table-wrap reports__table-wrap" id="siksika-reportTableWrap" hidden>
+			<table class="log-table">
+				<thead class="log-table__head">
+					<tr class="log-table__row">
+						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head reports__col-grade" hidden>Grade</th>
+						<th class="log-table__cell log-table__cell--head">Shed</th>
+						<th class="log-table__cell log-table__cell--head">Bay</th>
+						<th class="log-table__cell log-table__cell--head">Bales</th>
+					</tr>
+				</thead>
+				<tbody class="log-table__body" id="siksika-reportBody"></tbody>
+			</table>
+		</div>
+		<p class="reports__empty" id="siksika-reportEmpty">Select a product to view inventory locations.</p>
+	</section>
+
+	<section id="siksika-Log" class="tabs__panel">
+		<h2 class="log__title">Change Log</h2>
+		<div class="log__filters">
+			<label class="log__filter">
+				<span class="log__filter-label">Year</span>
+				<select id="siksika-logFilterYear" class="log__filter-input log__filter-input--select"></select>
+			</label>
+			<label class="log__filter">
+				<span class="log__filter-label">Month</span>
+				<select id="siksika-logFilterMonth" class="log__filter-input log__filter-input--select">
+					<option value="all">All months</option>
+					<option value="1">January</option>
+					<option value="2">February</option>
+					<option value="3">March</option>
+					<option value="4">April</option>
+					<option value="5">May</option>
+					<option value="6">June</option>
+					<option value="7">July</option>
+					<option value="8">August</option>
+					<option value="9">September</option>
+					<option value="10">October</option>
+					<option value="11">November</option>
+					<option value="12">December</option>
+				</select>
+			</label>
+			<label class="log__filter">
+				<span class="log__filter-label">Day</span>
+				<select id="siksika-logFilterDay" class="log__filter-input log__filter-input--select">
+					<option value="all">All days</option>
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+				</select>
+			</label>
+			<button type="button" id="siksika-logFilterReset" class="log__filter-reset">Reset</button>
+		</div>
+		<div class="log-table-wrap">
+			<table class="log-table">
+				<thead class="log-table__head">
+					<tr class="log-table__row">
+						<th class="log-table__cell log-table__cell--head">Date & Time</th>
+						<th class="log-table__cell log-table__cell--head">Changed By</th>
+						<th class="log-table__cell log-table__cell--head">Reported By</th>
+						<th class="log-table__cell log-table__cell--head">Action</th>
+						<th class="log-table__cell log-table__cell--head">Hay Type</th>
+						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head">Bay</th>
+						<th class="log-table__cell log-table__cell--head">Isle</th>
+						<th class="log-table__cell log-table__cell--head">Shed</th>
+						<th class="log-table__cell log-table__cell--head">Bales</th>
+					</tr>
+				</thead>
+				<tbody class="log-table__body" id="siksika-logBody"></tbody>
+			</table>
+		</div>
+	</section>
+
+</div>

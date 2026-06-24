@@ -132,13 +132,13 @@ h3 {
 	text-align: center;
 }
 
-.tabs__btn:hover {
+.tabs__btn:not(.tabs__btn--active):hover {
 	color: var(--text-main);
 }
 
 .tabs__btn--active {
-	background-color: var(--color-surface);
-	color: var(--color-primary);
+	background-color: var(--color-primary);
+	color: #fff;
 	box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
 }
 
@@ -474,14 +474,14 @@ body.page--view-only .inventory__form {
 	text-align: center;
 }
 
-.shed-tabs__btn:hover {
+.shed-tabs__btn:not(.shed-tabs__btn--active):hover {
 	color: var(--text-main);
 	background-color: rgba(252, 249, 244, 0.45);
 }
 
 .shed-tabs__btn--active {
-	background-color: var(--color-surface);
-	color: var(--color-primary);
+	background-color: var(--color-primary);
+	color: #fff;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
@@ -1329,14 +1329,14 @@ body.page--offline .inventory__form {
 	text-align: center;
 }
 
-.location-tabs__btn:hover {
+.location-tabs__btn:not(.location-tabs__btn--active):hover {
 	color: var(--text-main);
 	background-color: rgba(252, 249, 244, 0.65);
 }
 
 .location-tabs__btn--active {
-	background-color: var(--color-surface);
-	color: var(--color-primary);
+	background-color: var(--color-primary);
+	color: #fff;
 	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
 }
 

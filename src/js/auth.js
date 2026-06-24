@@ -1,18 +1,20 @@
-import {
-	getAuth,
-	signInWithEmailAndPassword,
-	signOut,
-	onAuthStateChanged,
-} from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
-/** Firebase Auth email → person name for change log. Keep in sync with database.rules.json */
-export const USERS = {
+/** Barr-ag team — edit access to Olds and Siksika */
+export const OLDS_EDITORS = {
 	"operations@barr-ag.com": "Vlad",
 	"tschmitt@barr-ag.com": "Tyler",
 	"rschmitt@barr-ag.com": "Ryley",
 	"tbeschmitt@barr-ag.com": "Taylor",
 	"nmathis@barr-ag.com": "Natalie",
 };
+
+/** Siksika-only users — view Olds, edit Siksika. Add emails here and in database.rules.json */
+export const SIKSIKA_EDITORS = {
+	"siksika@barr-ag.com": "Siksika",
+};
+
+export const USERS = { ...OLDS_EDITORS, ...SIKSIKA_EDITORS };
 
 export function getPersonFromEmail(email) {
 	if (!email) return null;
@@ -21,6 +23,22 @@ export function getPersonFromEmail(email) {
 
 export function isAuthorizedEmail(email) {
 	return !!getPersonFromEmail(email);
+}
+
+export function isOldsEditor(email) {
+	return !!OLDS_EDITORS[email?.toLowerCase()];
+}
+
+export function isSiksikaEditor(email) {
+	const key = email?.toLowerCase();
+	return !!(OLDS_EDITORS[key] || SIKSIKA_EDITORS[key]);
+}
+
+export function canEditLocation(email, locationId) {
+	if (!email) return false;
+	if (locationId === "olds") return isOldsEditor(email);
+	if (locationId === "siksika") return isSiksikaEditor(email);
+	return false;
 }
 
 export function isAdminUser(email) {

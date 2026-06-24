@@ -1,16 +1,51 @@
-import { normalizeHayShedState, validateHayShedState } from "./state-cache.js";
+import { LOCATION_IDS } from "./locations.js";
+import {
+	normalizeHayShedState,
+	validateHayShedState,
+	isLegacyHayShedRoot,
+} from "./state-cache.js";
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
+
+function isMultiLocationBackup(state) {
+	return LOCATION_IDS.some((locationId) => state?.[locationId] && typeof state[locationId] === "object");
+}
+
+function normalizeBackupState(state) {
+	if (isLegacyHayShedRoot(state)) {
+		return { olds: normalizeHayShedState(state, "olds") };
+	}
+
+	if (isMultiLocationBackup(state)) {
+		const normalized = {};
+		for (const locationId of LOCATION_IDS) {
+			if (!state?.[locationId]) continue;
+			normalized[locationId] = normalizeHayShedState(state[locationId], locationId);
+		}
+		return normalized;
+	}
+
+	return { olds: normalizeHayShedState(state, "olds") };
+}
+
+export function validateBackupState(state) {
+	const normalized = normalizeBackupState(state);
+	const targets = Object.keys(normalized);
+
+	if (!targets.length) return false;
+
+	return targets.every((locationId) => validateHayShedState(normalized[locationId], locationId));
+}
 
 export function parseHayShedStateFromJson(text) {
 	const parsed = JSON.parse(text);
 	const state = parsed?.state && typeof parsed.state === "object" ? parsed.state : parsed;
 
-	if (!validateHayShedState(state)) {
+	if (!validateBackupState(state)) {
 		throw new Error("Invalid backup file format.");
 	}
 
-	return normalizeHayShedState(state);
+	return normalizeBackupState(state);
 }
 
 export function readHayShedStateFile(file) {
@@ -40,7 +75,7 @@ export function buildBackupPayload(state, { exportedBy = null } = {}) {
 		version: BACKUP_VERSION,
 		exportedAt: new Date().toISOString(),
 		exportedBy,
-		state: normalizeHayShedState(state),
+		state: normalizeBackupState(state),
 	};
 }
 
