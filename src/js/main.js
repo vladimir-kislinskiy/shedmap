@@ -99,14 +99,14 @@ function clearAllBaysUI(locationId = getCurrentLocationId()) {
 	syncAllShedLayouts();
 }
 
-async function resetAllBays({ confirm = true } = {}) {
-	const locationId = getCurrentLocationId();
+async function resetAllBays({ confirm = true, locationId = getCurrentLocationId() } = {}) {
 	if (!canEdit(locationId)) {
 		alert("Sign in to reset all bays.");
 		return false;
 	}
 
-	if (confirm && !window.confirm("Clear all bays in every shed and the change log?")) {
+	const locationLabel = getLocationConfig(locationId).label;
+	if (confirm && !window.confirm(`Clear all bays and the change log for ${locationLabel}?`)) {
 		return false;
 	}
 
@@ -115,7 +115,7 @@ async function resetAllBays({ confirm = true } = {}) {
 	try {
 		await set(ref(db, getLocationFirebasePath(locationId)), buildEmptyShedState(locationId));
 		await cacheHayShedState(locationId, buildEmptyShedState(locationId));
-		if (location.search.includes("reset=all")) {
+		if (location.search.includes("reset=")) {
 			history.replaceState(null, "", location.pathname);
 		}
 		return true;
@@ -126,7 +126,15 @@ async function resetAllBays({ confirm = true } = {}) {
 	}
 }
 
-let pendingResetAll = new URLSearchParams(location.search).get("reset") === "all";
+function getPendingResetLocation() {
+	const value = new URLSearchParams(location.search).get("reset");
+	if (!value) return null;
+	if (value === "all") return getCurrentLocationId();
+	if (LOCATION_IDS.includes(value)) return value;
+	return null;
+}
+
+let pendingResetLocation = getPendingResetLocation();
 
 const changeLogs = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
 let isAuthenticated = false;
@@ -1601,9 +1609,10 @@ function handleAuthChange(authenticated, person, email = null) {
 	updateAuthUI(authenticated, person);
 	syncAdminBackupUI(authenticated, email);
 
-	if (authenticated && pendingResetAll) {
-		pendingResetAll = false;
-		resetAllBays({ confirm: false });
+	if (authenticated && pendingResetLocation) {
+		const locationId = pendingResetLocation;
+		pendingResetLocation = null;
+		resetAllBays({ confirm: false, locationId });
 	}
 }
 
@@ -2037,6 +2046,8 @@ function initToggleControls() {
 }
 
 window.resetAllBays = resetAllBays;
+window.resetOlds = () => resetAllBays({ locationId: "olds" });
+window.resetSiksika = () => resetAllBays({ locationId: "siksika" });
 
 window.addEventListener("load", async () => {
 	initGrabToScroll();
