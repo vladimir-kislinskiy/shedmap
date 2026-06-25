@@ -134,6 +134,7 @@ let currentUserEmail = null;
 let currentPerson = null;
 let transferSource = null;
 let firebaseConnected = true;
+let currentTab = "Sheds";
 let offlineBannerTimer = null;
 const OFFLINE_BANNER_DELAY_MS = 4000;
 let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
@@ -201,25 +202,30 @@ function setTransferSource(stackEl) {
 	};
 }
 
-function setActiveTab(panelId, btn, locationId = getCurrentLocation()) {
-	const panelRoot = getLocationPanel(locationId);
-	if (!panelRoot) return;
+function setActiveTab(tabId) {
+	currentTab = tabId;
 
-	panelRoot.querySelectorAll(".tabs__panel").forEach((panel) => {
-		panel.classList.remove("tabs__panel--active");
+	document.querySelectorAll(".tabs__group .tabs__btn").forEach((tabBtn) => {
+		tabBtn.classList.toggle("tabs__btn--active", tabBtn.dataset.tab === tabId);
 	});
-	panelRoot.querySelectorAll(".tabs__btn").forEach((tabBtn) => {
-		tabBtn.classList.remove("tabs__btn--active");
-	});
-	loc(panelId, locationId)?.classList.add("tabs__panel--active");
-	btn?.classList.add("tabs__btn--active");
 
-	if (panelId === "Sheds") {
+	// Tab buttons are shared in the header, but each location keeps its own
+	// panels — keep both locations in sync so switching location preserves the tab.
+	LOCATION_IDS.forEach((locId) => {
+		const panelRoot = getLocationPanel(locId);
+		if (!panelRoot) return;
+		const activePanel = loc(tabId, locId);
+		panelRoot.querySelectorAll(".tabs__panel").forEach((panel) => {
+			panel.classList.toggle("tabs__panel--active", panel === activePanel);
+		});
+	});
+
+	if (tabId === "Sheds") {
 		requestAnimationFrame(() => syncAllShedLayouts());
 	}
 
-	if (panelId === "Reports") {
-		updateReportsTable(locationId);
+	if (tabId === "Reports") {
+		updateReportsTable(getCurrentLocation());
 	}
 }
 
@@ -1506,11 +1512,8 @@ function setInventoryControlsOpen(open) {
 	const toggleBtn = document.getElementById("toggleControls");
 	if (!controls || !toggleBtn) return;
 
-	if (open) {
-		const shedsBtn = locQuery('.tabs__btn[data-tab="Sheds"]', locationId);
-		if (shedsBtn && !shedsBtn.classList.contains("tabs__btn--active")) {
-			setActiveTab("Sheds", shedsBtn, locationId);
-		}
+	if (open && currentTab !== "Sheds") {
+		setActiveTab("Sheds");
 	}
 
 	controls.hidden = !open;
@@ -1741,13 +1744,16 @@ function initLocationTabs() {
 	setCurrentLocationId("olds");
 }
 
+function initMainTabs() {
+	document.querySelectorAll(".tabs__group .tabs__btn").forEach((btn) => {
+		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
+	});
+	setActiveTab(currentTab);
+}
+
 function initTabs(locationId = getCurrentLocation()) {
 	const panelRoot = getLocationPanel(locationId);
 	if (!panelRoot) return;
-
-	panelRoot.querySelectorAll(".tabs__btn").forEach((btn) => {
-		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab, btn, locationId));
-	});
 
 	panelRoot.querySelectorAll(".shed-tabs__btn").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveShedTab(btn.dataset.subtab, btn, {}, locationId));
@@ -1977,6 +1983,7 @@ window.addEventListener("load", async () => {
 	initAuthUI();
 	initToggleControls();
 	initLocationTabs();
+	initMainTabs();
 	LOCATION_IDS.forEach((locationId) => {
 		initTabs(locationId);
 		initReports(locationId);

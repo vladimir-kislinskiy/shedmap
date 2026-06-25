@@ -1274,10 +1274,12 @@ body.page--offline .inventory__form {
 
 /* Auth */
 .auth-bar {
-	display: flex;
+	display: grid;
+	grid-template-columns: 1fr auto 1fr;
+	grid-template-areas: "location tabs actions";
 	align-items: center;
-	justify-content: space-between;
-	gap: clamp(8px, 2vw, 16px);
+	column-gap: clamp(8px, 2vw, 16px);
+	row-gap: clamp(8px, 2vw, 12px);
 	width: 100%;
 	padding: clamp(10px, 2vw, 14px) clamp(12px, 3vw, 24px);
 	background: rgba(252, 249, 244, 0.96);
@@ -1288,6 +1290,23 @@ body.page--offline .inventory__form {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 	min-width: 0;
 	flex-shrink: 0;
+}
+
+.auth-bar > .location-tabs {
+	grid-area: location;
+	justify-self: start;
+}
+
+.auth-bar > .tabs__group {
+	grid-area: tabs;
+	justify-self: center;
+	flex: 0 1 auto;
+	border: 1px solid var(--border-color);
+}
+
+.auth-bar > .auth-bar__actions {
+	grid-area: actions;
+	justify-self: end;
 }
 
 .auth-bar__title {

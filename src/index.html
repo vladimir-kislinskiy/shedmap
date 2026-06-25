@@ -9,6 +9,11 @@
 				<button type="button" class="location-tabs__btn location-tabs__btn--active" data-location="olds">Olds</button>
 				<button type="button" class="location-tabs__btn" data-location="siksika">Siksika</button>
 			</nav>
+			<div class="tabs__group" role="tablist" aria-label="Main navigation">
+				<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
+				<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
+				<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
+			</div>
 			<div class="auth-bar__actions">
 				<div class="auth-bar__status">
 					<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
@@ -60,14 +65,6 @@
 		<main class="page__main">
 			<div id="location-olds" class="location-panel location-panel--active">
 			<div class="page__content">
-
-				<nav class="tabs" aria-label="Main navigation">
-					<div class="tabs__group">
-						<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
-						<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
-						<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
-					</div>
-				</nav>
 
 				<section id="Sheds" class="tabs__panel tabs__panel--active">
 					<form class="inventory__form" id="inventoryControls" hidden novalidate>
