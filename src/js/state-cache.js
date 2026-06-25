@@ -84,9 +84,25 @@ export async function loadAllCachedHayShedStates() {
 }
 
 export function normalizeHayShedState(state, locationId = "olds") {
+	const config = getLocationConfig(locationId);
+	const sheds = { ...(state?.sheds && typeof state.sheds === "object" ? state.sheds : {}) };
+
+	config.sheds.forEach((shedId) => {
+		if (!sheds[shedId] || typeof sheds[shedId] !== "object") {
+			sheds[shedId] = {};
+		}
+
+		for (let i = 0; i < config.bayCount; i++) {
+			const colId = `${shedId}-col-${i}`;
+			if (!Array.isArray(sheds[shedId][colId])) {
+				sheds[shedId][colId] = [];
+			}
+		}
+	});
+
 	return {
 		changeLog: Array.isArray(state?.changeLog) ? state.changeLog : [],
-		sheds: state?.sheds && typeof state.sheds === "object" ? state.sheds : {},
+		sheds,
 		locationId,
 	};
 }

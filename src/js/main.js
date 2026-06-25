@@ -18,7 +18,7 @@ import {
 	normalizeHayShedState,
 	isLegacyHayShedRoot,
 } from "./state-cache.js";
-import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath } from "./locations.js";
+import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath, OLDS_LOCATION_ID } from "./locations.js";
 import {
 	getCurrentLocationId,
 	setCurrentLocationId,
@@ -614,7 +614,7 @@ function makeStackDraggable(stackEl) {
 			}
 
 			setCurrentLocationId(locationId);
-			saveState();
+			saveState(locationId);
 			resetInventoryForm();
 		},
 	});
@@ -698,7 +698,7 @@ function handleHay() {
 
 		updateBayStats(bayStackEl);
 		syncAllShedLayouts();
-		saveState();
+		saveState(locationId);
 		resetInventoryForm();
 		return;
 	}
@@ -847,7 +847,7 @@ function handleHay() {
 		);
 
 		syncAllShedLayouts();
-		saveState();
+		saveState(locationId);
 		updateReportsTable();
 		resetInventoryForm();
 		return;
@@ -942,7 +942,7 @@ function handleHay() {
 
 	updateBayStats(bayStackEl);
 	syncAllShedLayouts();
-	saveState();
+	saveState(locationId);
 	updateReportsTable();
 	resetInventoryForm();
 }
@@ -1445,10 +1445,73 @@ function updateSyncBanner() {
 async function initLocalCache() {
 	const cachedByLocation = await loadAllCachedHayShedStates();
 	LOCATION_IDS.forEach((locationId) => {
+		if (hasRemoteStateByLocation[locationId]) return;
+
 		const cached = cachedByLocation[locationId];
 		if (!cached?.state || !validateHayShedState(cached.state, locationId)) return;
 		cacheSavedAtByLocation[locationId] = cached.savedAt;
 		applyAppState(locationId, cached.state);
+	});
+}
+
+function applyRemoteState(locationId, state) {
+	if (!state || !validateHayShedState(state, locationId)) {
+		console.warn(`Ignoring invalid remote state for ${locationId}`, state);
+		return;
+	}
+
+	hasRemoteStateByLocation[locationId] = true;
+	applyAppState(locationId, state);
+	cacheHayShedState(locationId, state).then(() => {
+		cacheSavedAtByLocation[locationId] = Date.now();
+		updateSyncBanner();
+	});
+}
+
+function initFirebaseSync() {
+	// Legacy flat data at hayShedState root (changeLog + sheds at top level)
+	onValue(
+		ref(db, "hayShedState"),
+		(snapshot) => {
+			const root = snapshot.val();
+			if (!root) return;
+
+			try {
+				if (isLegacyHayShedRoot(root)) {
+					applyRemoteState(OLDS_LOCATION_ID, root);
+					return;
+				}
+
+				// Hybrid: legacy Olds data at root alongside nested location nodes
+				if (root.sheds && Array.isArray(root.changeLog) && !root.olds) {
+					applyRemoteState(OLDS_LOCATION_ID, {
+						changeLog: root.changeLog,
+						sheds: root.sheds,
+					});
+				}
+			} catch (e) {
+				console.error("Error syncing legacy root state:", e);
+			}
+		},
+		(err) => console.error("Firebase legacy read error:", err),
+	);
+
+	// Per-location paths — reliable sync for Olds and Siksika independently
+	LOCATION_IDS.forEach((locationId) => {
+		onValue(
+			ref(db, getLocationFirebasePath(locationId)),
+			(snapshot) => {
+				const state = snapshot.val();
+				if (!state) return;
+
+				try {
+					applyRemoteState(locationId, state);
+				} catch (e) {
+					console.error(`Error syncing ${locationId} state:`, e);
+				}
+			},
+			(err) => console.error(`Firebase read error (${locationId}):`, err),
+		);
 	});
 }
 
@@ -1463,48 +1526,22 @@ function initSyncStatus() {
 	);
 }
 
-function saveState() {
-	const locationId = getCurrentLocation();
+async function saveState(locationId = getCurrentLocation()) {
 	if (!canEdit(locationId)) return;
 
 	const state = collectAppState(locationId);
 
-	set(ref(db, getLocationFirebasePath(locationId)), state).catch((err) => {
-		console.error("Error saving state:", err);
-	});
-	cacheHayShedState(locationId, state);
+	try {
+		await set(ref(db, getLocationFirebasePath(locationId)), state);
+	} catch (err) {
+		console.error(`Error saving ${locationId} state:`, err);
+		alert(
+			"Failed to save changes to the server. Data is cached on this device but may not appear on other devices until sync works.",
+		);
+	}
+
+	await cacheHayShedState(locationId, state);
 }
-
-onValue(
-	ref(db, "hayShedState"),
-	(snapshot) => {
-		const rootState = snapshot.val();
-		if (!rootState) return;
-
-		try {
-			const normalizedRoot = isLegacyHayShedRoot(rootState)
-				? { olds: rootState }
-				: rootState;
-
-			LOCATION_IDS.forEach((locationId) => {
-				const locationState = normalizedRoot?.[locationId];
-				if (!locationState || !validateHayShedState(locationState, locationId)) return;
-				hasRemoteStateByLocation[locationId] = true;
-				applyAppState(locationId, locationState);
-				cacheHayShedState(locationId, locationState).then(() => {
-					cacheSavedAtByLocation[locationId] = Date.now();
-					updateSyncBanner();
-				});
-			});
-		} catch (e) {
-			console.error("Error syncing state:", e);
-		}
-	},
-	(err) => {
-		console.error("Firebase read error:", err);
-		updateSyncBanner();
-	},
-);
 
 function setInventoryControlsOpen(open) {
 	const locationId = getCurrentLocation();
@@ -1712,12 +1749,32 @@ function initAuthUI() {
 	});
 }
 
+const LOCATION_STORAGE_KEY = "hayShedLocation";
+
+function getSavedLocationId() {
+	try {
+		const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
+		if (saved && LOCATION_IDS.includes(saved)) return saved;
+	} catch {
+		// localStorage unavailable (private mode, etc.)
+	}
+	return OLDS_LOCATION_ID;
+}
+
+function saveLocationPreference(locationId) {
+	try {
+		localStorage.setItem(LOCATION_STORAGE_KEY, locationId);
+	} catch {
+		// ignore
+	}
+}
+
 function setActiveLocation(locationId, btn) {
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((tabBtn) => {
-		tabBtn.classList.remove("location-tabs__btn--active");
+		tabBtn.classList.toggle("location-tabs__btn--active", tabBtn.dataset.location === locationId);
 	});
-	btn?.classList.add("location-tabs__btn--active");
 	setCurrentLocationId(locationId);
+	saveLocationPreference(locationId);
 
 	document.querySelectorAll(".location-panel").forEach((panel) => {
 		const isActive = panel.id === `location-${locationId}`;
@@ -1741,7 +1798,10 @@ function initLocationTabs() {
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveLocation(btn.dataset.location, btn));
 	});
-	setCurrentLocationId("olds");
+
+	const savedLocation = getSavedLocationId();
+	const savedBtn = document.querySelector(`.location-tabs__btn[data-location="${savedLocation}"]`);
+	setActiveLocation(savedLocation, savedBtn);
 }
 
 function initMainTabs() {
@@ -1991,6 +2051,7 @@ window.addEventListener("load", async () => {
 		initLogFilters(locationId);
 	});
 	initSyncStatus();
+	initFirebaseSync();
 	await initLocalCache();
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	updateStackInteractionState();
