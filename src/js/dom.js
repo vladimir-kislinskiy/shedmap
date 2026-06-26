@@ -664,6 +664,10 @@ export function normalizeStackComment(value = "") {
 	return words.join(" ");
 }
 
+export function isBayFrontComment(comment = "") {
+	return normalizeStackComment(comment).toLowerCase() === "bay front";
+}
+
 export function sanitizeCommentInput(value = "") {
 	let v = String(value).replace(/^\s+/, "").replace(/\s+/g, " ");
 	const parts = v.split(" ");
@@ -732,6 +736,7 @@ export function applyStackComment(stackEl, comment = "") {
 
 	const normalizedComment = normalizeStackComment(comment);
 	stackEl.dataset.comment = normalizedComment;
+	stackEl.classList.toggle("hay-stack--bay-front", isBayFrontComment(normalizedComment));
 
 	const commentEl = stackEl.querySelector(".hay-stack__comment");
 	if (commentEl) {

@@ -699,6 +699,18 @@ body.page--view-only .inventory__form {
 	min-width: 0;
 }
 
+/* "Bay front" stacks drop to the bottom edge of the bay (toward the entrance). */
+.shed__bay-stack > .hay-stack--bay-front,
+.shed__isle > .hay-stack--bay-front {
+	order: 1;
+	margin-top: auto;
+}
+
+.shed__bay-stack > .hay-stack--bay-front ~ .hay-stack--bay-front,
+.shed__isle > .hay-stack--bay-front ~ .hay-stack--bay-front {
+	margin-top: 6px;
+}
+
 .hay-stack--full {
 	width: 100%;
 	flex-shrink: 0;
