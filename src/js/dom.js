@@ -18,6 +18,7 @@ export const HAY_TYPES = [
 	{ id: "wheat-straw", label: "Wheat Straw" },
 	{ id: "barley-straw", label: "Barley Straw" },
 	{ id: "canola-straw", label: "Canola Straw" },
+	{ id: "corn-stalks", label: "Corn Stalks", stackLabel: "Corn Stalks" },
 	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
 	{ id: "tmr", label: "TMR", stackLabel: "TMR" },
 ];
