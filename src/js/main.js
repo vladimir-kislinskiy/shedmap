@@ -449,6 +449,9 @@ function resetInventoryFormFields() {
 	if (noTagsCheck) noTagsCheck.checked = false;
 	syncNoTagsState(locationId);
 
+	const separateStackCheck = getScopedElement("separateStackCheck", locationId);
+	if (separateStackCheck) separateStackCheck.checked = false;
+
 	const stackComment = getScopedElement("stackComment", locationId);
 	if (stackComment) stackComment.value = "";
 
@@ -679,6 +682,7 @@ function handleHay() {
 	const action = getScopedElement("actionSelect", locationId).value;
 	const reportedBy = getReportedByValue(locationId);
 	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
+	const separateStack = getScopedElement("separateStackCheck", locationId)?.checked ?? false;
 	const stackComment = normalizeStackComment(getScopedElement("stackComment", locationId)?.value || "");
 	const stackGrade = normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
 
@@ -942,7 +946,9 @@ function handleHay() {
 			return;
 		}
 
-		const existingStack = findStackInContainer(targetContainer, stackKey);
+		// "Separate" forces a brand-new stack instead of merging into a matching
+		// contract already in this isle, allowing several piles of the same contract.
+		const existingStack = separateStack ? null : findStackInContainer(targetContainer, stackKey);
 
 		if (existingStack) {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;

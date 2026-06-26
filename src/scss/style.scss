@@ -443,7 +443,8 @@ body.page--view-only .inventory__form {
 	cursor: pointer;
 }
 
-.inventory__reject-check--no-tags {
+.inventory__reject-check--no-tags,
+.inventory__reject-check--separate {
 	accent-color: var(--color-primary);
 }
 
