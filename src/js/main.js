@@ -396,9 +396,24 @@ function syncInventoryActionFields(locationId = getCurrentLocation()) {
 }
 
 const GRADE_ELIGIBLE_TYPES = new Set(["alfalfa", "timothy"]);
+const NO_TAGS_CONTRACT = "No Tags";
 
 function isGradeEligibleType(type) {
 	return GRADE_ELIGIBLE_TYPES.has(type);
+}
+
+function syncNoTagsState(locationId = getCurrentLocation()) {
+	const noTags = getScopedElement("noTagsCheck", locationId)?.checked ?? false;
+	const contractInput = getScopedElement("contractNumber", locationId);
+	if (!contractInput) return;
+
+	contractInput.disabled = noTags;
+	if (noTags) {
+		contractInput.value = "";
+		contractInput.placeholder = NO_TAGS_CONTRACT;
+	} else {
+		contractInput.placeholder = "26-2222";
+	}
 }
 
 function syncGradeFieldVisibility(type = getScopedElement("hayType")?.value || "", locationId = getCurrentLocation()) {
@@ -429,6 +444,10 @@ function resetInventoryFormFields() {
 
 	const rejectCheck = getScopedElement("rejectCheck", locationId);
 	if (rejectCheck) rejectCheck.checked = false;
+
+	const noTagsCheck = getScopedElement("noTagsCheck", locationId);
+	if (noTagsCheck) noTagsCheck.checked = false;
+	syncNoTagsState(locationId);
 
 	const stackComment = getScopedElement("stackComment", locationId);
 	if (stackComment) stackComment.value = "";
@@ -501,7 +520,15 @@ function fillFormFromStack(stackEl) {
 	setCurrentLocationId(locationId);
 	getScopedElement("hayType", locationId).value = type;
 	syncGradeFieldVisibility(type, locationId);
-	getScopedElement("contractNumber", locationId).value = contract;
+
+	const isNoTags = contract === NO_TAGS_CONTRACT;
+	const noTagsCheck = getScopedElement("noTagsCheck", locationId);
+	if (noTagsCheck) noTagsCheck.checked = isNoTags;
+	syncNoTagsState(locationId);
+
+	const contractInput = getScopedElement("contractNumber", locationId);
+	if (contractInput && !isNoTags) contractInput.value = contract;
+
 	getScopedElement("baleCount", locationId).value = bales;
 	getScopedElement("shedSelect", locationId).value = shed;
 	setIsleCheckboxes(isle, locationId);
@@ -643,7 +670,8 @@ function handleHay() {
 	if (!canEdit(locationId) || !currentPerson) return;
 
 	const type = getScopedElement("hayType", locationId).value;
-	const contract = getScopedElement("contractNumber", locationId).value.trim();
+	const noTags = getScopedElement("noTagsCheck", locationId)?.checked ?? false;
+	const contract = noTags ? NO_TAGS_CONTRACT : getScopedElement("contractNumber", locationId).value.trim();
 	const baleCountRaw = getScopedElement("baleCount", locationId).value.trim();
 	const baleCount = baleCountRaw === "" ? NaN : parseInt(baleCountRaw, 10);
 	const shed = getScopedElement("shedSelect", locationId).value;
@@ -664,7 +692,7 @@ function handleHay() {
 		return;
 	}
 
-	if (!isValidContract(contract)) {
+	if (!noTags && !isValidContract(contract)) {
 		alert("Contract number must be in format: 26-2222 or 26-2222A");
 		return;
 	}
@@ -684,16 +712,25 @@ function handleHay() {
 		if (!isle) return;
 
 		const targetContainer = getIsleContainer(bayStackEl, isle);
-		const foundStack = findStackInContainer(targetContainer, stackKey);
+		let foundStack = findStackInContainer(targetContainer, stackKey);
+
+		// Fall back to the stack the user selected, so Update can change the
+		// contract or toggle "No tags" on an existing stack (its identity changes).
+		if (!foundStack && transferSource?.stackEl?.isConnected && transferSource.locationId === locationId) {
+			foundStack = transferSource.stackEl;
+		}
 
 		if (!foundStack) {
 			alert("No matching stack found in the selected isle. Check product, contract, shed, bay, and isle.");
 			return;
 		}
 
+		const stackBayEl = foundStack.closest(".shed__bay-stack") || bayStackEl;
 		const foundIsle = foundStack.dataset.isle || "both";
 		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
 
+		// Apply product/contract/no-tags identity in place, then the flags.
+		updateHayStack(foundStack, type, contract, currentBales);
 		applyStackRejected(foundStack, rejected);
 		applyStackComment(foundStack, stackComment);
 		applyStackGrade(foundStack, stackGrade);
@@ -707,14 +744,14 @@ function handleHay() {
 			"Update",
 			type,
 			contract,
-			getBayDisplayNumberForLocation(shed, bay, locationId),
+			getBayDisplayNumberForLocation(stackBayEl.dataset.shed, stackBayEl.dataset.bay, locationId),
 			foundIsle,
-			shed,
+			stackBayEl.dataset.shed,
 			currentBales,
 			updateNotes.join(" — ") || "Stack updated",
 		);
 
-		updateBayStats(bayStackEl);
+		updateBayStats(stackBayEl);
 		syncAllShedLayouts();
 		saveState(locationId);
 		resetInventoryForm();
@@ -880,11 +917,13 @@ function handleHay() {
 		const isle = getSelectedIsle();
 		if (!isle) return;
 
-		for (const stack of locQueryAll(".hay-stack", locationId)) {
-			const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
-			if (stackContract === contract && stackType !== type) {
-				alert(`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot add it as ${getHayTypeLabel(type)}.`);
-				return;
+		if (!noTags) {
+			for (const stack of locQueryAll(".hay-stack", locationId)) {
+				const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
+				if (stackContract === contract && stackType !== type) {
+					alert(`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot add it as ${getHayTypeLabel(type)}.`);
+					return;
+				}
 			}
 		}
 
@@ -2035,6 +2074,9 @@ function initInventoryForm(locationId = getCurrentLocation()) {
 	getScopedElement("hayType", locationId)?.addEventListener("change", (e) => {
 		syncGradeFieldVisibility(e.target.value, locationId);
 	});
+
+	getScopedElement("noTagsCheck", locationId)?.addEventListener("change", () => syncNoTagsState(locationId));
+	syncNoTagsState(locationId);
 
 	syncGradeFieldVisibility("", locationId);
 

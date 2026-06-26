@@ -327,7 +327,8 @@ body.page--view-only .inventory__form {
 }
 
 .inventory__field--reported-by {
-	width: clamp(150px, 20vw, 200px);
+	width: auto;
+	min-width: 0;
 }
 
 .inventory__field--bales {
@@ -440,6 +441,10 @@ body.page--view-only .inventory__form {
 	height: 16px;
 	accent-color: var(--color-rejected-solid);
 	cursor: pointer;
+}
+
+.inventory__reject-check--no-tags {
+	accent-color: var(--color-primary);
 }
 
 .inventory__field--comment {

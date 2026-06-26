@@ -2,14 +2,6 @@
 
 	<section id="siksika-Sheds" class="tabs__panel tabs__panel--active">
 		<form class="inventory__form" id="siksika-inventoryControls" hidden novalidate>
-			<select id="siksika-reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
-				required>
-				<option value="" selected disabled>Reported by</option>
-				<option value="N/A">N/A</option>
-				<option value="Peter">Peter</option>
-				<option value="Jacob">Jacob</option>
-			</select>
-
 			<select id="siksika-hayType" class="inventory__field inventory__field--select" required>
 				<option value="" selected disabled>Product</option>
 				<option value="alfalfa">Alfalfa Hay</option>
@@ -76,11 +68,23 @@
 						<input type="checkbox" class="inventory__reject-check" id="siksika-rejectCheck">
 						<span class="inventory__reject-text">Rejected</span>
 					</label>
+					<label class="inventory__reject-option">
+						<input type="checkbox" class="inventory__reject-check inventory__reject-check--no-tags" id="siksika-noTagsCheck">
+						<span class="inventory__reject-text">No tags</span>
+					</label>
 				</fieldset>
 			</div>
 
 			<input type="text" id="siksika-stackComment" class="inventory__field inventory__field--comment"
 				placeholder="Comment" maxlength="24" autocomplete="off" spellcheck="false">
+
+			<select id="siksika-reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
+				required>
+				<option value="" selected disabled>Reported by</option>
+				<option value="N/A">N/A</option>
+				<option value="Peter">Peter</option>
+				<option value="Jacob">Jacob</option>
+			</select>
 
 			<select id="siksika-actionSelect" class="inventory__field inventory__field--select" required>
 				<option value="" selected disabled>Action</option>
