@@ -4,6 +4,7 @@ export function capitalize(word) {
 
 export const HAY_TYPES = [
 	{ id: "alfalfa", label: "Alfalfa Hay", stackLabel: "Alfalfa" },
+	{ id: "dehy-alfalfa", label: "Dehy Alfalfa", stackLabel: "Dehy Alf" },
 	{ id: "timothy-straw", label: "Timothy Straw" },
 	{ id: "dehy-timothy", label: "Dehy Timothy", stackLabel: "Dehy Tim" },
 	{ id: "timothy", label: "Timothy Hay", stackLabel: "Timothy" },
