@@ -83,6 +83,13 @@ function buildEmptyShedState(locationId = getCurrentLocationId()) {
 	return { changeLog: [], sheds };
 }
 
+// Firebase removes nodes whose only content is empty arrays/objects, which would
+// collapse a cleared location to null and make the reset invisible to other
+// devices. Stamping updatedAt keeps the node alive so an empty state syncs.
+function stampStateForWrite(state) {
+	return { ...state, updatedAt: Date.now() };
+}
+
 function clearAllBaysUI(locationId = getCurrentLocationId()) {
 	const locationConfig = getLocationConfig(locationId);
 	locationConfig.sheds.forEach((shed) => {
@@ -111,10 +118,13 @@ async function resetAllBays({ confirm = true, locationId = getCurrentLocationId(
 	}
 
 	clearAllBaysUI(locationId);
+	// Prevent stale local cache from resurrecting data later this session.
+	hasRemoteStateByLocation[locationId] = true;
 
 	try {
-		await set(ref(db, getLocationFirebasePath(locationId)), buildEmptyShedState(locationId));
-		await cacheHayShedState(locationId, buildEmptyShedState(locationId));
+		const emptyState = buildEmptyShedState(locationId);
+		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(emptyState));
+		await cacheHayShedState(locationId, emptyState);
 		if (location.search.includes("reset=")) {
 			history.replaceState(null, "", location.pathname);
 		}
@@ -1540,7 +1550,7 @@ async function saveState(locationId = getCurrentLocation()) {
 	const state = collectAppState(locationId);
 
 	try {
-		await set(ref(db, getLocationFirebasePath(locationId)), state);
+		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(state));
 	} catch (err) {
 		console.error(`Error saving ${locationId} state:`, err);
 		alert(
@@ -1595,7 +1605,7 @@ async function restoreAppStateToFirebase(state) {
 	const targets = LOCATION_IDS.filter((locationId) => rootState?.[locationId]);
 	for (const locationId of targets) {
 		const locationState = normalizeHayShedState(rootState[locationId], locationId);
-		await set(ref(db, getLocationFirebasePath(locationId)), locationState);
+		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(locationState));
 		await cacheHayShedState(locationId, locationState);
 		hasRemoteStateByLocation[locationId] = true;
 		cacheSavedAtByLocation[locationId] = Date.now();
