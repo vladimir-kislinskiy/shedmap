@@ -220,6 +220,7 @@ function setTransferSource(stackEl) {
 
 function setActiveTab(tabId) {
 	currentTab = tabId;
+	saveMainTabPreference(tabId);
 
 	document.querySelectorAll(".tabs__group .tabs__btn").forEach((tabBtn) => {
 		tabBtn.classList.toggle("tabs__btn--active", tabBtn.dataset.tab === tabId);
@@ -263,6 +264,7 @@ function setActiveShedTab(panelId, btn, { bay } = {}, locationId = getCurrentLoc
 		const config = getLocationConfig(locationId);
 		const shed = config.sheds.find((shedId) => panelId.endsWith(`${shedId}-shed-tab`)) || config.defaultShed;
 		shedSelect.value = shed;
+		saveShedTabPreference(locationId, shed);
 		updateBaySelectForShed(shed, selectedBayOrNull(bay), locationId);
 	}
 
@@ -1839,6 +1841,56 @@ function saveLocationPreference(locationId) {
 	}
 }
 
+const MAIN_TAB_STORAGE_KEY = "hayShedMainTab";
+const SHED_TAB_STORAGE_KEY = "hayShedShedTab";
+const MAIN_TAB_IDS = ["Sheds", "Log", "Reports"];
+
+function getSavedMainTab() {
+	try {
+		const saved = localStorage.getItem(MAIN_TAB_STORAGE_KEY);
+		if (saved && MAIN_TAB_IDS.includes(saved)) return saved;
+	} catch {
+		// localStorage unavailable
+	}
+	return "Sheds";
+}
+
+function saveMainTabPreference(tabId) {
+	try {
+		localStorage.setItem(MAIN_TAB_STORAGE_KEY, tabId);
+	} catch {
+		// ignore
+	}
+}
+
+function getSavedShedTabs() {
+	try {
+		const parsed = JSON.parse(localStorage.getItem(SHED_TAB_STORAGE_KEY) || "null");
+		if (parsed && typeof parsed === "object") return parsed;
+	} catch {
+		// ignore
+	}
+	return {};
+}
+
+function saveShedTabPreference(locationId, shed) {
+	if (!locationId || !shed) return;
+	try {
+		const all = getSavedShedTabs();
+		all[locationId] = shed;
+		localStorage.setItem(SHED_TAB_STORAGE_KEY, JSON.stringify(all));
+	} catch {
+		// ignore
+	}
+}
+
+function getSavedShedForLocation(locationId) {
+	const config = getLocationConfig(locationId);
+	const shed = getSavedShedTabs()[locationId];
+	if (shed && config.sheds.includes(shed)) return shed;
+	return config.defaultShed;
+}
+
 function setActiveLocation(locationId, btn) {
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((tabBtn) => {
 		tabBtn.classList.toggle("location-tabs__btn--active", tabBtn.dataset.location === locationId);
@@ -1878,7 +1930,7 @@ function initMainTabs() {
 	document.querySelectorAll(".tabs__group .tabs__btn").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
 	});
-	setActiveTab(currentTab);
+	setActiveTab(getSavedMainTab());
 }
 
 function initTabs(locationId = getCurrentLocation()) {
@@ -1896,11 +1948,18 @@ function initTabs(locationId = getCurrentLocation()) {
 	});
 
 	initEmptyBaySelect(locationId);
-	updateBaySelectForShed(
-		getScopedElement("shedSelect", locationId)?.value || getLocationConfig(locationId).defaultShed,
-		null,
-		locationId,
-	);
+
+	const savedShed = getSavedShedForLocation(locationId);
+	const savedShedBtn = panelRoot.querySelector(`.shed-tabs__btn[data-subtab$="${savedShed}-shed-tab"]`);
+	if (savedShedBtn) {
+		setActiveShedTab(savedShedBtn.dataset.subtab, savedShedBtn, {}, locationId);
+	} else {
+		updateBaySelectForShed(
+			getScopedElement("shedSelect", locationId)?.value || getLocationConfig(locationId).defaultShed,
+			null,
+			locationId,
+		);
+	}
 }
 
 function bindDigitsOnlyInput(input, { maxDigits, format, minValue } = {}) {
