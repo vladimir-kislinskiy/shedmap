@@ -215,9 +215,20 @@
 
 	.reports__include-reject {
 		width: 100%;
+		min-width: 0;
 		justify-content: flex-start;
-		height: 42px;
-		min-height: 42px;
+		height: 32px;
+		min-height: 32px;
+		padding: 4px 8px;
+	}
+
+	.reports__include-reject-text {
+		font-size: 13px;
+	}
+
+	.reports__include-reject-check {
+		width: 14px;
+		height: 14px;
 	}
 
 	.reports__filters {
@@ -288,6 +299,16 @@
 		height: 30px;
 		min-height: 30px;
 		padding: 3px 10px;
+		font-size: 12px;
+	}
+
+	.reports__include-reject {
+		height: 30px;
+		min-height: 30px;
+		padding: 3px 6px;
+	}
+
+	.reports__include-reject-text {
 		font-size: 12px;
 	}
 }
