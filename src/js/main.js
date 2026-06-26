@@ -796,7 +796,7 @@ function handleHay() {
 		const isSameBay = sourceShed === shed && sourceBay === bay;
 		const isSameIsle = sourceIsle === destIsle;
 
-		if (isSameBay && isSameIsle && !rejected) {
+		if (isSameBay && isSameIsle && !rejected && !separateStack) {
 			alert("Choose a different bay or isle for the transfer destination.");
 			return;
 		}
@@ -818,9 +818,12 @@ function handleHay() {
 		if (!destBayStackEl) return;
 
 		const destContainer = getIsleContainer(destBayStackEl, destIsle);
-		const isRejectSplitInPlace = isSameBay && isSameIsle && rejected;
+		const isRejectSplitInPlace = isSameBay && isSameIsle && rejected && !separateStack;
+		// Splitting bales within the same isle (reject or separate) leaves the bay/isle
+		// totals unchanged, so the capacity checks below should be skipped.
+		const isSplitInPlace = isSameBay && isSameIsle && (rejected || separateStack);
 
-		if (!isRejectSplitInPlace) {
+		if (!isSplitInPlace) {
 			const destBayTotal = sumBalesInContainer(destBayStackEl);
 			const destIsleTotal = destIsle === "both" ? destBayTotal : sumBalesInContainer(destContainer);
 			const destBayMax = getMaxBalesPerBay(locationId);
@@ -861,7 +864,9 @@ function handleHay() {
 		updateBayStats(sourceBayStackEl);
 
 		let existingDest = null;
-		if (isRejectSplitInPlace) {
+		if (separateStack) {
+			existingDest = null;
+		} else if (isRejectSplitInPlace) {
 			existingDest = findRejectedStackInContainer(destContainer, stackKey, foundSource);
 		} else {
 			existingDest = findStackInContainer(destContainer, stackKey);
@@ -886,8 +891,8 @@ function handleHay() {
 		const sourceBayLabel = getBayDisplayNumberForLocation(sourceShed, sourceBay, locationId);
 		const destBayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
 		const transferNotes = [
-			isRejectSplitInPlace
-				? `Rejected split in ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`
+			isSplitInPlace
+				? `Split in ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`
 				: `From ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`,
 		];
 		if (rejected) transferNotes.push("Rejected");
