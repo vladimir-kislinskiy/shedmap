@@ -1,3 +1,10 @@
+import {
+	DEFAULT_MAX_BALES_PER_BAY,
+	getMaxBalesPerBay,
+	getMaxBalesPerIsle,
+	OLDS_LOCATION_ID,
+} from "./locations.js";
+
 export function capitalize(word) {
 	return word.charAt(0).toUpperCase() + word.slice(1);
 }
@@ -46,23 +53,15 @@ export function parseStackKey(stackKey = "") {
 
 export const BAYS_PER_SHED = 12;
 
-export const MAX_BALES_PER_BAY = 1400;
+export const MAX_BALES_PER_BAY = DEFAULT_MAX_BALES_PER_BAY;
 export const MAX_BALES_PER_ISLE = MAX_BALES_PER_BAY / 2;
 
-export const SHED_BAY_START = {
-	west: 1,
-	north: 25,
-	east: 49,
-};
-
-export function getBayDisplayNumber(shed, bayIndex) {
-	const colIndex = parseInt(bayIndex, 10);
-	const start = (SHED_BAY_START[shed] ?? 1) + colIndex * 2;
-	return `${start}-${start + 1}`;
+function getBayStackLocationId(bayStackEl) {
+	return bayStackEl?.dataset?.location || OLDS_LOCATION_ID;
 }
 
-export function getIsleMaxBales(isle) {
-	return isle === "both" ? MAX_BALES_PER_BAY : MAX_BALES_PER_ISLE;
+export function getIsleMaxBales(isle, locationId = OLDS_LOCATION_ID) {
+	return getMaxBalesPerIsle(isle, locationId);
 }
 
 const LAYOUT = {
@@ -126,10 +125,10 @@ function getMinStackPercent(areaBudget) {
 	return (LAYOUT.minStack / areaBudget) * 100;
 }
 
-function getTierInSegment(baleCount, segmentStart) {
+function getTierInSegment(baleCount, segmentStart, segmentMax = LAYOUT.baleSegmentMax) {
 	const offset = Math.max(0, baleCount - segmentStart);
 	if (offset <= 0) return 0;
-	return Math.min(Math.ceil(offset / LAYOUT.baleStep), LAYOUT.baleSegmentMax / LAYOUT.baleStep);
+	return Math.min(Math.ceil(offset / LAYOUT.baleStep), segmentMax / LAYOUT.baleStep);
 }
 
 function percentForTiers(tier, maxTier, maxPercent, areaBudget) {
@@ -138,28 +137,29 @@ function percentForTiers(tier, maxTier, maxPercent, areaBudget) {
 	return Math.max(getMinStackPercent(areaBudget), Math.round(pct * 100) / 100);
 }
 
-/** % of shed__bay-stack area: 1400 bales = 100%, 700 bales = 50% */
-export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop) {
+/** % of shed__bay-stack area: full bay = 100%, half bay = 50% */
+export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
 	if (baleCount <= 0) return 0;
 
-	const tiersPerSegment = LAYOUT.baleSegmentMax / LAYOUT.baleStep;
+	const segmentMax = maxBales >= bayMax ? bayMax / 2 : maxBales;
+	const tiersPerSegment = segmentMax / LAYOUT.baleStep;
 	const halfPercent = 50;
 
-	if (maxBales <= LAYOUT.baleSegmentMax || baleCount <= LAYOUT.baleSegmentMax) {
-		const tier = getTierInSegment(baleCount, 0);
+	if (maxBales <= segmentMax || baleCount <= segmentMax) {
+		const tier = getTierInSegment(baleCount, 0, segmentMax);
 		return percentForTiers(tier, tiersPerSegment, halfPercent, areaBudget);
 	}
 
-	const tier = getTierInSegment(baleCount, LAYOUT.baleSegmentMax);
+	const tier = getTierInSegment(baleCount, segmentMax, segmentMax);
 	return Math.round((halfPercent + (tier / tiersPerSegment) * halfPercent) * 100) / 100;
 }
 
-export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop) {
-	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget);
+export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
+	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget, bayMax);
 	return Math.round((pct / 100) * areaBudget);
 }
 
-export function getBayFillPercent(total, maxBales = getIsleMaxBales("both")) {
+export function getBayFillPercent(total, maxBales = DEFAULT_MAX_BALES_PER_BAY) {
 	if (total <= 0) return 0;
 	if (total >= maxBales) return 100;
 	const percent = Math.floor((total / maxBales) * 100);
@@ -172,22 +172,25 @@ function getDirectStacks(container) {
 }
 
 function applyAllStackHeights(bayStackEl) {
+	const locationId = getBayStackLocationId(bayStackEl);
+
 	getDirectStacks(bayStackEl).forEach((stack) => {
 		const bales = parseInt(stack.dataset.bales, 10) || 0;
-		setStackHeight(stack, bales, getIsleMaxBales("both"));
+		setStackHeight(stack, bales, getIsleMaxBales("both", locationId));
 	});
 
 	["1", "2"].forEach((isleNum) => {
 		getDirectStacks(bayStackEl.querySelector(`.shed__isle--${isleNum}`)).forEach((stack) => {
 			const bales = parseInt(stack.dataset.bales, 10) || 0;
-			setStackHeight(stack, bales, getIsleMaxBales(isleNum));
+			setStackHeight(stack, bales, getIsleMaxBales(isleNum, locationId));
 		});
 	});
 }
 
 function getBayFillRatio(bayStackEl) {
+	const locationId = getBayStackLocationId(bayStackEl);
 	const totalBales = sumBalesInContainer(bayStackEl);
-	return Math.min(1, totalBales / getIsleMaxBales("both"));
+	return Math.min(1, totalBales / getIsleMaxBales("both", locationId));
 }
 
 function redistributeBayStackHeights(bayStackEl) {
@@ -252,7 +255,9 @@ function applyBayStackAreaBudget(bayStackEl) {
 
 		const fullIdeal = fullStacks.reduce((total, stack) => {
 			const bales = parseInt(stack.dataset.bales, 10) || 0;
-			return total + getStackHeightPx(bales, getIsleMaxBales("both"), base);
+			const locationId = getBayStackLocationId(bayStackEl);
+			const bayMax = getMaxBalesPerBay(locationId);
+			return total + getStackHeightPx(bales, getIsleMaxBales("both", locationId), base, bayMax);
 		}, 0);
 
 		const isleIdeal = Math.max(
@@ -316,7 +321,8 @@ function ensureStackFitsContent(stackEl) {
 	if (!bayStack) return false;
 
 	const bales = parseInt(stackEl.dataset.bales, 10) || 0;
-	const maxBales = getIsleMaxBales(stackEl.dataset.isle || "both");
+	const locationId = getBayStackLocationId(bayStack);
+	const maxBales = getIsleMaxBales(stackEl.dataset.isle || "both", locationId);
 	setStackHeight(stackEl, bales, maxBales);
 
 	const renderedHeight = stackEl.getBoundingClientRect().height;
@@ -342,8 +348,10 @@ function finalizeBayStackLayout(bayStackEl) {
 function getStackAbsoluteHeightPx(stack, bayStackEl) {
 	const bales = parseInt(stack.dataset.bales, 10) || 0;
 	const isle = stack.dataset.isle || "both";
+	const locationId = getBayStackLocationId(bayStackEl);
+	const bayMax = getMaxBalesPerBay(locationId);
 	const areaBudget = getStackAreaBudgetForStack(stack);
-	const pct = getStackHeightPercent(bales, getIsleMaxBales(isle), areaBudget);
+	const pct = getStackHeightPercent(bales, getIsleMaxBales(isle, locationId), areaBudget, bayMax);
 	const pctHeight = Math.round((pct / 100) * areaBudget);
 	const minHeight = parseFloat(stack.dataset.contentMinHeight) || 0;
 	return Math.max(pctHeight, minHeight);
@@ -503,7 +511,9 @@ export function syncAllShedLayoutsAfterPaint() {
 
 export function setStackHeight(stackEl, baleCount, maxBales) {
 	const areaBudget = getStackAreaBudgetForStack(stackEl);
-	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget);
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	const bayMax = getMaxBalesPerBay(getBayStackLocationId(bayStack));
+	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget, bayMax);
 	stackEl.style.setProperty("--stack-height", String(pct));
 	stackEl.style.removeProperty("min-height");
 	delete stackEl.dataset.contentMinHeight;
@@ -747,7 +757,8 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl, { re
 	applyStackGrade(stack, grade);
 	applyStackComment(stack, comment);
 	updateStackCountDisplay(stack, baleCount);
-	setStackHeight(stack, baleCount, getIsleMaxBales(isle));
+	const locationId = getBayStackLocationId(bayStackEl);
+	setStackHeight(stack, baleCount, getIsleMaxBales(isle, locationId));
 	applyIsleLayout(stack, isle, bayStackEl);
 	return stack;
 }
@@ -761,7 +772,9 @@ export function updateHayStack(stackEl, type, contract, baleCount) {
 	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
 	stackEl.querySelector(".hay-stack__contract").textContent = contract;
 	updateStackCountDisplay(stackEl, baleCount);
-	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle));
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	const locationId = getBayStackLocationId(bayStack);
+	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle, locationId));
 }
 
 export function getStackType(stackEl) {

@@ -18,7 +18,7 @@ import {
 	normalizeHayShedState,
 	isLegacyHayShedRoot,
 } from "./state-cache.js";
-import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath, OLDS_LOCATION_ID } from "./locations.js";
+import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath, OLDS_LOCATION_ID, getMaxBalesPerBay, getMaxBalesPerIsle } from "./locations.js";
 import {
 	getCurrentLocationId,
 	setCurrentLocationId,
@@ -45,10 +45,8 @@ import {
 	formatStackKey,
 	getBayStacks,
 	getBayFillPercent,
-	MAX_BALES_PER_BAY,
 	getHayTypeLabel,
 	getIsleContainer,
-	getIsleMaxBales,
 	getStackType,
 	getStackGradeLabel,
 	normalizeStackComment,
@@ -615,7 +613,8 @@ function updateBayStats(bayStackEl) {
 
 	if (totalEl) totalEl.textContent = total;
 	if (fillEl) {
-		fillEl.textContent = `${getBayFillPercent(total, MAX_BALES_PER_BAY)}% full`;
+		const locationId = bayStackEl.dataset.location || getCurrentLocation();
+		fillEl.textContent = `${getBayFillPercent(total, getMaxBalesPerBay(locationId))}% full`;
 	}
 }
 
@@ -824,10 +823,11 @@ function handleHay() {
 		if (!isRejectSplitInPlace) {
 			const destBayTotal = sumBalesInContainer(destBayStackEl);
 			const destIsleTotal = destIsle === "both" ? destBayTotal : sumBalesInContainer(destContainer);
-			const destIsleMax = getIsleMaxBales(destIsle);
+			const destBayMax = getMaxBalesPerBay(locationId);
+			const destIsleMax = getMaxBalesPerIsle(destIsle, locationId);
 
-			if (destBayTotal + baleCount > MAX_BALES_PER_BAY) {
-				alert(`Cannot add more than ${MAX_BALES_PER_BAY} bales in the destination bay.`);
+			if (destBayTotal + baleCount > destBayMax) {
+				alert(`Cannot add more than ${destBayMax} bales in the destination bay.`);
 				return;
 			}
 
@@ -839,7 +839,7 @@ function handleHay() {
 			const destIsleTotal = destIsle === "both"
 				? sumBalesInContainer(destBayStackEl)
 				: sumBalesInContainer(destContainer);
-			const destIsleMax = getIsleMaxBales(destIsle);
+			const destIsleMax = getMaxBalesPerIsle(destIsle, locationId);
 
 			if (destIsleTotal + baleCount > destIsleMax) {
 				alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
@@ -934,10 +934,11 @@ function handleHay() {
 		const targetContainer = getIsleContainer(bayStackEl, isle);
 		const bayTotal = sumBalesInContainer(bayStackEl);
 		const isleTotal = isle === "both" ? bayTotal : sumBalesInContainer(targetContainer);
-		const isleMax = getIsleMaxBales(isle);
+		const bayMax = getMaxBalesPerBay(locationId);
+		const isleMax = getMaxBalesPerIsle(isle, locationId);
 
-		if (bayTotal + baleCount > MAX_BALES_PER_BAY) {
-			alert(`Cannot add more than ${MAX_BALES_PER_BAY} bales in this bay.`);
+		if (bayTotal + baleCount > bayMax) {
+			alert(`Cannot add more than ${bayMax} bales in this bay.`);
 			return;
 		}
 

@@ -3,6 +3,8 @@ export const SIKSIKA_LOCATION_ID = "siksika";
 
 export const LOCATION_IDS = [OLDS_LOCATION_ID, SIKSIKA_LOCATION_ID];
 
+export const DEFAULT_MAX_BALES_PER_BAY = 1400;
+
 /** @type {Record<string, import('./locations.js').LocationConfig>} */
 export const LOCATIONS = {
 	[OLDS_LOCATION_ID]: {
@@ -10,6 +12,7 @@ export const LOCATIONS = {
 		label: "Olds",
 		sheds: ["west", "north", "east"],
 		bayCount: 12,
+		maxBalesPerBay: 1600,
 		shedBayStart: {
 			west: 1,
 			north: 25,
@@ -46,4 +49,13 @@ export function getLocationConfig(locationId) {
 
 export function getLocationFirebasePath(locationId) {
 	return `hayShedState/${locationId}`;
+}
+
+export function getMaxBalesPerBay(locationId = OLDS_LOCATION_ID) {
+	return getLocationConfig(locationId).maxBalesPerBay ?? DEFAULT_MAX_BALES_PER_BAY;
+}
+
+export function getMaxBalesPerIsle(isle, locationId = OLDS_LOCATION_ID) {
+	const bayMax = getMaxBalesPerBay(locationId);
+	return isle === "both" ? bayMax : bayMax / 2;
 }
