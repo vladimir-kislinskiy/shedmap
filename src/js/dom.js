@@ -464,6 +464,13 @@ function reconcileColumnsLayout(columns) {
 }
 
 function syncShedColumnsLayout(columns) {
+	// Skip columns that aren't currently visible (inactive location / main tab /
+	// shed tab). Laying them out is wasted work and triggers many forced reflows;
+	// they get laid out when their panel becomes visible (every tab/location
+	// switch re-runs the sync). This is the single biggest perf win on weak
+	// devices since only 1 of ~5 shed column groups is ever on screen.
+	if (columns.offsetParent === null) return;
+
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
@@ -573,6 +580,28 @@ export function repairBayLayout(bayStackEl) {
 			isleEl.appendChild(stack);
 		});
 	});
+
+	// If any single-isle stack is "bay front", it takes priority at the very
+	// bottom of the bay (full-width / two-isle stacks then sit above it). We flag
+	// the bay here so CSS can reorder it without relying on :has() (unsupported on
+	// older tablets/phones).
+	const hasIsleFront = !!bayStackEl.querySelector(".shed__isle > .hay-stack--bay-front");
+	bayStackEl.classList.toggle("shed__bay-stack--isle-front", hasIsleFront);
+
+	// Glue the whole "front cluster" (full-width bay-front stacks + the isles row
+	// that holds the single-isle bay-front stacks) to the bottom edge. The auto
+	// top-margin must sit on the topmost cluster element: the first full-width
+	// bay-front stack if there is one, otherwise the isles row itself. Marking it
+	// in JS avoids splitting the free space across multiple auto margins.
+	islesRow.classList.remove("shed__front-anchor");
+	bayStackEl
+		.querySelectorAll(":scope > .hay-stack")
+		.forEach((el) => el.classList.remove("shed__front-anchor"));
+
+	if (hasIsleFront) {
+		const firstFullFront = bayStackEl.querySelector(":scope > .hay-stack--bay-front");
+		(firstFullFront || islesRow).classList.add("shed__front-anchor");
+	}
 }
 
 export function repairAllBayLayouts() {

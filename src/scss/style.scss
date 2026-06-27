@@ -656,9 +656,10 @@ body.page--view-only .inventory__form {
 	margin-bottom: 8px;
 }
 
-/* Olds only: bay numbers shown identically at the top and at the exit (open
-   front) — split on the dash and pushed to the left/right edges of the bay. */
-#location-olds .shed__bay-label,
+/* Olds only: bay numbers split on the dash and pushed to the left/right edges,
+   shown at the top and at the exit (open front). Built statically in HTML
+   (see shed-bay-olds.html) — no JS involved. */
+#location-olds .shed__bay-label--olds,
 #location-olds .shed__bay-exit {
 	display: flex;
 	justify-content: space-between;
@@ -679,6 +680,12 @@ body.page--view-only .inventory__form {
 	font-size: 0.85rem;
 	font-weight: 600;
 	color: var(--text-muted);
+}
+
+/* Top bay numbers for Olds are temporarily hidden.
+   To bring them back, delete this rule. */
+#location-olds .shed__bay-label--olds {
+	display: none;
 }
 
 /* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
@@ -738,6 +745,21 @@ body.page--view-only .inventory__form {
 
 .shed__isle > .hay-stack--bay-front ~ .hay-stack--bay-front {
 	margin-top: 0;
+}
+
+/* When a bay has a single-isle "bay front" stack, that stack gets priority at the
+   very bottom (closest to the entrance), and full-width (two-isle) stacks sit
+   directly above it. The isles row drops below the full-width stacks (order: 2)
+   and stops growing, so the JS-set bottom anchor (.shed__front-anchor, see
+   repairBayLayout) can glue the whole front cluster to the bay's bottom edge with
+   no gap. Marker class is toggled from JS so this works without :has(). */
+.shed__bay-stack--isle-front .shed__isles {
+	order: 2;
+	flex-grow: 0;
+}
+
+.shed__bay-stack--isle-front .shed__front-anchor {
+	margin-top: auto;
 }
 
 .hay-stack--full {
