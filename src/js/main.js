@@ -1926,6 +1926,46 @@ function initLocationTabs() {
 	setActiveLocation(savedLocation, savedBtn);
 }
 
+function initBayNumberLabels() {
+	// Olds only: split the bay number on the dash and show it at both the top and
+	// the exit, pushed to the left/right edges. Siksika keeps the default "Bay N".
+	const oldsPanel = document.getElementById(`location-${OLDS_LOCATION_ID}`);
+	if (!oldsPanel) return;
+
+	oldsPanel.querySelectorAll(".shed__bay").forEach((bay) => {
+		const raw = (bay.dataset.num || "").trim();
+		const parts = raw.split(/\s*[-–]\s*/).filter(Boolean);
+		if (!parts.length) return;
+
+		const left = parts[0];
+		const right = parts.length > 1 ? parts[parts.length - 1] : parts[0];
+
+		const fill = (container) => {
+			if (!container) return;
+			const leftEl = document.createElement("span");
+			leftEl.className = "shed__bay-num shed__bay-num--left";
+			leftEl.textContent = left;
+
+			const rightEl = document.createElement("span");
+			rightEl.className = "shed__bay-num shed__bay-num--right";
+			rightEl.textContent = right;
+
+			container.replaceChildren(leftEl, rightEl);
+		};
+
+		fill(bay.querySelector(".shed__bay-label"));
+
+		let exit = bay.querySelector(".shed__bay-exit");
+		if (!exit) {
+			exit = document.createElement("div");
+			exit.className = "shed__bay-exit";
+			exit.setAttribute("aria-hidden", "true");
+			bay.append(exit);
+		}
+		fill(exit);
+	});
+}
+
 function initMainTabs() {
 	document.querySelectorAll(".tabs__group .tabs__btn").forEach((btn) => {
 		btn.addEventListener("click", () => setActiveTab(btn.dataset.tab));
@@ -2176,6 +2216,7 @@ window.addEventListener("load", async () => {
 	initGrabToScroll();
 	initAuthUI();
 	initToggleControls();
+	initBayNumberLabels();
 	initLocationTabs();
 	initMainTabs();
 	LOCATION_IDS.forEach((locationId) => {

@@ -114,7 +114,9 @@ function measureBayChromeForColumns(columns) {
 
 		const labelStyle = window.getComputedStyle(label);
 		const marginBottom = parseFloat(labelStyle.marginBottom) || 0;
-		const chrome = label.offsetHeight + marginBottom + stats.offsetHeight;
+		const exit = bay.querySelector(".shed__bay-exit");
+		const exitHeight = exit ? exit.offsetHeight : 0;
+		const chrome = label.offsetHeight + marginBottom + exitHeight + stats.offsetHeight;
 
 		if (chrome > maxChrome) maxChrome = chrome;
 	});

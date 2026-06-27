@@ -656,6 +656,31 @@ body.page--view-only .inventory__form {
 	margin-bottom: 8px;
 }
 
+/* Olds only: bay numbers shown identically at the top and at the exit (open
+   front) — split on the dash and pushed to the left/right edges of the bay. */
+#location-olds .shed__bay-label,
+#location-olds .shed__bay-exit {
+	display: flex;
+	justify-content: space-between;
+	align-items: baseline;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0 4px;
+	white-space: nowrap;
+	line-height: 1.1;
+}
+
+#location-olds .shed__bay-exit {
+	margin-top: 6px;
+	min-height: 16px;
+}
+
+#location-olds .shed__bay-num {
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
 /* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
 .hay-stack {
 	--stack-font-size: 0.65rem;
