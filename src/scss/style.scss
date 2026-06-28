@@ -1356,10 +1356,10 @@ body.page--offline .inventory__form {
 .page-footer {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
+	justify-content: flex-end;
 	gap: 12px;
 	flex-wrap: wrap;
-	text-align: left;
+	text-align: right;
 	flex-shrink: 0;
 	margin-top: 100px;
 	padding: clamp(10px, 2vw, 16px);
