@@ -2455,7 +2455,7 @@ function scheduleCrmStats() {
 }
 
 function initCrmTheme() {
-	const { collapseBtn, menuToggle, darkSwitch } = getCrmEls();
+	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
 	// The classic design is intentionally retained in code/styles but disabled:
 	// the app always runs in the CRM theme. The theme toggle is therefore not
@@ -2491,6 +2491,15 @@ function initCrmTheme() {
 	};
 	collapseBtn?.addEventListener("click", toggleSidebar);
 	menuToggle?.addEventListener("click", toggleSidebar);
+
+	// On the overlay sidebar (mobile/tablet) it covers the content, so after the
+	// user picks a section collapse it automatically to reveal the selection.
+	navSlot?.addEventListener("click", (e) => {
+		if (!e.target.closest(".tabs__btn[data-tab]")) return;
+		if (!window.matchMedia("(max-width: 900px)").matches) return;
+		document.body.classList.add("crm-collapsed");
+		saveCrmCollapsed(true);
+	});
 
 	try {
 		document.body.classList.toggle("crm-collapsed", localStorage.getItem(CRM_COLLAPSED_STORAGE_KEY) === "1");
