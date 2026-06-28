@@ -2189,6 +2189,7 @@ function initToggleControls() {
 
 const UI_THEME_STORAGE_KEY = "uiTheme";
 const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
+const CRM_DARK_STORAGE_KEY = "uiCrmDark";
 let crmStatsScheduled = false;
 
 function saveCrmCollapsed(collapsed) {
@@ -2219,6 +2220,7 @@ function getCrmEls() {
 		controlsHint: document.getElementById("crmControlsHint"),
 		collapseBtn: document.getElementById("crmCollapse"),
 		menuToggle: document.getElementById("crmMenuToggle"),
+		darkSwitch: document.getElementById("crmThemeSwitch"),
 		stats: document.getElementById("crmStats"),
 	};
 }
@@ -2453,11 +2455,35 @@ function scheduleCrmStats() {
 }
 
 function initCrmTheme() {
-	const { collapseBtn, menuToggle } = getCrmEls();
+	const { collapseBtn, menuToggle, darkSwitch } = getCrmEls();
 
 	// The classic design is intentionally retained in code/styles but disabled:
 	// the app always runs in the CRM theme. The theme toggle is therefore not
 	// wired up and no classic code path ever executes at runtime.
+
+	// Dark variant: a slightly darker, eye-friendly version of the same corporate
+	// grays. State is applied before first paint by the inline script in
+	// index.html; here we sync the switch UI and handle clicks.
+	const applyDark = (dark) => {
+		document.body.classList.toggle("theme-dark", dark);
+		if (darkSwitch) darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
+	};
+	let dark = false;
+	try {
+		dark = localStorage.getItem(CRM_DARK_STORAGE_KEY) === "1";
+	} catch {
+		// ignore storage failures
+	}
+	applyDark(dark);
+	darkSwitch?.addEventListener("click", () => {
+		const next = !document.body.classList.contains("theme-dark");
+		try {
+			localStorage.setItem(CRM_DARK_STORAGE_KEY, next ? "1" : "0");
+		} catch {
+			// ignore storage failures
+		}
+		applyDark(next);
+	});
 
 	const toggleSidebar = () => {
 		const collapsed = document.body.classList.toggle("crm-collapsed");

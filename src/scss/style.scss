@@ -562,6 +562,27 @@ body.page--view-only .inventory__form {
 	flex-shrink: 0;
 }
 
+/* The bay bottom (stats + edge numbers / labels) doubles as the drag-to-scroll
+   handle: show a grab cursor so the affordance is clear, and never let this text
+   get selected while panning (overrides the bay's default/view-only cursor and
+   selection). */
+.shed__bay-label,
+.shed__bay-stats,
+.shed__bay-exit {
+	cursor: grab;
+	user-select: none;
+	-webkit-user-select: none;
+}
+
+.shed__columns--grabbing .shed__bay-label,
+.shed__columns--grabbing .shed__bay-stats,
+.shed__columns--grabbing .shed__bay-exit,
+body.page--dragging .shed__bay-label,
+body.page--dragging .shed__bay-stats,
+body.page--dragging .shed__bay-exit {
+	cursor: grabbing;
+}
+
 .shed__bay-stack {
 	--stack-area-height: 500px;
 	width: 100%;

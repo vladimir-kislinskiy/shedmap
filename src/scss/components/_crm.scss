@@ -86,6 +86,78 @@
 	--color-badge-bg: #e2e8f0;
 }
 
+/* Dark variant of the corporate theme — the same strict business palette but in
+   softer, slightly darker grays so it's easier on the eyes in low light. Only
+   chrome tokens are overridden; product/hay colors stay the same. */
+.theme-crm.theme-dark {
+	--bg-page: #21262d;
+	--bg-gradient: linear-gradient(135deg, #262c34 0%, #1d2228 100%);
+	--color-surface: #2b313a;
+	--color-surface-muted: #242a32;
+	--color-surface-hover: #333b45;
+	--color-surface-glass: rgba(43, 49, 58, 0.85);
+	--card-bg: #2b313a;
+	--card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+
+	--color-primary: #3d5a80;
+	--color-primary-hover: #4a6a93;
+	--color-primary-light: #6b86ab;
+	--color-primary-focus: rgba(107, 134, 171, 0.32);
+	--color-primary-shadow: rgba(0, 0, 0, 0.45);
+	--color-primary-shadow-strong: rgba(0, 0, 0, 0.55);
+	--color-primary-soft: rgba(107, 134, 171, 0.16);
+
+	--text-main: #dce3ec;
+	--text-muted: #94a3b8;
+	--text-heading: #f1f5f9;
+	--text-placeholder: #6b7686;
+
+	--border-color: #3a424d;
+	--border-color-strong: #4b5563;
+
+	--color-bay-bg: #2b313a;
+	--color-bay-bg-hover: #333b45;
+	--color-bay-border: #3a424d;
+	--color-bay-border-hover: #4b5563;
+
+	--color-row-hover: #2f3640;
+	--color-on-primary: #ffffff;
+	--color-badge-text: #cbd5e1;
+	--color-badge-bg: #3a424d;
+}
+
+/* Dark-theme readability fixes — some chrome hard-codes light surfaces/colors
+   that lose contrast on dark backgrounds. Keep every label clearly visible. */
+
+/* Active sidebar nav item: brighten the label/icon so it stands out against the
+   translucent highlight instead of blending into it. */
+.theme-crm.theme-dark .crm-sidebar__nav .tabs__btn--active {
+	color: #cddcef;
+	background: rgba(107, 134, 171, 0.22);
+}
+
+/* Shed name tabs: the track and inactive labels were tuned for light surfaces. */
+.theme-crm.theme-dark .shed-tabs {
+	background-color: var(--color-surface-muted);
+}
+
+.theme-crm.theme-dark .shed-tabs__btn:not(.shed-tabs__btn--active) {
+	color: #aab6c6;
+}
+
+.theme-crm.theme-dark .shed-tabs__btn:not(.shed-tabs__btn--active):hover {
+	color: var(--text-heading);
+	background-color: var(--color-surface-hover);
+}
+
+/* These chrome controls hard-code a light beige hover; swap it for a dark hover
+   so icons/labels never flash onto a near-white background. */
+.theme-crm.theme-dark .auth-action:hover,
+.theme-crm.theme-dark .location-tabs__btn:not(.location-tabs__btn--active):hover {
+	color: var(--text-main);
+	background-color: var(--color-surface-hover);
+}
+
 /* Top bar — reuse the existing auth bar, restyle it as a sticky CRM top bar.
    The main nav (Sheds / Change Log / Reports) is moved into the sidebar by JS,
    so only the menu toggle, the Olds/Siksika switch and the account actions
@@ -370,6 +442,71 @@
 	box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
 }
 
+/* Dark-mode switch — an animated sun/moon icon that lives in the top bar, just
+   before the username. The classic theme is disabled, but keep it scoped so it
+   only shows in the CRM chrome. */
+.theme-switch {
+	display: none;
+}
+
+.theme-crm .theme-switch {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 34px;
+	height: 34px;
+	padding: 0;
+	color: var(--text-muted);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 50%;
+	cursor: pointer;
+	transition: background-color 0.2s, color 0.2s;
+}
+
+.theme-crm .theme-switch:hover {
+	color: var(--text-main);
+	background: var(--color-surface-hover);
+}
+
+.theme-switch__icons {
+	position: relative;
+	display: block;
+	width: 20px;
+	height: 20px;
+}
+
+.theme-switch__icon {
+	position: absolute;
+	inset: 0;
+	width: 20px;
+	height: 20px;
+	transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+}
+
+/* Light mode shows the sun; the moon is rotated/scaled out of view. */
+.theme-switch__icon--sun {
+	opacity: 1;
+	transform: rotate(0deg) scale(1);
+}
+
+.theme-switch__icon--moon {
+	opacity: 0;
+	transform: rotate(-90deg) scale(0.4);
+}
+
+/* Dark mode swaps them with a rotate + fade. */
+.theme-dark .theme-switch__icon--sun {
+	opacity: 0;
+	transform: rotate(90deg) scale(0.4);
+}
+
+.theme-dark .theme-switch__icon--moon {
+	opacity: 1;
+	transform: rotate(0deg) scale(1);
+}
+
 /* --------------------------------------------------------------------------
    Main content shift + stat cards
    -------------------------------------------------------------------------- */
@@ -612,6 +749,12 @@
 
 	.theme-crm .crm-sidebar {
 		box-shadow: 0 0 60px rgba(47, 41, 35, 0.28);
+	}
+
+	/* On the slide-over sidebar the form can fill the panel, leaving Collapse
+	   right under Submit — add a clear gap so it isn't tapped by accident. */
+	.theme-crm .crm-sidebar__collapse {
+		margin-top: 28px;
 	}
 
 	.theme-crm .crm-stats__cards {
