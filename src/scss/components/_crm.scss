@@ -1,0 +1,618 @@
+/* ==========================================================================
+   CRM design variant (theme-crm)
+   A second, business-app / CRM-style layout that can be toggled on at runtime.
+   Everything here is opt-in: the classic layout is untouched unless the
+   <body> carries the `.theme-crm` class. CRM-only elements are hidden by
+   default and revealed inside the theme.
+   ========================================================================== */
+
+/* CRM-only chrome stays hidden in the classic theme. */
+.crm-sidebar,
+.crm-stats,
+.crm-menu-toggle {
+	display: none;
+}
+
+/* Temporary toggle button between the classic and CRM designs. Sits in the
+   bottom-right corner of the page footer (in normal flow, not sticky). */
+.theme-toggle {
+	flex: 0 0 auto;
+	padding: 9px 16px;
+	font-family: inherit;
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--color-on-primary);
+	background: var(--color-primary);
+	border: none;
+	border-radius: var(--radius-sm);
+	box-shadow: 0 4px 12px var(--color-primary-shadow);
+	cursor: pointer;
+	transition: background-color 0.2s, transform 0.1s;
+}
+
+.theme-toggle:hover {
+	background: var(--color-primary-hover);
+}
+
+.theme-toggle:active {
+	transform: translateY(1px);
+}
+
+/* --------------------------------------------------------------------------
+   Theme scope
+   -------------------------------------------------------------------------- */
+.theme-crm {
+	--crm-sidebar-w: 320px;
+	--crm-topbar-h: 64px;
+	--crm-gutter: clamp(12px, 2vw, 20px);
+
+	/* Strict corporate palette. We override ONLY chrome tokens (surfaces, text,
+	   borders, primary, bay chrome). Product/hay colors (--color-alfalfa,
+	   --color-timothy, --color-rejected, …) are deliberately NOT touched so the
+	   bales keep their identity in both themes. */
+	--bg-page: #eef1f5;
+	--bg-gradient: linear-gradient(135deg, #f4f6f9 0%, #eef1f5 100%);
+	--color-surface: #ffffff;
+	--color-surface-muted: #f6f8fa;
+	--color-surface-hover: #eef1f5;
+	--color-surface-glass: rgba(255, 255, 255, 0.85);
+	--card-bg: #ffffff;
+	--card-shadow: 0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
+
+	--color-primary: #1f3a5f;
+	--color-primary-hover: #16304f;
+	--color-primary-light: #4f6b8f;
+	--color-primary-focus: rgba(31, 58, 95, 0.18);
+	--color-primary-shadow: rgba(31, 58, 95, 0.25);
+	--color-primary-shadow-strong: rgba(31, 58, 95, 0.32);
+	--color-primary-soft: rgba(31, 58, 95, 0.1);
+
+	--text-main: #1e293b;
+	--text-muted: #64748b;
+	--text-heading: #0f172a;
+	--text-placeholder: #94a3b8;
+
+	--border-color: #e2e8f0;
+	--border-color-strong: #cbd5e1;
+
+	--color-bay-bg: #f6f8fa;
+	--color-bay-bg-hover: #eef1f5;
+	--color-bay-border: #e2e8f0;
+	--color-bay-border-hover: #cbd5e1;
+
+	--color-row-hover: #f1f5f9;
+	--color-on-primary: #ffffff;
+	--color-badge-text: #1f3a5f;
+	--color-badge-bg: #e2e8f0;
+}
+
+/* Top bar — reuse the existing auth bar, restyle it as a sticky CRM top bar.
+   The main nav (Sheds / Change Log / Reports) is moved into the sidebar by JS,
+   so only the menu toggle, the Olds/Siksika switch and the account actions
+   remain here. */
+.theme-crm .page-hero {
+	position: sticky;
+	top: 0;
+	z-index: 60;
+}
+
+.theme-crm .auth-bar {
+	display: flex;
+	align-items: center;
+	gap: clamp(8px, 1.5vw, 16px);
+	min-height: var(--crm-topbar-h);
+	padding: 0 clamp(12px, 2vw, 20px);
+	/* The classic bar hard-codes a beige glass background — neutralize it. */
+	background: var(--color-surface);
+	backdrop-filter: none;
+}
+
+/* Panels hard-code beige surfaces/borders in the classic theme; align them with
+   the corporate palette. */
+.theme-crm .tabs__panel {
+	background: var(--color-surface);
+	border-color: var(--border-color);
+	backdrop-filter: none;
+}
+
+.theme-crm .auth-bar > .auth-bar__actions {
+	margin-left: auto;
+}
+
+/* The gear toggle isn't needed in the CRM theme — the form lives in the sidebar
+   and is always visible while editable. */
+.theme-crm .inventory-settings {
+	display: none;
+}
+
+/* Sign-in / sign-out button sized to sit proportionally next to the username. */
+.theme-crm .auth-action {
+	width: 30px;
+	height: 30px;
+}
+
+.theme-crm .auth-action__icon {
+	width: 15px;
+	height: 15px;
+}
+
+/* Menu / collapse toggle in the top bar. */
+.theme-crm .crm-menu-toggle {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: 40px;
+	height: 40px;
+	padding: 0;
+	background: var(--color-surface);
+	border: 1px solid var(--border-color-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.theme-crm .crm-menu-toggle:hover {
+	background: var(--color-surface-hover);
+}
+
+.crm-menu-toggle__icon,
+.crm-menu-toggle__icon::before,
+.crm-menu-toggle__icon::after {
+	display: block;
+	width: 18px;
+	height: 2px;
+	border-radius: 2px;
+	background: var(--text-main);
+}
+
+.crm-menu-toggle__icon {
+	position: relative;
+}
+
+.crm-menu-toggle__icon::before,
+.crm-menu-toggle__icon::after {
+	content: "";
+	position: absolute;
+	left: 0;
+}
+
+.crm-menu-toggle__icon::before {
+	top: -6px;
+}
+
+.crm-menu-toggle__icon::after {
+	top: 6px;
+}
+
+/* --------------------------------------------------------------------------
+   Sidebar (the slide-out controls panel)
+   -------------------------------------------------------------------------- */
+.theme-crm .crm-sidebar {
+	display: flex;
+	flex-direction: column;
+	position: fixed;
+	top: var(--crm-topbar-h);
+	left: 0;
+	bottom: 0;
+	z-index: 55;
+	width: var(--crm-sidebar-w);
+	padding: 16px 14px;
+	gap: 14px;
+	background: var(--color-surface);
+	border-right: 1px solid var(--border-color);
+	box-shadow: 2px 0 12px rgba(60, 48, 32, 0.04);
+	overflow-y: auto;
+	overscroll-behavior: contain;
+}
+
+.theme-crm.crm-collapsed .crm-sidebar {
+	transform: translateX(-100%);
+}
+
+/* Nav slot receives the moved `.tabs__group` buttons. */
+.crm-sidebar__nav {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding-top: 4px;
+}
+
+.theme-crm .crm-sidebar__nav .tabs__group {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	width: 100%;
+	padding: 0;
+	background: none;
+	border: none;
+	box-shadow: none;
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	width: 100%;
+	min-height: 42px;
+	padding: 10px 14px;
+	font-size: 0.9rem;
+	font-weight: 600;
+	text-align: left;
+	color: var(--text-main);
+	background: none;
+	border: none;
+	border-radius: var(--radius-sm);
+}
+
+/* Name-matching icons; masked so they inherit the link's text color (muted by
+   default, primary when active). */
+.theme-crm .crm-sidebar__nav .tabs__btn::before {
+	content: "";
+	flex: 0 0 auto;
+	width: 18px;
+	height: 18px;
+	margin-right: 10px;
+	background-color: currentColor;
+	-webkit-mask: var(--crm-nav-icon) center / contain no-repeat;
+	mask: var(--crm-nav-icon) center / contain no-repeat;
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Sheds"] {
+	--crm-nav-icon: url("../img/icons/shed.svg");
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Log"] {
+	--crm-nav-icon: url("../img/icons/change-log.svg");
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Reports"] {
+	--crm-nav-icon: url("../img/icons/reports.svg");
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn:hover {
+	background: var(--color-surface-hover);
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn--active {
+	color: var(--color-primary-hover);
+	background: var(--color-primary-soft);
+	font-weight: 700;
+}
+
+/* Controls slot receives the active location's inventory form. */
+.crm-sidebar__controls {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	padding-top: 6px;
+	border-top: 1px solid var(--border-color);
+}
+
+.crm-sidebar__controls-hint {
+	margin: 0;
+	padding: 6px;
+	font-size: 0.8rem;
+	color: var(--text-muted);
+}
+
+.theme-crm .crm-sidebar__controls .inventory__form {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	width: 100%;
+	margin: 0;
+	padding: 0;
+	background: none;
+	border: none;
+	box-shadow: none;
+}
+
+.theme-crm .crm-sidebar__controls .inventory__form[hidden] {
+	display: none;
+}
+
+.theme-crm .crm-sidebar__controls .inventory__field,
+.theme-crm .crm-sidebar__controls .inventory__submit {
+	width: 100%;
+	max-width: none;
+	box-sizing: border-box;
+}
+
+.theme-crm .crm-sidebar__controls .inventory__checks-row {
+	flex-direction: column;
+	align-items: stretch;
+	gap: 8px;
+}
+
+.theme-crm .crm-sidebar__controls .inventory__isles,
+.theme-crm .crm-sidebar__controls .inventory__reject {
+	width: 100%;
+}
+
+.crm-sidebar__collapse {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: auto;
+	padding: 10px 12px;
+	font-family: inherit;
+	font-size: 0.85rem;
+	font-weight: 600;
+	color: var(--text-muted);
+	background: var(--color-surface-muted);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+}
+
+.crm-sidebar__collapse:hover {
+	background: var(--color-surface-hover);
+}
+
+.crm-sidebar__collapse-icon {
+	width: 14px;
+	height: 2px;
+	background: currentColor;
+	box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
+}
+
+/* --------------------------------------------------------------------------
+   Main content shift + stat cards
+   -------------------------------------------------------------------------- */
+.theme-crm .page__wrapper {
+	padding-left: calc(var(--crm-sidebar-w) + var(--crm-gutter));
+}
+
+.theme-crm.crm-collapsed .page__wrapper {
+	padding-left: var(--crm-gutter);
+}
+
+/* Bays grow to fill the full shed width, but never shrink below their basis
+   (flex-shrink: 0). So they always use the maximum width available, and when the
+   sidebar narrows the area below that basis the columns scroll horizontally
+   instead of compressing the bays. Scoped to desktop so the responsive
+   fixed-width mobile behavior is preserved. */
+@media (min-width: 769px) {
+	.theme-crm .shed__bay {
+		flex: 1 0 150px;
+	}
+}
+
+.theme-crm .page-footer {
+	padding-left: calc(var(--crm-sidebar-w) + var(--crm-gutter));
+}
+
+.theme-crm.crm-collapsed .page-footer {
+	padding-left: var(--crm-gutter);
+}
+
+.theme-crm .crm-stats {
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	width: 100%;
+	margin-bottom: 20px;
+}
+
+.crm-stats__cards {
+	display: grid;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 14px;
+}
+
+.crm-stats__charts {
+	display: grid;
+	grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+	gap: 14px;
+	align-items: stretch;
+}
+
+.crm-card {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	padding: 14px 18px;
+	background: var(--color-surface);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	box-shadow: var(--card-shadow);
+}
+
+.crm-card__label {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.crm-card__value {
+	font-family: var(--font-heading);
+	font-size: 1.5rem;
+	font-weight: 700;
+	line-height: 1.1;
+	color: var(--text-heading);
+}
+
+.crm-card__sub {
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Charts (dependency-free inline SVG — kept light for weak devices)
+   -------------------------------------------------------------------------- */
+.crm-chart {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	padding: 16px 18px;
+	background: var(--color-surface);
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	box-shadow: var(--card-shadow);
+}
+
+.crm-chart__title {
+	font-size: 0.72rem;
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	text-transform: uppercase;
+	color: var(--text-muted);
+}
+
+.crm-chart--donut {
+	align-items: center;
+}
+
+.crm-donut {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+}
+
+.crm-donut__svg {
+	width: 160px;
+	max-width: 100%;
+	height: auto;
+}
+
+.crm-donut__track {
+	fill: none;
+	stroke: var(--color-surface-hover);
+	stroke-width: 16;
+}
+
+.crm-donut__seg {
+	fill: none;
+	stroke-width: 16;
+	stroke-linecap: butt;
+	transform: rotate(-90deg);
+	transform-origin: center;
+	transition: stroke-width 0.15s ease, opacity 0.15s ease;
+	cursor: pointer;
+}
+
+.crm-donut__seg--free {
+	stroke: var(--color-primary);
+}
+
+.crm-donut__seg--used {
+	stroke: var(--border-color-strong);
+}
+
+.crm-donut__seg.is-active {
+	stroke-width: 20;
+}
+
+.crm-donut__seg:not(.is-active).is-dim {
+	opacity: 0.45;
+}
+
+.crm-donut__value {
+	font-family: var(--font-heading);
+	font-size: 26px;
+	font-weight: 700;
+	fill: var(--text-heading);
+	text-anchor: middle;
+	dominant-baseline: middle;
+}
+
+.crm-donut__caption {
+	font-size: 11px;
+	font-weight: 600;
+	fill: var(--text-muted);
+	text-anchor: middle;
+	dominant-baseline: middle;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+}
+
+.crm-sheds-bars {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	justify-content: center;
+	flex: 1;
+}
+
+.crm-bar {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	gap: 4px 10px;
+	align-items: center;
+	cursor: default;
+}
+
+.crm-bar__name {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--text-main);
+}
+
+.crm-bar__pct {
+	font-size: 0.8rem;
+	font-weight: 700;
+	color: var(--color-primary);
+	font-variant-numeric: tabular-nums;
+}
+
+.crm-bar__track {
+	grid-column: 1 / -1;
+	position: relative;
+	height: 8px;
+	border-radius: 999px;
+	background: var(--color-surface-hover);
+	overflow: hidden;
+}
+
+.crm-bar__fill {
+	position: absolute;
+	inset: 0 auto 0 0;
+	height: 100%;
+	border-radius: 999px;
+	background: var(--color-primary);
+	transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s ease;
+}
+
+.crm-bar:hover .crm-bar__fill {
+	filter: brightness(1.12);
+}
+
+@media (max-width: 720px) {
+	.crm-stats__charts {
+		grid-template-columns: minmax(0, 1fr);
+	}
+}
+
+/* --------------------------------------------------------------------------
+   Responsive: below this width the sidebar overlays instead of pushing.
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+	.theme-crm .page__wrapper,
+	.theme-crm .page-footer {
+		padding-left: var(--crm-gutter);
+	}
+
+	.theme-crm .crm-sidebar {
+		box-shadow: 0 0 60px rgba(47, 41, 35, 0.28);
+	}
+
+	.theme-crm .crm-stats__cards {
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 560px) {
+	.theme-crm .crm-stats__cards {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (max-width: 520px) {
+	.theme-crm {
+		--crm-sidebar-w: 86vw;
+	}
+}

@@ -593,6 +593,7 @@ function bindStackSelect(stackEl) {
 		const locationId = stackEl.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
 		if (!canEdit(locationId) || stackEl._justDragged) return;
 		fillFormFromStack(stackEl);
+		openCrmSidebar();
 	});
 }
 
@@ -618,6 +619,8 @@ function updateBayStats(bayStackEl) {
 		const locationId = bayStackEl.dataset.location || getCurrentLocation();
 		fillEl.textContent = `${getBayFillPercent(total, getMaxBalesPerBay(locationId))}% full`;
 	}
+
+	scheduleCrmStats();
 }
 
 function getReportedByValue(locationId = getCurrentLocation()) {
@@ -1626,6 +1629,10 @@ function setInventoryControlsOpen(open) {
 
 	controls.hidden = !open;
 	controls.classList.toggle("inventory__form--hidden", !open);
+
+	const crmHint = document.getElementById("crmControlsHint");
+	if (crmHint) crmHint.hidden = open;
+
 	toggleBtn.classList.toggle("inventory-settings--active", open);
 	toggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
 	const label = open ? "Close inventory management" : "Manage inventory";
@@ -1642,6 +1649,10 @@ function refreshEditAccess() {
 
 	if (!editable) setInventoryControlsOpen(false);
 	updateStackInteractionState();
+
+	// In the CRM theme the inventory form lives in the sidebar and is always
+	// visible while editable — no gear toggle required.
+	syncCrmFormVisibility();
 }
 
 function setEditMode(authenticated, person = null, email = null) {
@@ -2168,6 +2179,326 @@ function initToggleControls() {
 	});
 }
 
+/* ==========================================================================
+   CRM design variant (theme-crm)
+   Non-destructive second layout toggled at runtime. It reuses every existing
+   handler by MOVING the main nav and the active inventory form into the
+   sidebar instead of duplicating logic. The Olds/Siksika switch and account
+   info stay in the top bar. A temporary floating button flips between designs.
+   ========================================================================== */
+
+const UI_THEME_STORAGE_KEY = "uiTheme";
+const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
+let crmStatsScheduled = false;
+
+function saveCrmCollapsed(collapsed) {
+	try {
+		localStorage.setItem(CRM_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
+	} catch {
+		// ignore storage failures
+	}
+}
+
+// Reveal the sidebar (with the inventory form). Used when a stack is clicked so
+// the control panel slides in for editing.
+function openCrmSidebar() {
+	if (!document.body.classList.contains("theme-crm")) return;
+	document.body.classList.remove("crm-collapsed");
+	saveCrmCollapsed(false);
+}
+
+// Remember where moved elements live in the classic layout, so the original
+// markup is restored verbatim when switching back.
+const crmOriginalParents = new WeakMap();
+
+function getCrmEls() {
+	return {
+		toggleBtn: document.getElementById("themeToggle"),
+		navSlot: document.getElementById("crmNavSlot"),
+		controlsSlot: document.getElementById("crmControlsSlot"),
+		controlsHint: document.getElementById("crmControlsHint"),
+		collapseBtn: document.getElementById("crmCollapse"),
+		menuToggle: document.getElementById("crmMenuToggle"),
+		stats: document.getElementById("crmStats"),
+	};
+}
+
+function rememberCrmHome(el) {
+	if (el && !crmOriginalParents.has(el)) {
+		crmOriginalParents.set(el, { parent: el.parentNode, next: el.nextSibling });
+	}
+}
+
+function restoreCrmHome(el) {
+	const home = crmOriginalParents.get(el);
+	if (home?.parent) home.parent.insertBefore(el, home.next);
+}
+
+function moveActiveFormIntoSidebar() {
+	const { controlsSlot } = getCrmEls();
+	if (!controlsSlot) return;
+
+	const activeForm = loc("inventoryControls", getCurrentLocation());
+
+	LOCATION_IDS.forEach((locationId) => {
+		const form = loc("inventoryControls", locationId);
+		if (!form) return;
+		if (form === activeForm) {
+			rememberCrmHome(form);
+			if (form.parentElement !== controlsSlot) controlsSlot.appendChild(form);
+		} else if (form.parentElement === controlsSlot) {
+			restoreCrmHome(form);
+		}
+	});
+
+	syncCrmFormVisibility();
+}
+
+// In the CRM theme the form is part of the sidebar, so it should be shown
+// automatically whenever the user can edit — without the gear toggle. Guests
+// see the "sign in" hint instead.
+function syncCrmFormVisibility() {
+	const { controlsHint } = getCrmEls();
+	if (!document.body.classList.contains("theme-crm")) return;
+
+	const editable = canEdit();
+	const activeForm = loc("inventoryControls", getCurrentLocation());
+	if (activeForm) {
+		activeForm.hidden = !editable;
+		activeForm.classList.toggle("inventory__form--hidden", !editable);
+	}
+	if (controlsHint) controlsHint.hidden = editable;
+}
+
+function applyUiTheme(theme) {
+	const { toggleBtn, navSlot } = getCrmEls();
+	const crm = theme === "crm";
+	document.body.classList.toggle("theme-crm", crm);
+
+	if (toggleBtn) toggleBtn.textContent = crm ? "Classic design" : "New design";
+
+	const tabsGroup = document.querySelector(".tabs__group");
+
+	if (crm) {
+		if (tabsGroup && navSlot && tabsGroup.parentElement !== navSlot) {
+			rememberCrmHome(tabsGroup);
+			navSlot.appendChild(tabsGroup);
+		}
+		moveActiveFormIntoSidebar();
+		placeCrmStatsInReports();
+		updateCrmStats();
+	} else {
+		if (tabsGroup) restoreCrmHome(tabsGroup);
+		LOCATION_IDS.forEach((locationId) => {
+			const form = loc("inventoryControls", locationId);
+			if (form) restoreCrmHome(form);
+		});
+		const stats = document.getElementById("crmStats");
+		if (stats) restoreCrmHome(stats);
+		// Restore the classic gated behaviour (form hidden until the gear toggle).
+		setInventoryControlsOpen(false);
+	}
+
+	requestAnimationFrame(() => syncAllShedLayouts());
+}
+
+function placeCrmStatsInReports() {
+	const stats = document.getElementById("crmStats");
+	if (!stats) return;
+	const reports = loc("Reports", getCurrentLocation());
+	if (!reports) return;
+
+	rememberCrmHome(stats);
+	const title = reports.querySelector(".log__title");
+	reports.insertBefore(stats, title ? title.nextSibling : reports.firstChild);
+}
+
+function updateCrmStats() {
+	const { stats } = getCrmEls();
+	if (!stats || !document.body.classList.contains("theme-crm")) return;
+
+	const locationId = getCurrentLocation();
+	const panel = getLocationPanel(locationId);
+	if (!panel) return;
+
+	const maxPerBay = getMaxBalesPerBay(locationId);
+	const sheds = new Map();
+	let total = 0;
+	let bayColumns = 0;
+
+	panel.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		bayColumns += 1;
+		const shedId = bayStack.dataset.shed || "other";
+		const bayTotal =
+			parseInt(bayStack.closest(".shed__bay")?.querySelector(".shed__bay-total-val")?.textContent, 10) || 0;
+		total += bayTotal;
+		const entry = sheds.get(shedId) || { total: 0, count: 0 };
+		entry.total += bayTotal;
+		entry.count += 1;
+		sheds.set(shedId, entry);
+	});
+
+	const capacity = bayColumns * maxPerBay;
+	const available = Math.max(0, capacity - total);
+	const occupiedPct = capacity ? Math.round((total / capacity) * 100) : 0;
+	const availablePct = capacity ? Math.max(0, 100 - occupiedPct) : 0;
+
+	const setText = (id, value) => {
+		const el = document.getElementById(id);
+		if (el) el.textContent = value;
+	};
+
+	setText("crmStatTotal", total.toLocaleString());
+	setText("crmStatTotalPct", `${occupiedPct}% used`);
+	setText("crmStatAvailable", available.toLocaleString());
+	setText("crmStatAvailablePct", `${availablePct}% free`);
+	setText("crmStatCapacity", capacity.toLocaleString());
+
+	const shedEntries = getLocationConfig(locationId).sheds.map((shedId) => {
+		const entry = sheds.get(shedId) || { total: 0, count: 0 };
+		const cap = entry.count * maxPerBay;
+		const freeVal = Math.max(0, cap - entry.total);
+		const freePct = cap ? Math.round((freeVal / cap) * 100) : 0;
+		return {
+			name: shedId.charAt(0).toUpperCase() + shedId.slice(1),
+			freePct,
+			freeVal,
+			capacity: cap,
+		};
+	});
+
+	renderCrmDonut(availablePct, available, occupiedPct, total);
+	renderCrmShedBars(shedEntries);
+}
+
+function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
+	const el = document.getElementById("crmDonut");
+	if (!el) return;
+
+	const r = 58;
+	const c = 2 * Math.PI * r;
+	const freeLen = (freePct / 100) * c;
+	const usedLen = (usedPct / 100) * c;
+	const usedRotation = -90 + (freePct / 100) * 360;
+
+	el.innerHTML = `
+		<svg viewBox="0 0 140 140" class="crm-donut__svg" role="img" aria-label="Free space ${freePct}%">
+			<circle class="crm-donut__track" cx="70" cy="70" r="${r}"></circle>
+			<circle class="crm-donut__seg crm-donut__seg--free" cx="70" cy="70" r="${r}"
+				stroke-dasharray="${freeLen.toFixed(2)} ${c.toFixed(2)}"
+				data-pct="${freePct}" data-label="free" data-val="${freeVal.toLocaleString()}">
+				<title>Free: ${freeVal.toLocaleString()} (${freePct}%)</title>
+			</circle>
+			<circle class="crm-donut__seg crm-donut__seg--used" cx="70" cy="70" r="${r}"
+				stroke-dasharray="${usedLen.toFixed(2)} ${c.toFixed(2)}" style="transform: rotate(${usedRotation}deg)"
+				data-pct="${usedPct}" data-label="used" data-val="${usedVal.toLocaleString()}">
+				<title>Used: ${usedVal.toLocaleString()} (${usedPct}%)</title>
+			</circle>
+			<text class="crm-donut__value" x="70" y="68" id="crmDonutValue">${freePct}%</text>
+			<text class="crm-donut__caption" x="70" y="88" id="crmDonutCaption">free</text>
+		</svg>`;
+
+	const valueEl = el.querySelector("#crmDonutValue");
+	const captionEl = el.querySelector("#crmDonutCaption");
+	const segs = el.querySelectorAll(".crm-donut__seg");
+
+	const resetCenter = () => {
+		if (valueEl) valueEl.textContent = `${freePct}%`;
+		if (captionEl) captionEl.textContent = "free";
+		segs.forEach((s) => s.classList.remove("is-active", "is-dim"));
+	};
+
+	segs.forEach((seg) => {
+		seg.addEventListener("mouseenter", () => {
+			if (valueEl) valueEl.textContent = `${seg.dataset.pct}%`;
+			if (captionEl) captionEl.textContent = seg.dataset.label;
+			segs.forEach((s) => {
+				s.classList.toggle("is-active", s === seg);
+				s.classList.toggle("is-dim", s !== seg);
+			});
+		});
+		seg.addEventListener("mouseleave", resetCenter);
+	});
+}
+
+function renderCrmShedBars(shedEntries) {
+	const el = document.getElementById("crmShedBars");
+	if (!el) return;
+
+	el.innerHTML = shedEntries
+		.map(
+			(shed) => `
+		<div class="crm-bar" title="${shed.name}: ${shed.freeVal.toLocaleString()} free of ${shed.capacity.toLocaleString()}">
+			<span class="crm-bar__name">${shed.name} Shed</span>
+			<span class="crm-bar__pct">${shed.freePct}% free</span>
+			<div class="crm-bar__track">
+				<div class="crm-bar__fill" style="width:${shed.freePct}%"></div>
+			</div>
+		</div>`,
+		)
+		.join("");
+}
+
+function scheduleCrmStats() {
+	if (crmStatsScheduled) return;
+	crmStatsScheduled = true;
+	requestAnimationFrame(() => {
+		crmStatsScheduled = false;
+		updateCrmStats();
+	});
+}
+
+function initCrmTheme() {
+	const { toggleBtn, collapseBtn, menuToggle } = getCrmEls();
+
+	toggleBtn?.addEventListener("click", () => {
+		const next = document.body.classList.contains("theme-crm") ? "classic" : "crm";
+		try {
+			localStorage.setItem(UI_THEME_STORAGE_KEY, next);
+		} catch {
+			// ignore storage failures
+		}
+		applyUiTheme(next);
+	});
+
+	const toggleSidebar = () => {
+		const collapsed = document.body.classList.toggle("crm-collapsed");
+		saveCrmCollapsed(collapsed);
+	};
+	collapseBtn?.addEventListener("click", toggleSidebar);
+	menuToggle?.addEventListener("click", toggleSidebar);
+
+	try {
+		document.body.classList.toggle("crm-collapsed", localStorage.getItem(CRM_COLLAPSED_STORAGE_KEY) === "1");
+	} catch {
+		// ignore storage failures
+	}
+
+	// After the location switch handlers run, re-sync which form is in the
+	// sidebar and refresh the stat cards for the now-active location.
+	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
+		btn.addEventListener("click", () => {
+			requestAnimationFrame(() => {
+				if (!document.body.classList.contains("theme-crm")) return;
+				moveActiveFormIntoSidebar();
+				placeCrmStatsInReports();
+				updateCrmStats();
+			});
+		});
+	});
+
+	// Default to the new CRM theme; only the explicit "classic" preference opts
+	// out. Must match the early inline theme script in index.html so the bundle
+	// re-applies the exact same state the page already started with (no flash).
+	let saved = "crm";
+	try {
+		saved = localStorage.getItem(UI_THEME_STORAGE_KEY) === "classic" ? "classic" : "crm";
+	} catch {
+		saved = "crm";
+	}
+	applyUiTheme(saved);
+}
+
 window.resetAllBays = resetAllBays;
 window.resetOlds = () => resetAllBays({ locationId: "olds" });
 window.resetSiksika = () => resetAllBays({ locationId: "siksika" });
@@ -2193,6 +2524,7 @@ window.addEventListener("load", async () => {
 	updateLogTable(getCurrentLocation());
 	updateReportsTable(getCurrentLocation());
 	updateSyncBanner();
+	initCrmTheme();
 });
 
 let resizeTimer;

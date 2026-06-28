@@ -9,6 +9,7 @@
 @import "./components/burger";
 @import "./components/header";
 @import "./components/footer";
+@import "./components/crm";
 
 html {
 	background-color: var(--bg-page);
@@ -1327,6 +1328,11 @@ body.page--offline .inventory__form {
 
 /* Footer */
 .page-footer {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
 	text-align: left;
 	flex-shrink: 0;
 	margin-top: 100px;
