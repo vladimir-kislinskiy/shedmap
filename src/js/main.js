@@ -9,7 +9,6 @@ import {
 } from "./auth.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { getFirebaseConfig } from "./firebase-config.js";
-import { openReportPdf } from "./report-pdf.js";
 import {
 	cacheHayShedState,
 	formatCacheTimestamp,
@@ -1335,7 +1334,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 	});
 }
 
-function printCurrentReportPdf(locationId = getCurrentLocation()) {
+async function printCurrentReportPdf(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
 	const productId = filterEl?.value ?? "";
 	if (!productId) {
@@ -1346,6 +1345,10 @@ function printCurrentReportPdf(locationId = getCurrentLocation()) {
 	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
 	const productLabel = getHayTypeLabel(productId);
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
+
+	// jsPDF is heavy and only needed on demand, so load it lazily on click to
+	// keep it out of the initial bundle.
+	const { openReportPdf } = await import("./report-pdf.js");
 	openReportPdf({
 		productLabel,
 		rows,
