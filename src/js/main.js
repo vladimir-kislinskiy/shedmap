@@ -2116,16 +2116,38 @@ function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurren
 	const select = getScopedElement("baySelect", locationId);
 	if (!select) return;
 	const locationConfig = getLocationConfig(locationId);
+	const disabledBays = locationConfig.disabledBays?.[shed] ?? [];
+	const reversed = !!locationConfig.reverseSheds?.includes(shed);
 
-	for (let index = 0; index < locationConfig.bayCount; index++) {
-		const option = select.options[index];
-		if (!option) continue;
+	const options = Array.from(select.options);
+	options.forEach((option, position) => {
+		// Tag each option with its stable bay index on first run so we can safely
+		// reorder them later without losing the option <-> bay mapping.
+		if (option.dataset.bayIndex === undefined) option.dataset.bayIndex = String(position);
+		const index = Number(option.dataset.bayIndex);
+		const isDisabled = disabledBays.includes(index);
 		option.value = String(index);
+		option.hidden = isDisabled;
+		option.disabled = isDisabled;
 		option.textContent = `Bay ${getBayDisplayNumberForLocation(shed, index, locationId)}`;
-	}
+	});
+
+	options
+		.sort((a, b) =>
+			reversed
+				? Number(b.dataset.bayIndex) - Number(a.dataset.bayIndex)
+				: Number(a.dataset.bayIndex) - Number(b.dataset.bayIndex)
+		)
+		.forEach((option) => select.appendChild(option));
 
 	if (selectedBay !== null && selectedBay !== undefined && selectedBay !== "") {
 		select.value = String(selectedBay);
+	}
+
+	const current = select.options[select.selectedIndex];
+	if (!current || current.hidden) {
+		const firstVisible = options.find((option) => !option.hidden);
+		if (firstVisible) select.value = firstVisible.value;
 	}
 }
 
@@ -2314,7 +2336,7 @@ function updateCrmStats() {
 	let total = 0;
 	let bayColumns = 0;
 
-	panel.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+	panel.querySelectorAll(".shed__bay:not(.shed__bay--disabled) .shed__bay-stack").forEach((bayStack) => {
 		bayColumns += 1;
 		const shedId = bayStack.dataset.shed || "other";
 		const bayTotal =

@@ -57,6 +57,8 @@ export const LOCATIONS = {
 			shed1: "West",
 			shed2: "East",
 		},
+		reverseSheds: ["shed1"],
+		disabledBays: { shed2: [9, 10, 11, 12] },
 		defaultShed: "shed1",
 	},
 };

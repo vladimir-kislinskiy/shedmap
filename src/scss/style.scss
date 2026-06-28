@@ -610,6 +610,16 @@ body.page--dragging .shed__bay-exit {
 	border-color: var(--color-bay-border-hover);
 }
 
+/* Unused bays: look identical to real bays, but faded out and non-interactive
+   so it's clear they're inactive (number replaced by "n/a"). */
+.shed__bay--disabled {
+	opacity: 0.45;
+}
+
+.shed__bay--disabled .shed__bay-stack {
+	pointer-events: none;
+}
+
 .shed__isles {
 	display: flex;
 	flex: 1 1 auto;

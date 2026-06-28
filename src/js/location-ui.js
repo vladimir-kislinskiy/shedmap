@@ -48,7 +48,9 @@ export function getBayDisplayNumberForLocation(shed, bayIndex, locationId = curr
 	const config = getLocationConfig(locationId);
 	const colIndex = parseInt(bayIndex, 10);
 	const span = config.bayLabelSpan ?? 2;
-	const start = (config.shedBayStart[shed] ?? 1) + colIndex * span;
+	const reversed = !!config.reverseSheds?.includes(shed);
+	const effectiveIndex = reversed ? config.bayCount - 1 - colIndex : colIndex;
+	const start = (config.shedBayStart[shed] ?? 1) + effectiveIndex * span;
 
 	if (span === 1) {
 		return String(start);
