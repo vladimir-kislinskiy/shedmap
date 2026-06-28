@@ -311,6 +311,20 @@
 	display: none;
 }
 
+/* The classic view-only rule hides the form with `display: none !important`.
+   In the CRM theme guests must still see it, so re-show the active sidebar form
+   (must use !important to beat the classic rule). */
+.theme-crm.page--view-only .crm-sidebar__controls .inventory__form:not([hidden]) {
+	display: flex !important;
+}
+
+/* Guests see the full form but it is inert: dim it and block interaction
+   (pointer-events is a fallback for browsers without `inert` support). */
+.theme-crm .crm-sidebar__controls .inventory__form--locked {
+	opacity: 0.55;
+	pointer-events: none;
+}
+
 .theme-crm .crm-sidebar__controls .inventory__field,
 .theme-crm .crm-sidebar__controls .inventory__submit {
 	width: 100%;

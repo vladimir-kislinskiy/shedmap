@@ -4,20 +4,17 @@
 
 <body class="page page--view-only">
 	<script>
-		/* Apply the saved UI theme before first paint to avoid a flash of the
-		   other theme on load/refresh. Defaults to the new CRM theme; only the
-		   explicit "classic" preference opts out. The main bundle re-applies the
-		   same state (and moves DOM into the sidebar) once it loads. */
+		/* The classic design is retained in code/styles but disabled: the app
+		   always runs in the new CRM theme. We set the class before first paint to
+		   avoid any flash. */
 		(function () {
+			document.body.classList.add("theme-crm");
 			try {
-				if (localStorage.getItem("uiTheme") !== "classic") {
-					document.body.classList.add("theme-crm");
-				}
 				if (localStorage.getItem("uiCrmCollapsed") === "1") {
 					document.body.classList.add("crm-collapsed");
 				}
 			} catch (e) {
-				document.body.classList.add("theme-crm");
+				/* ignore storage failures */
 			}
 		})();
 	</script>
@@ -415,8 +412,9 @@
 	<footer class="page-footer">
 		<span class="page-footer__copy">&copy; 2026 <a href="https://vkys.ca" target="_blank"
 				rel="noopener noreferrer" class="page-footer__link">Volodymyr Kyslynskyi</a></span>
+		<!-- The classic design is disabled; the toggle is kept in markup but hidden. -->
 		<button type="button" id="themeToggle" class="theme-toggle" title="Switch design"
-			aria-label="Switch design">New design</button>
+			aria-label="Switch design" hidden>New design</button>
 	</footer>
 
 	<template id="hayStackTemplate">

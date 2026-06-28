@@ -2254,9 +2254,11 @@ function moveActiveFormIntoSidebar() {
 	syncCrmFormVisibility();
 }
 
-// In the CRM theme the form is part of the sidebar, so it should be shown
-// automatically whenever the user can edit — without the gear toggle. Guests
-// see the "sign in" hint instead.
+// In the CRM theme the form is part of the sidebar and is always visible. Guests
+// see the same buttons and fields, but the whole form is made inert (fully
+// non-interactive) instead of hidden. Using `inert` (with a CSS fallback class)
+// rather than toggling each control keeps the app's own per-field disabled logic
+// (bale count, contract, etc.) intact for signed-in users.
 function syncCrmFormVisibility() {
 	const { controlsHint } = getCrmEls();
 	if (!document.body.classList.contains("theme-crm")) return;
@@ -2264,8 +2266,10 @@ function syncCrmFormVisibility() {
 	const editable = canEdit();
 	const activeForm = loc("inventoryControls", getCurrentLocation());
 	if (activeForm) {
-		activeForm.hidden = !editable;
-		activeForm.classList.toggle("inventory__form--hidden", !editable);
+		activeForm.hidden = false;
+		activeForm.classList.remove("inventory__form--hidden");
+		activeForm.inert = !editable;
+		activeForm.classList.toggle("inventory__form--locked", !editable);
 	}
 	if (controlsHint) controlsHint.hidden = editable;
 }
@@ -2449,17 +2453,11 @@ function scheduleCrmStats() {
 }
 
 function initCrmTheme() {
-	const { toggleBtn, collapseBtn, menuToggle } = getCrmEls();
+	const { collapseBtn, menuToggle } = getCrmEls();
 
-	toggleBtn?.addEventListener("click", () => {
-		const next = document.body.classList.contains("theme-crm") ? "classic" : "crm";
-		try {
-			localStorage.setItem(UI_THEME_STORAGE_KEY, next);
-		} catch {
-			// ignore storage failures
-		}
-		applyUiTheme(next);
-	});
+	// The classic design is intentionally retained in code/styles but disabled:
+	// the app always runs in the CRM theme. The theme toggle is therefore not
+	// wired up and no classic code path ever executes at runtime.
 
 	const toggleSidebar = () => {
 		const collapsed = document.body.classList.toggle("crm-collapsed");
@@ -2487,16 +2485,10 @@ function initCrmTheme() {
 		});
 	});
 
-	// Default to the new CRM theme; only the explicit "classic" preference opts
-	// out. Must match the early inline theme script in index.html so the bundle
-	// re-applies the exact same state the page already started with (no flash).
-	let saved = "crm";
-	try {
-		saved = localStorage.getItem(UI_THEME_STORAGE_KEY) === "classic" ? "classic" : "crm";
-	} catch {
-		saved = "crm";
-	}
-	applyUiTheme(saved);
+	// Classic design disabled — always run the CRM theme (matches the early inline
+	// script in index.html). applyUiTheme is never called with "classic", so its
+	// classic branch (DOM restore, etc.) stays dead code and costs nothing.
+	applyUiTheme("crm");
 }
 
 window.resetAllBays = resetAllBays;
