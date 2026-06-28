@@ -281,6 +281,19 @@
 	transform: translateX(-100%);
 }
 
+/* Location slot (top of the sidebar) receives the moved `.location-tabs`. */
+.theme-crm .crm-sidebar__loc .location-tabs {
+	display: flex;
+	width: 100%;
+	flex: 1 1 auto;
+	box-sizing: border-box;
+}
+
+.theme-crm .crm-sidebar__loc .location-tabs__btn {
+	flex: 1 1 0;
+	min-width: 0;
+}
+
 /* Nav slot receives the moved `.tabs__group` buttons. */
 .crm-sidebar__nav {
 	display: flex;

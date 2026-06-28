@@ -21,6 +21,7 @@ export const HAY_TYPES = [
 	{ id: "corn-stalks", label: "Corn Stalks", stackLabel: "Corn Stalks" },
 	{ id: "mixed-hay", label: "Mixed Hay", stackLabel: "Mix Hay" },
 	{ id: "tmr", label: "TMR", stackLabel: "TMR" },
+	{ id: "orchard", label: "Orchard", stackLabel: "Orchard" },
 ];
 
 export function getHayTypeLabel(type) {

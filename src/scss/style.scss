@@ -927,6 +927,11 @@ body.page--dragging .shed__bay-stack {
 	background-image: var(--color-tmr);
 }
 
+.hay-stack--orchard {
+	background-color: var(--color-orchard-solid);
+	background-image: var(--color-orchard);
+}
+
 .hay-stack--timothy-straw {
 	background-color: var(--color-timothy-straw-solid);
 	background-image: var(--color-timothy-straw);
@@ -951,6 +956,7 @@ body.page--dragging .shed__bay-stack {
 .hay-stack--rejected.hay-stack--corn-stalks,
 .hay-stack--rejected.hay-stack--mixed-hay,
 .hay-stack--rejected.hay-stack--tmr,
+.hay-stack--rejected.hay-stack--orchard,
 .hay-stack--rejected.hay-stack--timothy-straw,
 .hay-stack--rejected.hay-stack--dehy-timothy,
 .hay-stack--rejected.hay-stack--dehy-alfalfa {

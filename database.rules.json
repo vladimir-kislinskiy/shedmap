@@ -8,6 +8,9 @@
 			"siksika": {
 				".write": "auth != null && (auth.token.email == 'operations@barr-ag.com' || auth.token.email == 'tschmitt@barr-ag.com' || auth.token.email == 'rschmitt@barr-ag.com' || auth.token.email == 'tbeschmitt@barr-ag.com' || auth.token.email == 'nmathis@barr-ag.com' || auth.token.email == 'siksika@barr-ag.com')"
 			},
+			"simply": {
+				".write": "auth != null && (auth.token.email == 'operations@barr-ag.com' || auth.token.email == 'tschmitt@barr-ag.com' || auth.token.email == 'rschmitt@barr-ag.com' || auth.token.email == 'tbeschmitt@barr-ag.com' || auth.token.email == 'nmathis@barr-ag.com')"
+			},
 			".write": false
 		},
 		".read": false,

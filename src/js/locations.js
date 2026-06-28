@@ -1,7 +1,8 @@
 export const OLDS_LOCATION_ID = "olds";
 export const SIKSIKA_LOCATION_ID = "siksika";
+export const SIMPLY_LOCATION_ID = "simply";
 
-export const LOCATION_IDS = [OLDS_LOCATION_ID, SIKSIKA_LOCATION_ID];
+export const LOCATION_IDS = [OLDS_LOCATION_ID, SIKSIKA_LOCATION_ID, SIMPLY_LOCATION_ID];
 
 export const DEFAULT_MAX_BALES_PER_BAY = 1400;
 
@@ -40,6 +41,23 @@ export const LOCATIONS = {
 			north: "North Shed",
 		},
 		defaultShed: "south",
+	},
+	[SIMPLY_LOCATION_ID]: {
+		id: SIMPLY_LOCATION_ID,
+		label: "Simply",
+		sheds: ["shed1", "shed2"],
+		bayCount: 13,
+		maxBalesPerBay: 1200,
+		bayLabelSpan: 1,
+		shedBayStart: {
+			shed1: 1,
+			shed2: 14,
+		},
+		shedLabels: {
+			shed1: "Shed 1",
+			shed2: "Shed 2",
+		},
+		defaultShed: "shed1",
 	},
 };
 

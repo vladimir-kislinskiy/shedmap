@@ -2216,6 +2216,7 @@ function getCrmEls() {
 	return {
 		toggleBtn: document.getElementById("themeToggle"),
 		navSlot: document.getElementById("crmNavSlot"),
+		locSlot: document.getElementById("crmLocSlot"),
 		controlsSlot: document.getElementById("crmControlsSlot"),
 		controlsHint: document.getElementById("crmControlsHint"),
 		collapseBtn: document.getElementById("crmCollapse"),
@@ -2277,15 +2278,20 @@ function syncCrmFormVisibility() {
 }
 
 function applyUiTheme(theme) {
-	const { toggleBtn, navSlot } = getCrmEls();
+	const { toggleBtn, navSlot, locSlot } = getCrmEls();
 	const crm = theme === "crm";
 	document.body.classList.toggle("theme-crm", crm);
 
 	if (toggleBtn) toggleBtn.textContent = crm ? "Classic design" : "New design";
 
 	const tabsGroup = document.querySelector(".tabs__group");
+	const locTabs = document.querySelector(".location-tabs");
 
 	if (crm) {
+		if (locTabs && locSlot && locTabs.parentElement !== locSlot) {
+			rememberCrmHome(locTabs);
+			locSlot.appendChild(locTabs);
+		}
 		if (tabsGroup && navSlot && tabsGroup.parentElement !== navSlot) {
 			rememberCrmHome(tabsGroup);
 			navSlot.appendChild(tabsGroup);
@@ -2294,6 +2300,7 @@ function applyUiTheme(theme) {
 		placeCrmStatsInReports();
 		updateCrmStats();
 	} else {
+		if (locTabs) restoreCrmHome(locTabs);
 		if (tabsGroup) restoreCrmHome(tabsGroup);
 		LOCATION_IDS.forEach((locationId) => {
 			const form = loc("inventoryControls", locationId);

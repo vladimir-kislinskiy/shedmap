@@ -22,6 +22,7 @@
 		})();
 	</script>
 	<aside class="crm-sidebar" id="crmSidebar" aria-label="Inventory controls">
+		<div class="crm-sidebar__loc" id="crmLocSlot"></div>
 		<nav class="crm-sidebar__nav" id="crmNavSlot" aria-label="Sections"></nav>
 		<div class="crm-sidebar__controls" id="crmControlsSlot">
 			<p class="crm-sidebar__controls-hint" id="crmControlsHint">Sign in to manage inventory.</p>
@@ -40,6 +41,7 @@
 			<nav class="location-tabs" aria-label="Location">
 				<button type="button" class="location-tabs__btn location-tabs__btn--active" data-location="olds">Olds</button>
 				<button type="button" class="location-tabs__btn" data-location="siksika">Siksika</button>
+				<button type="button" class="location-tabs__btn" data-location="simply">Simply</button>
 			</nav>
 			<div class="tabs__group" role="tablist" aria-label="Main navigation">
 				<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
@@ -422,6 +424,10 @@
 
 			<div id="location-siksika" class="location-panel" hidden inert>
 				@include('partials/location-siksika-panel.html')
+			</div>
+
+			<div id="location-simply" class="location-panel" hidden inert>
+				@include('partials/location-simply-panel.html')
 			</div>
 		</main>
 	</div>

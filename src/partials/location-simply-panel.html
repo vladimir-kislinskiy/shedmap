@@ -1,0 +1,259 @@
+<div class="page__content">
+
+	<section id="simply-Sheds" class="tabs__panel tabs__panel--active">
+		<form class="inventory__form" id="simply-inventoryControls" hidden novalidate>
+			<select id="simply-hayType" class="inventory__field inventory__field--select" required>
+				<option value="" selected disabled>Product</option>
+				<option value="wheat-straw">Wheat Straw</option>
+				<option value="tmr">TMR</option>
+				<option value="orchard">Orchard</option>
+				<option value="alfalfa">Alfalfa Hay</option>
+			</select>
+
+			<select id="simply-stackGrade" class="inventory__field inventory__field--select inventory__field--grade" hidden>
+				<option value="" selected>Grade</option>
+				<option value="premium">Premium</option>
+				<option value="low-premium">Low Premium</option>
+				<option value="1a">#1A</option>
+				<option value="1">#1</option>
+				<option value="low-1">Low #1</option>
+				<option value="standard">Standard</option>
+				<option value="economy">Economy</option>
+			</select>
+
+			<input type="text" id="simply-contractNumber" class="inventory__field inventory__field--contract"
+				placeholder="26-2222" maxlength="8" inputmode="text" autocomplete="off"
+				autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
+				title="Format: 26-2222 or 26-2222A" required>
+
+			<input type="tel" id="simply-baleCount" class="inventory__field inventory__field--bales"
+				placeholder="Bales" maxlength="4" inputmode="numeric" autocomplete="off"
+				pattern="[0-9]*" title="Minimum 1 bale for Add/Remove">
+
+			<select id="simply-shedSelect" class="inventory__field inventory__field--select">
+				<option value="shed1">Shed 1</option>
+				<option value="shed2">Shed 2</option>
+			</select>
+
+			<select id="simply-baySelect" class="inventory__field inventory__field--select">
+				<option value="0">Bay 1</option>
+				<option value="1">Bay 2</option>
+				<option value="2">Bay 3</option>
+				<option value="3">Bay 4</option>
+				<option value="4">Bay 5</option>
+				<option value="5">Bay 6</option>
+				<option value="6">Bay 7</option>
+				<option value="7">Bay 8</option>
+				<option value="8">Bay 9</option>
+				<option value="9">Bay 10</option>
+				<option value="10">Bay 11</option>
+				<option value="11">Bay 12</option>
+				<option value="12">Bay 13</option>
+			</select>
+
+			<div class="inventory__checks-row">
+				<fieldset class="inventory__isles" id="simply-isleFieldset">
+					<label class="inventory__isle-option">
+						<input type="checkbox" class="inventory__isle-check" id="simply-isle1" value="1" checked>
+						<span class="inventory__isle-text">Isle 1</span>
+					</label>
+					<label class="inventory__isle-option">
+						<input type="checkbox" class="inventory__isle-check" id="simply-isle2" value="2" checked>
+						<span class="inventory__isle-text">Isle 2</span>
+					</label>
+				</fieldset>
+
+				<fieldset class="inventory__reject" id="simply-rejectFieldset">
+					<label class="inventory__reject-option">
+						<input type="checkbox" class="inventory__reject-check" id="simply-rejectCheck">
+						<span class="inventory__reject-text">Rejected</span>
+					</label>
+					<label class="inventory__reject-option">
+						<input type="checkbox" class="inventory__reject-check inventory__reject-check--no-tags" id="simply-noTagsCheck">
+						<span class="inventory__reject-text">No tags</span>
+					</label>
+					<label class="inventory__reject-option">
+						<input type="checkbox" class="inventory__reject-check inventory__reject-check--separate" id="simply-separateStackCheck">
+						<span class="inventory__reject-text">Separate</span>
+					</label>
+				</fieldset>
+			</div>
+
+			<input type="text" id="simply-stackComment" class="inventory__field inventory__field--comment"
+				placeholder="Comment" maxlength="24" autocomplete="off" spellcheck="false">
+
+			<select id="simply-reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
+				required>
+				<option value="" selected disabled>Reported by</option>
+				<option value="N/A">N/A</option>
+				<option value="Jay">Jay</option>
+				<option value="Ryley">Ryley</option>
+			</select>
+
+			<select id="simply-actionSelect" class="inventory__field inventory__field--select" required>
+				<option value="" selected disabled>Action</option>
+				<option value="add">Add</option>
+				<option value="remove">Remove</option>
+				<option value="update">Update</option>
+				<option value="transfer">Transfer</option>
+			</select>
+
+			<button type="button" id="simply-submitHay" class="inventory__submit">Submit</button>
+		</form>
+
+		<nav class="shed-tabs" aria-label="Shed navigation">
+			<button type="button" class="shed-tabs__btn shed-tabs__btn--active"
+				data-subtab="simply-shed1-tab">Shed 1</button>
+			<button type="button" class="shed-tabs__btn" data-subtab="simply-shed2-tab">Shed 2</button>
+		</nav>
+
+		<div class="shed-tabs__panel shed-tabs__panel--active" id="simply-shed1-tab">
+			@include('shed-columns-simply-shed1.html')
+		</div>
+
+		<div class="shed-tabs__panel" id="simply-shed2-tab">
+			@include('shed-columns-simply-shed2.html')
+		</div>
+	</section>
+
+	<section id="simply-Reports" class="tabs__panel">
+		<h2 class="log__title">Inventory Reports</h2>
+		<div class="log__filters reports__filters">
+			<label class="log__filter">
+				<span class="log__filter-label">Product</span>
+				<select id="simply-reportProductFilter" class="log__filter-input log__filter-input--select">
+					<option value="" selected disabled>Product</option>
+					<option value="wheat-straw">Wheat Straw</option>
+					<option value="tmr">TMR</option>
+					<option value="orchard">Orchard</option>
+					<option value="alfalfa">Alfalfa Hay</option>
+				</select>
+			</label>
+			<label class="log__filter reports__filter--grade" id="simply-reportGradeFilterWrap" hidden>
+				<span class="log__filter-label">Grade</span>
+				<select id="simply-reportGradeFilter" class="log__filter-input log__filter-input--select">
+					<option value="all" selected>All grades</option>
+					<option value="premium">Premium</option>
+					<option value="low-premium">Low Premium</option>
+					<option value="1a">#1A</option>
+					<option value="1">#1</option>
+					<option value="low-1">Low #1</option>
+					<option value="standard">Standard</option>
+					<option value="economy">Economy</option>
+				</select>
+			</label>
+			<label class="log__filter reports__filter--reject">
+				<span class="log__filter-label">Display</span>
+				<span class="reports__include-reject">
+					<input type="checkbox" id="simply-reportIncludeRejected" class="reports__include-reject-check">
+					<span class="reports__include-reject-text">Include rejected</span>
+				</span>
+			</label>
+			<button type="button" id="simply-reportPrintPdf" class="reports__print-btn" disabled>
+				Print PDF
+			</button>
+		</div>
+		<p class="reports__summary" id="simply-reportSummary" hidden></p>
+		<div class="log-table-wrap reports__table-wrap" id="simply-reportTableWrap" hidden>
+			<table class="log-table">
+				<thead class="log-table__head">
+					<tr class="log-table__row">
+						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head reports__col-grade" hidden>Grade</th>
+						<th class="log-table__cell log-table__cell--head">Shed</th>
+						<th class="log-table__cell log-table__cell--head">Bay</th>
+						<th class="log-table__cell log-table__cell--head">Bales</th>
+					</tr>
+				</thead>
+				<tbody class="log-table__body" id="simply-reportBody"></tbody>
+			</table>
+		</div>
+		<p class="reports__empty" id="simply-reportEmpty">Select a product to view inventory locations.</p>
+	</section>
+
+	<section id="simply-Log" class="tabs__panel">
+		<h2 class="log__title">Change Log</h2>
+		<div class="log__filters">
+			<label class="log__filter">
+				<span class="log__filter-label">Year</span>
+				<select id="simply-logFilterYear" class="log__filter-input log__filter-input--select"></select>
+			</label>
+			<label class="log__filter">
+				<span class="log__filter-label">Month</span>
+				<select id="simply-logFilterMonth" class="log__filter-input log__filter-input--select">
+					<option value="all">All months</option>
+					<option value="1">January</option>
+					<option value="2">February</option>
+					<option value="3">March</option>
+					<option value="4">April</option>
+					<option value="5">May</option>
+					<option value="6">June</option>
+					<option value="7">July</option>
+					<option value="8">August</option>
+					<option value="9">September</option>
+					<option value="10">October</option>
+					<option value="11">November</option>
+					<option value="12">December</option>
+				</select>
+			</label>
+			<label class="log__filter">
+				<span class="log__filter-label">Day</span>
+				<select id="simply-logFilterDay" class="log__filter-input log__filter-input--select">
+					<option value="all">All days</option>
+					<option value="1">1</option>
+					<option value="2">2</option>
+					<option value="3">3</option>
+					<option value="4">4</option>
+					<option value="5">5</option>
+					<option value="6">6</option>
+					<option value="7">7</option>
+					<option value="8">8</option>
+					<option value="9">9</option>
+					<option value="10">10</option>
+					<option value="11">11</option>
+					<option value="12">12</option>
+					<option value="13">13</option>
+					<option value="14">14</option>
+					<option value="15">15</option>
+					<option value="16">16</option>
+					<option value="17">17</option>
+					<option value="18">18</option>
+					<option value="19">19</option>
+					<option value="20">20</option>
+					<option value="21">21</option>
+					<option value="22">22</option>
+					<option value="23">23</option>
+					<option value="24">24</option>
+					<option value="25">25</option>
+					<option value="26">26</option>
+					<option value="27">27</option>
+					<option value="28">28</option>
+					<option value="29">29</option>
+					<option value="30">30</option>
+					<option value="31">31</option>
+				</select>
+			</label>
+			<button type="button" id="simply-logFilterReset" class="log__filter-reset">Reset</button>
+		</div>
+		<div class="log-table-wrap">
+			<table class="log-table">
+				<thead class="log-table__head">
+					<tr class="log-table__row">
+						<th class="log-table__cell log-table__cell--head">Date & Time</th>
+						<th class="log-table__cell log-table__cell--head">Changed By</th>
+						<th class="log-table__cell log-table__cell--head">Reported By</th>
+						<th class="log-table__cell log-table__cell--head">Action</th>
+						<th class="log-table__cell log-table__cell--head">Hay Type</th>
+						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head">Bay</th>
+						<th class="log-table__cell log-table__cell--head">Isle</th>
+						<th class="log-table__cell log-table__cell--head">Shed</th>
+						<th class="log-table__cell log-table__cell--head">Bales</th>
+					</tr>
+				</thead>
+				<tbody class="log-table__body" id="simply-logBody"></tbody>
+			</table>
+		</div>
+	</section>
+
+</div>

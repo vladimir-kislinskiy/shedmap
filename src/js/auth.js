@@ -34,10 +34,15 @@ export function isSiksikaEditor(email) {
 	return !!(OLDS_EDITORS[key] || SIKSIKA_EDITORS[key]);
 }
 
+export function isSimplyEditor(email) {
+	return isOldsEditor(email);
+}
+
 export function canEditLocation(email, locationId) {
 	if (!email) return false;
 	if (locationId === "olds") return isOldsEditor(email);
 	if (locationId === "siksika") return isSiksikaEditor(email);
+	if (locationId === "simply") return isSimplyEditor(email);
 	return false;
 }
 
