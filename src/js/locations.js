@@ -54,8 +54,8 @@ export const LOCATIONS = {
 			shed2: 14,
 		},
 		shedLabels: {
-			shed1: "Shed 1",
-			shed2: "Shed 2",
+			shed1: "West",
+			shed2: "East",
 		},
 		defaultShed: "shed1",
 	},

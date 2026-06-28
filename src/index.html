@@ -22,8 +22,20 @@
 		})();
 	</script>
 	<aside class="crm-sidebar" id="crmSidebar" aria-label="Inventory controls">
-		<div class="crm-sidebar__loc" id="crmLocSlot"></div>
-		<nav class="crm-sidebar__nav" id="crmNavSlot" aria-label="Sections"></nav>
+		<div class="crm-sidebar__loc" id="crmLocSlot">
+			<nav class="location-tabs" aria-label="Location">
+				<button type="button" class="location-tabs__btn location-tabs__btn--active" data-location="olds">Olds</button>
+				<button type="button" class="location-tabs__btn" data-location="siksika">Siksika</button>
+				<button type="button" class="location-tabs__btn" data-location="simply">Simply</button>
+			</nav>
+		</div>
+		<nav class="crm-sidebar__nav" id="crmNavSlot" aria-label="Sections">
+			<div class="tabs__group" role="tablist" aria-label="Main navigation">
+				<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
+				<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
+				<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
+			</div>
+		</nav>
 		<div class="crm-sidebar__controls" id="crmControlsSlot">
 			<p class="crm-sidebar__controls-hint" id="crmControlsHint">Sign in to manage inventory.</p>
 		</div>
@@ -38,16 +50,6 @@
 			<button type="button" id="crmMenuToggle" class="crm-menu-toggle" aria-label="Toggle controls panel">
 				<span class="crm-menu-toggle__icon" aria-hidden="true"></span>
 			</button>
-			<nav class="location-tabs" aria-label="Location">
-				<button type="button" class="location-tabs__btn location-tabs__btn--active" data-location="olds">Olds</button>
-				<button type="button" class="location-tabs__btn" data-location="siksika">Siksika</button>
-				<button type="button" class="location-tabs__btn" data-location="simply">Simply</button>
-			</nav>
-			<div class="tabs__group" role="tablist" aria-label="Main navigation">
-				<button type="button" class="tabs__btn tabs__btn--active" data-tab="Sheds">Sheds</button>
-				<button type="button" class="tabs__btn" data-tab="Log">Change Log</button>
-				<button type="button" class="tabs__btn" data-tab="Reports">Reports</button>
-			</div>
 			<div class="auth-bar__actions">
 				<div class="auth-bar__status">
 					<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
@@ -280,16 +282,16 @@
 							<select id="reportProductFilter" class="log__filter-input log__filter-input--select">
 								<option value="" selected disabled>Product</option>
 								<option value="alfalfa">Alfalfa Hay</option>
-								<option value="timothy">Timothy Hay</option>
-								<option value="wheat-straw">Wheat Straw</option>
 								<option value="barley-straw">Barley Straw</option>
 								<option value="canola-straw">Canola Straw</option>
 								<option value="corn-stalks">Corn Stalks</option>
-								<option value="mixed-hay">Mixed Hay</option>
-								<option value="tmr">TMR</option>
-								<option value="timothy-straw">Timothy Straw</option>
-								<option value="dehy-timothy">Dehy Timothy</option>
 								<option value="dehy-alfalfa">Dehy Alfalfa</option>
+								<option value="dehy-timothy">Dehy Timothy</option>
+								<option value="mixed-hay">Mixed Hay</option>
+								<option value="timothy">Timothy Hay</option>
+								<option value="timothy-straw">Timothy Straw</option>
+								<option value="tmr">TMR</option>
+								<option value="wheat-straw">Wheat Straw</option>
 							</select>
 						</label>
 						<label class="log__filter reports__filter--grade" id="reportGradeFilterWrap" hidden>

@@ -598,12 +598,11 @@ function bindStackSelect(stackEl) {
 }
 
 function updateStackInteractionState() {
-	document.querySelectorAll(".hay-stack").forEach((stack) => {
+	// Draggable/grab styling is handled in CSS via the body `page--view-only`
+	// class; here we only clear any selection on stacks that became read-only.
+	document.querySelectorAll(".hay-stack--selected").forEach((stack) => {
 		const locationId = stack.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
-		const editable = canEdit(locationId);
-		stack.classList.toggle("hay-stack--selectable", editable);
-		stack.classList.toggle("hay-stack--draggable", editable);
-		if (!editable) stack.classList.remove("hay-stack--selected");
+		if (!canEdit(locationId)) stack.classList.remove("hay-stack--selected");
 	});
 }
 
@@ -2187,7 +2186,6 @@ function initToggleControls() {
    info stay in the top bar. A temporary floating button flips between designs.
    ========================================================================== */
 
-const UI_THEME_STORAGE_KEY = "uiTheme";
 const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
 const CRM_DARK_STORAGE_KEY = "uiCrmDark";
 let crmStatsScheduled = false;
@@ -2214,9 +2212,7 @@ const crmOriginalParents = new WeakMap();
 
 function getCrmEls() {
 	return {
-		toggleBtn: document.getElementById("themeToggle"),
 		navSlot: document.getElementById("crmNavSlot"),
-		locSlot: document.getElementById("crmLocSlot"),
 		controlsSlot: document.getElementById("crmControlsSlot"),
 		controlsHint: document.getElementById("crmControlsHint"),
 		collapseBtn: document.getElementById("crmCollapse"),
@@ -2271,47 +2267,23 @@ function syncCrmFormVisibility() {
 	if (activeForm) {
 		activeForm.hidden = false;
 		activeForm.classList.remove("inventory__form--hidden");
+		// `inert` makes the whole form non-interactive for guests; CSS dims it
+		// via the [inert] selector, so no extra class toggle is needed.
 		activeForm.inert = !editable;
-		activeForm.classList.toggle("inventory__form--locked", !editable);
 	}
 	if (controlsHint) controlsHint.hidden = editable;
 }
 
-function applyUiTheme(theme) {
-	const { toggleBtn, navSlot, locSlot } = getCrmEls();
-	const crm = theme === "crm";
-	document.body.classList.toggle("theme-crm", crm);
-
-	if (toggleBtn) toggleBtn.textContent = crm ? "Classic design" : "New design";
-
-	const tabsGroup = document.querySelector(".tabs__group");
-	const locTabs = document.querySelector(".location-tabs");
-
-	if (crm) {
-		if (locTabs && locSlot && locTabs.parentElement !== locSlot) {
-			rememberCrmHome(locTabs);
-			locSlot.appendChild(locTabs);
-		}
-		if (tabsGroup && navSlot && tabsGroup.parentElement !== navSlot) {
-			rememberCrmHome(tabsGroup);
-			navSlot.appendChild(tabsGroup);
-		}
-		moveActiveFormIntoSidebar();
-		placeCrmStatsInReports();
-		updateCrmStats();
-	} else {
-		if (locTabs) restoreCrmHome(locTabs);
-		if (tabsGroup) restoreCrmHome(tabsGroup);
-		LOCATION_IDS.forEach((locationId) => {
-			const form = loc("inventoryControls", locationId);
-			if (form) restoreCrmHome(form);
-		});
-		const stats = document.getElementById("crmStats");
-		if (stats) restoreCrmHome(stats);
-		// Restore the classic gated behaviour (form hidden until the gear toggle).
-		setInventoryControlsOpen(false);
-	}
-
+function applyUiTheme() {
+	// The classic design is permanently disabled — the app always runs the CRM
+	// theme. The `theme-crm` class is applied before first paint by the inline
+	// script in index.html, and the location switcher + main nav are pre-placed
+	// in the sidebar markup. So the only relocation needed here is the per-location
+	// inventory form and the stats block, which depend on the active location.
+	document.body.classList.add("theme-crm");
+	moveActiveFormIntoSidebar();
+	placeCrmStatsInReports();
+	updateCrmStats();
 	requestAnimationFrame(() => syncAllShedLayouts());
 }
 
@@ -2528,9 +2500,8 @@ function initCrmTheme() {
 	});
 
 	// Classic design disabled — always run the CRM theme (matches the early inline
-	// script in index.html). applyUiTheme is never called with "classic", so its
-	// classic branch (DOM restore, etc.) stays dead code and costs nothing.
-	applyUiTheme("crm");
+	// script in index.html).
+	applyUiTheme();
 }
 
 window.resetAllBays = resetAllBays;

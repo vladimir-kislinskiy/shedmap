@@ -303,9 +303,3 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (canDrag()) e.preventDefault();
 	});
 }
-
-export function setStacksDraggable(enabled) {
-	document.querySelectorAll(".hay-stack").forEach((stack) => {
-		stack.classList.toggle("hay-stack--draggable", enabled);
-	});
-}

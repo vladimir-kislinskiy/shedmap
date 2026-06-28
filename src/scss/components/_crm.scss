@@ -403,9 +403,10 @@
 	display: flex !important;
 }
 
-/* Guests see the full form but it is inert: dim it and block interaction
-   (pointer-events is a fallback for browsers without `inert` support). */
-.theme-crm .crm-sidebar__controls .inventory__form--locked {
+/* Guests see the full form but it is inert: dim it to signal it's read-only.
+   `inert` itself blocks interaction; `pointer-events` is a fallback for older
+   browsers without `inert` support. */
+.theme-crm .crm-sidebar__controls .inventory__form[inert] {
 	opacity: 0.55;
 	pointer-events: none;
 }
@@ -556,6 +557,13 @@
 	gap: 16px;
 	width: 100%;
 	margin-bottom: 20px;
+}
+
+/* Avoid a flash on load: keep the stats block hidden while it's still in its
+   home position (direct child of page main). JS relocates it into the active
+   Reports panel, after which this rule no longer matches and it shows there. */
+.theme-crm .page__main > .crm-stats {
+	display: none;
 }
 
 .crm-stats__cards {

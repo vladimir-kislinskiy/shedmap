@@ -4,10 +4,10 @@
 		<form class="inventory__form" id="simply-inventoryControls" hidden novalidate>
 			<select id="simply-hayType" class="inventory__field inventory__field--select" required>
 				<option value="" selected disabled>Product</option>
-				<option value="wheat-straw">Wheat Straw</option>
-				<option value="tmr">TMR</option>
-				<option value="orchard">Orchard</option>
 				<option value="alfalfa">Alfalfa Hay</option>
+				<option value="orchard">Orchard</option>
+				<option value="tmr">TMR</option>
+				<option value="wheat-straw">Wheat Straw</option>
 			</select>
 
 			<select id="simply-stackGrade" class="inventory__field inventory__field--select inventory__field--grade" hidden>
@@ -31,8 +31,8 @@
 				pattern="[0-9]*" title="Minimum 1 bale for Add/Remove">
 
 			<select id="simply-shedSelect" class="inventory__field inventory__field--select">
-				<option value="shed1">Shed 1</option>
-				<option value="shed2">Shed 2</option>
+				<option value="shed1">West</option>
+				<option value="shed2">East</option>
 			</select>
 
 			<select id="simply-baySelect" class="inventory__field inventory__field--select">
@@ -103,8 +103,8 @@
 
 		<nav class="shed-tabs" aria-label="Shed navigation">
 			<button type="button" class="shed-tabs__btn shed-tabs__btn--active"
-				data-subtab="simply-shed1-tab">Shed 1</button>
-			<button type="button" class="shed-tabs__btn" data-subtab="simply-shed2-tab">Shed 2</button>
+				data-subtab="simply-shed1-tab">West</button>
+			<button type="button" class="shed-tabs__btn" data-subtab="simply-shed2-tab">East</button>
 		</nav>
 
 		<div class="shed-tabs__panel shed-tabs__panel--active" id="simply-shed1-tab">
@@ -123,10 +123,10 @@
 				<span class="log__filter-label">Product</span>
 				<select id="simply-reportProductFilter" class="log__filter-input log__filter-input--select">
 					<option value="" selected disabled>Product</option>
-					<option value="wheat-straw">Wheat Straw</option>
-					<option value="tmr">TMR</option>
-					<option value="orchard">Orchard</option>
 					<option value="alfalfa">Alfalfa Hay</option>
+					<option value="orchard">Orchard</option>
+					<option value="tmr">TMR</option>
+					<option value="wheat-straw">Wheat Straw</option>
 				</select>
 			</label>
 			<label class="log__filter reports__filter--grade" id="simply-reportGradeFilterWrap" hidden>
