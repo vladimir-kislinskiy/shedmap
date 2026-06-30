@@ -858,13 +858,14 @@ export function formatIsleLabel(isle) {
 	return isle;
 }
 
-export function createReportRow(entry, { showGrade = false } = {}) {
+export function createReportRow(entry, { showGrade = false, showProduct = false } = {}) {
 	const tpl = document.getElementById("reportRowTemplate");
 	if (!tpl) return null;
 
 	const row = tpl.content.firstElementChild.cloneNode(true);
 	const fields = {
 		contract: entry.contract,
+		product: entry.product || "—",
 		shed: entry.shed,
 		bay: entry.bay,
 		bales: formatStackCountLabel(entry.bales, entry.rejected),
@@ -878,6 +879,10 @@ export function createReportRow(entry, { showGrade = false } = {}) {
 
 	row.querySelectorAll(".reports__col-grade").forEach((cell) => {
 		cell.hidden = !showGrade;
+	});
+
+	row.querySelectorAll(".reports__col-product").forEach((cell) => {
+		cell.hidden = !showProduct;
 	});
 
 	if (entry.rejected) {

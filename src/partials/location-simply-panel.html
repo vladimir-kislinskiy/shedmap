@@ -22,7 +22,7 @@
 			</select>
 
 			<input type="text" id="simply-contractNumber" class="inventory__field inventory__field--contract"
-				placeholder="26-2222" maxlength="8" inputmode="text" autocomplete="off"
+				placeholder="e.g. 25-xxxx" maxlength="8" inputmode="text" autocomplete="off"
 				autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
 				title="Format: 26-2222 or 26-2222A" required>
 
@@ -129,6 +129,13 @@
 					<option value="wheat-straw">Wheat Straw</option>
 				</select>
 			</label>
+			<span class="reports__filter-or" aria-hidden="true">or</span>
+			<label class="log__filter reports__filter--search">
+				<span class="log__filter-label">Contract #</span>
+				<input type="search" id="simply-reportContractSearch"
+					class="log__filter-input reports__contract-search"
+					placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
+			</label>
 			<label class="log__filter reports__filter--grade" id="simply-reportGradeFilterWrap" hidden>
 				<span class="log__filter-label">Grade</span>
 				<select id="simply-reportGradeFilter" class="log__filter-input log__filter-input--select">
@@ -159,6 +166,7 @@
 				<thead class="log-table__head">
 					<tr class="log-table__row">
 						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head reports__col-product" hidden>Product</th>
 						<th class="log-table__cell log-table__cell--head reports__col-grade" hidden>Grade</th>
 						<th class="log-table__cell log-table__cell--head">Shed</th>
 						<th class="log-table__cell log-table__cell--head">Bay</th>
@@ -168,7 +176,7 @@
 				<tbody class="log-table__body" id="simply-reportBody"></tbody>
 			</table>
 		</div>
-		<p class="reports__empty" id="simply-reportEmpty">Select a product to view inventory locations.</p>
+		<p class="reports__empty" id="simply-reportEmpty">Select a product or search a contract to view inventory locations.</p>
 	</section>
 
 	<section id="simply-Log" class="tabs__panel">

@@ -419,7 +419,7 @@ function syncNoTagsState(locationId = getCurrentLocation()) {
 		contractInput.value = "";
 		contractInput.placeholder = NO_TAGS_CONTRACT;
 	} else {
-		contractInput.placeholder = "26-2222";
+		contractInput.placeholder = "e.g. 25-xxxx";
 	}
 }
 
@@ -1280,6 +1280,76 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 	return rows;
 }
 
+// Masks a contract search value to the "25-5711" shape: 2 leading digits, an
+// auto-inserted dash, up to 4 more digits, and an optional single trailing
+// letter (e.g. "25-5711A"). Anything else the user types is dropped.
+function formatContractSearch(raw) {
+	const digits = (raw.match(/\d/g) || []).join("").slice(0, 6);
+	const letterMatch = raw.match(/[a-zA-Z]/g);
+	const letter = letterMatch ? letterMatch[letterMatch.length - 1].toUpperCase() : "";
+
+	let out = digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits;
+	// The trailing letter only belongs after the full 4-digit contract number.
+	if (letter && digits.length === 6) out += letter;
+	return out;
+}
+
+// Scans every stack in the active location for contracts matching `query`
+// (substring, case-insensitive) across all products. Used by the Reports
+// "Contract #" search, which is an alternative to the product filter.
+function collectContractReport(query, { includeRejected = false } = {}, locationId = getCurrentLocation()) {
+	const needle = query.trim().toLowerCase();
+	if (!needle) return [];
+
+	const rows = [];
+	const locationConfig = getLocationConfig(locationId);
+
+	locationConfig.sheds.forEach((shed, shedOrder) => {
+		for (let bayIndex = 0; bayIndex < locationConfig.bayCount; bayIndex++) {
+			const colEl = getBayColumnEl(shed, bayIndex, locationId);
+			if (!colEl) continue;
+
+			getBayStacks(colEl).forEach((stack) => {
+				const rejected = stack.dataset.rejected === "true";
+				if (!includeRejected && rejected) return;
+
+				const { type, contract } = parseStackKey(stack.dataset.stackKey || "");
+				if (!contract.toLowerCase().includes(needle)) return;
+
+				const bales = parseInt(stack.dataset.bales, 10) || 0;
+				if (bales <= 0) return;
+
+				rows.push({
+					contract,
+					product: getHayTypeLabel(type),
+					shed: getShedLabel(shed, locationId),
+					bay: getBayDisplayNumberForLocation(shed, bayIndex, locationId),
+					bales,
+					grade: stack.dataset.grade || "",
+					rejected,
+					shedOrder,
+					bayIndex,
+				});
+			});
+		}
+	});
+
+	rows.sort((a, b) => {
+		const contractDiff = a.contract.localeCompare(b.contract, undefined, { numeric: true });
+		if (contractDiff !== 0) return contractDiff;
+		if (a.shedOrder !== b.shedOrder) return a.shedOrder - b.shedOrder;
+		return a.bayIndex - b.bayIndex;
+	});
+
+	return rows;
+}
+
+function setReportProductColumnVisible(show, locationId = getCurrentLocation()) {
+	locQueryAll(".reports__col-product", locationId).forEach((el) => {
+		el.hidden = !show;
+	});
+}
+
 function syncReportPrintButton(productId, locationId = getCurrentLocation()) {
 	const printBtn = getScopedElement("reportPrintPdf", locationId);
 	if (!printBtn) return;
@@ -1292,29 +1362,67 @@ function syncReportPrintButton(productId, locationId = getCurrentLocation()) {
 
 function updateReportsTable(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
-	const productId = filterEl?.value ?? "";
+	const searchEl = getScopedElement("reportContractSearch", locationId);
 	const reportBody = getScopedElement("reportBody", locationId);
 	const reportSummary = getScopedElement("reportSummary", locationId);
 	const reportTableWrap = getScopedElement("reportTableWrap", locationId);
 	const reportEmpty = getScopedElement("reportEmpty", locationId);
 	if (!filterEl || !reportBody || !reportSummary || !reportTableWrap || !reportEmpty) return;
 
+	const productId = filterEl.value ?? "";
+	const contractQuery = searchEl?.value.trim() ?? "";
+	const searchMode = contractQuery.length > 0;
+	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+
+	reportBody.replaceChildren();
+
+	// Contract search takes precedence over the product filter: the two are an
+	// "or" choice, so when a query is typed we ignore the selected product and
+	// list every matching contract (across all products) in this location.
+	if (searchMode) {
+		syncReportGradeFilterVisibility("", locationId);
+		setReportGradeColumnVisible(false, locationId);
+		setReportProductColumnVisible(true, locationId);
+		syncReportPrintButton("", locationId);
+
+		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+		const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
+
+		if (rows.length === 0) {
+			reportSummary.hidden = true;
+			reportTableWrap.hidden = true;
+			reportEmpty.hidden = false;
+			const rejectNote = includeRejected ? "" : " (rejected excluded)";
+			reportEmpty.textContent = `No contracts matching “${contractQuery}”${rejectNote}.`;
+			return;
+		}
+
+		reportEmpty.hidden = true;
+		reportSummary.hidden = false;
+		reportSummary.textContent = `“${contractQuery}”: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
+		reportTableWrap.hidden = false;
+
+		rows.forEach((entry) => {
+			const row = createReportRow(entry, { showGrade: false, showProduct: true });
+			if (row) reportBody.appendChild(row);
+		});
+		return;
+	}
+
+	setReportProductColumnVisible(false, locationId);
 	syncReportGradeFilterVisibility(productId, locationId);
 	const showGrade = isGradeEligibleType(productId);
 	setReportGradeColumnVisible(showGrade, locationId);
-
-	reportBody.replaceChildren();
 
 	if (!productId) {
 		reportSummary.hidden = true;
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
-		reportEmpty.textContent = "Select a product to view inventory locations.";
+		reportEmpty.textContent = "Select a product or search a contract to view inventory locations.";
 		syncReportPrintButton("", locationId);
 		return;
 	}
 
-	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 	const productLabel = getHayTypeLabel(productId);
@@ -1370,9 +1478,26 @@ function initReports(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
 	if (!filterEl) return;
 
+	const searchEl = getScopedElement("reportContractSearch", locationId);
 	const refresh = () => updateReportsTable(locationId);
-	filterEl.addEventListener("change", refresh);
-	filterEl.addEventListener("input", refresh);
+
+	// Product filter and contract search are mutually exclusive ("or"): using one
+	// clears the other so it's obvious which mode the table is showing.
+	filterEl.addEventListener("change", () => {
+		if (filterEl.value && searchEl) searchEl.value = "";
+		refresh();
+	});
+	searchEl?.addEventListener("input", () => {
+		const formatted = formatContractSearch(searchEl.value);
+		if (searchEl.value !== formatted) {
+			searchEl.value = formatted;
+			// Keep the caret at the end since the mask only ever appends.
+			searchEl.setSelectionRange(formatted.length, formatted.length);
+		}
+		if (searchEl.value.trim()) filterEl.value = "";
+		refresh();
+	});
+
 	getScopedElement("reportGradeFilter", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportIncludeRejected", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));

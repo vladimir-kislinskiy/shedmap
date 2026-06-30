@@ -1128,8 +1128,35 @@ body.page--dragging .shed__bay-stack {
 	display: none !important;
 }
 
+.reports__col-product[hidden] {
+	display: none !important;
+}
+
 .reports__filters {
 	align-items: flex-end;
+}
+
+/* "or" separator between the product filter and the contract search, aligned
+   with the inputs (which sit at the bottom of their stacked label). */
+.reports__filter-or {
+	flex: 0 0 auto;
+	align-self: flex-end;
+	height: 42px;
+	display: inline-flex;
+	align-items: center;
+	font-size: 0.8rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	color: var(--text-muted);
+}
+
+.reports__contract-search {
+	min-width: 160px;
+}
+
+.reports__contract-search::-webkit-search-cancel-button {
+	cursor: pointer;
 }
 
 .reports__print-btn {

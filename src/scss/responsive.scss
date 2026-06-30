@@ -213,6 +213,17 @@
 		max-width: 100%;
 	}
 
+	.reports__contract-search {
+		min-width: 0;
+		width: 100%;
+		max-width: 100%;
+	}
+
+	.reports__filter-or {
+		height: 32px;
+		font-size: 0.7rem;
+	}
+
 	.reports__include-reject {
 		width: 100%;
 		min-width: 0;
