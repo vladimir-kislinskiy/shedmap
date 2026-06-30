@@ -590,6 +590,9 @@
 
 .theme-crm.tab-overview .page__main > .crm-stats {
 	display: flex;
+	/* Same slide-up fade as the other tab panels (Sheds / Reports / Log) so the
+	   Overview content also rises into view when its tab opens. */
+	animation: fadeIn 0.4s ease-out forwards;
 }
 
 /* On the Overview tab, hide the per-location content (Sheds / Log / Reports) so
@@ -663,7 +666,7 @@
 	font-weight: 600;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
-	color: var(--text-muted);
+	color: var(--text-main);
 }
 
 .crm-chart--donut {
@@ -677,59 +680,79 @@
 	width: 100%;
 }
 
-.crm-donut__svg {
+.crm-donut__wrap {
+	position: relative;
+	display: inline-flex;
 	width: 160px;
+	height: 160px;
 	max-width: 100%;
-	height: auto;
 }
 
-.crm-donut__track {
-	fill: none;
-	stroke: var(--color-surface-hover);
-	stroke-width: 16;
+/* Donut built from clipped half-discs rotated with transform (rendered to the
+   final angle instantly — no animation). The grey base disc is the "used"
+   portion; the primary half-discs cover the "free" portion; the hole punches
+   the centre to leave a 16px ring. */
+.crm-donut__pie {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: var(--border-color-strong);
 }
 
-.crm-donut__seg {
-	fill: none;
-	stroke-width: 16;
-	stroke-linecap: butt;
-	transform: rotate(-90deg);
+.crm-donut__slice {
+	position: absolute;
+	inset: 0;
+	clip: rect(0, 160px, 160px, 80px);
+}
+
+.crm-donut__slice.is-gt50 {
+	clip: rect(auto, auto, auto, auto);
+}
+
+.crm-donut__bar,
+.crm-donut__fill {
+	position: absolute;
+	inset: 0;
+	border-radius: 50%;
+	background: var(--color-primary);
+	clip: rect(0, 80px, 160px, 0);
+	transform: rotate(0deg);
 	transform-origin: center;
-	transition: stroke-width 0.15s ease, opacity 0.15s ease;
-	cursor: pointer;
 }
 
-.crm-donut__seg--free {
-	stroke: var(--color-primary);
+.crm-donut__hole {
+	position: absolute;
+	inset: 16px;
+	border-radius: 50%;
+	background: var(--color-surface);
 }
 
-.crm-donut__seg--used {
-	stroke: var(--border-color-strong);
-}
-
-.crm-donut__seg.is-active {
-	stroke-width: 20;
-}
-
-.crm-donut__seg:not(.is-active).is-dim {
-	opacity: 0.45;
+/* Center label is an HTML overlay so counting the number costs nothing extra. */
+.crm-donut__center {
+	position: absolute;
+	inset: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 2px;
+	pointer-events: none;
 }
 
 .crm-donut__value {
 	font-family: var(--font-heading);
 	font-size: 26px;
 	font-weight: 700;
-	fill: var(--text-heading);
-	text-anchor: middle;
-	dominant-baseline: middle;
+	line-height: 1;
+	color: var(--text-heading);
+	font-variant-numeric: tabular-nums;
 }
 
 .crm-donut__caption {
 	font-size: 11px;
 	font-weight: 600;
-	fill: var(--text-muted);
-	text-anchor: middle;
-	dominant-baseline: middle;
+	line-height: 1;
+	color: var(--text-muted);
 	text-transform: uppercase;
 	letter-spacing: 0.05em;
 }
@@ -759,7 +782,7 @@
 .crm-bar__pct {
 	font-size: 0.8rem;
 	font-weight: 700;
-	color: var(--color-primary);
+	color: var(--text-main);
 	font-variant-numeric: tabular-nums;
 }
 
@@ -775,10 +798,15 @@
 .crm-bar__fill {
 	position: absolute;
 	inset: 0 auto 0 0;
+	width: 100%;
 	height: 100%;
 	border-radius: 999px;
 	background: var(--color-primary);
-	transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1), filter 0.15s ease;
+	/* Width is expressed via scaleX (set inline from JS); no transition — the
+	   Overview stats render instantly. */
+	transform: scaleX(0);
+	transform-origin: left center;
+	transition: filter 0.15s ease;
 }
 
 .crm-bar:hover .crm-bar__fill {
