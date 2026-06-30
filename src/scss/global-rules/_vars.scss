@@ -1,9 +1,11 @@
 /* CSS variables */
 
 :root {
-	/* Fonts */
-	--font-primary: 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-	--font-heading: 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	/* Fonts — Saira Semi Condensed is the active app font. DMSans stays in the
+	   chain as an inactive backup (no @font-face, not shipped), so it only kicks
+	   in if locally installed; system-ui is the practical fallback. */
+	--font-primary: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+	--font-heading: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
 	/* Page & surfaces */
 	--bg-page: #e8e2d6;

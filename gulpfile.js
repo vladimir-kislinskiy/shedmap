@@ -121,7 +121,14 @@ const scriptsBundle = async () => {
 };
 
 const resources = () => {
-	return src("./src/resources/**")
+	// DMSans is an inactive backup font (kept in src/resources/fonts but not
+	// referenced in CSS). Exclude it from the build so it is never shipped or
+	// downloaded. Remove the negations to ship it again.
+	return src([
+		"./src/resources/**",
+		"!./src/resources/fonts/DMSans-*.woff",
+		"!./src/resources/fonts/DMSans-*.woff2",
+	])
 		.pipe(dest("./dist"))
 		.pipe(browserSync.stream());
 };
@@ -211,10 +218,10 @@ function rewriteHtml() {
 const rewrite = parallel(rewriteCss, rewriteHtml);
 
 const DEV_FONT_FILES = [
-	"./dist/fonts/DMSans-Medium.woff2",
-	"./dist/fonts/DMSans-Medium.woff",
-	"./dist/fonts/DMSans-Bold.woff2",
-	"./dist/fonts/DMSans-Bold.woff",
+	"./dist/fonts/SairaSemiCondensed-Regular.woff2",
+	"./dist/fonts/SairaSemiCondensed-Medium.woff2",
+	"./dist/fonts/SairaSemiCondensed-SemiBold.woff2",
+	"./dist/fonts/SairaSemiCondensed-Bold.woff2",
 ];
 
 const DEV_FAVICON_FILES = [

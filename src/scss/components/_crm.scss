@@ -342,6 +342,10 @@
 	mask: var(--crm-nav-icon) center / contain no-repeat;
 }
 
+.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Overview"] {
+	--crm-nav-icon: url("../img/icons/overview.svg");
+}
+
 .theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Sheds"] {
 	--crm-nav-icon: url("../img/icons/shed.svg");
 }
@@ -577,10 +581,20 @@
 	margin-bottom: 20px;
 }
 
-/* Avoid a flash on load: keep the stats block hidden while it's still in its
-   home position (direct child of page main). JS relocates it into the active
-   Reports panel, after which this rule no longer matches and it shows there. */
+/* The stats block is the content of the "Overview" tab. It lives as a direct
+   child of page main and is hidden by default (also avoids a load flash); it is
+   only revealed when the Overview tab is active. */
 .theme-crm .page__main > .crm-stats {
+	display: none;
+}
+
+.theme-crm.tab-overview .page__main > .crm-stats {
+	display: flex;
+}
+
+/* On the Overview tab, hide the per-location content (Sheds / Log / Reports) so
+   only the summary shows. */
+.theme-crm.tab-overview .location-panel {
 	display: none;
 }
 
@@ -764,7 +778,7 @@
 	height: 100%;
 	border-radius: 999px;
 	background: var(--color-primary);
-	transition: width 0.35s cubic-bezier(0.4, 0, 0.2, 1), filter 0.15s ease;
+	transition: width 0.9s cubic-bezier(0.22, 1, 0.36, 1), filter 0.15s ease;
 }
 
 .crm-bar:hover .crm-bar__fill {

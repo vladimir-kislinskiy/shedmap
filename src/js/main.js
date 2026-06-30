@@ -236,6 +236,14 @@ function setActiveTab(tabId) {
 		});
 	});
 
+	// The Overview tab shows the global stats block (a direct child of page main)
+	// and hides the per-location content; CSS keys off `body.tab-overview`.
+	document.body.classList.toggle("tab-overview", tabId === "Overview");
+
+	if (tabId === "Overview") {
+		updateCrmStats({ animate: true });
+	}
+
 	if (tabId === "Sheds") {
 		requestAnimationFrame(() => syncAllShedLayouts());
 	}
@@ -1856,7 +1864,7 @@ function saveLocationPreference(locationId) {
 
 const MAIN_TAB_STORAGE_KEY = "hayShedMainTab";
 const SHED_TAB_STORAGE_KEY = "hayShedShedTab";
-const MAIN_TAB_IDS = ["Sheds", "Log", "Reports"];
+const MAIN_TAB_IDS = ["Overview", "Sheds", "Log", "Reports"];
 
 function getSavedMainTab() {
 	try {
@@ -2307,29 +2315,63 @@ function applyUiTheme() {
 	// inventory form and the stats block, which depend on the active location.
 	document.body.classList.add("theme-crm");
 	moveActiveFormIntoSidebar();
-	placeCrmStatsInReports();
 	updateCrmStats();
 	requestAnimationFrame(() => syncAllShedLayouts());
 }
 
-function placeCrmStatsInReports() {
-	const stats = document.getElementById("crmStats");
-	if (!stats) return;
-	const reports = loc("Reports", getCurrentLocation());
-	if (!reports) return;
+// Counts/animations on the Overview tab share one token: starting a new render
+// bumps it so any in-flight animation from a previous render bails out instead
+// of fighting over the same elements.
+let crmAnimToken = 0;
+const CRM_ANIM_MS = 900;
 
-	rememberCrmHome(stats);
-	const title = reports.querySelector(".log__title");
-	reports.insertBefore(stats, title ? title.nextSibling : reports.firstChild);
+function crmEaseOut(t) {
+	return 1 - Math.pow(1 - t, 3);
 }
 
-function updateCrmStats() {
+// Drives `onFrame(progress)` from 0→1 over `duration`, easing out. Stops early
+// if a newer animation has superseded this one.
+function crmAnimate(duration, onFrame) {
+	const token = crmAnimToken;
+	const start = performance.now();
+	const step = (now) => {
+		if (token !== crmAnimToken) return;
+		const t = duration > 0 ? Math.min(1, (now - start) / duration) : 1;
+		onFrame(crmEaseOut(t));
+		if (t < 1) requestAnimationFrame(step);
+	};
+	requestAnimationFrame(step);
+}
+
+function setCrmText(id, value) {
+	const el = document.getElementById(id);
+	if (el) el.textContent = value;
+}
+
+// Counts a number element up from 0 to `to` (or sets it instantly when not
+// animating). `format` turns the rounded value into the final string.
+function crmCountUp(id, to, animate, format = (n) => n.toLocaleString()) {
+	const el = document.getElementById(id);
+	if (!el) return;
+	if (!animate) {
+		el.textContent = format(to);
+		return;
+	}
+	crmAnimate(CRM_ANIM_MS, (p) => {
+		el.textContent = format(Math.round(to * p));
+	});
+}
+
+function updateCrmStats({ animate = false } = {}) {
 	const { stats } = getCrmEls();
 	if (!stats || !document.body.classList.contains("theme-crm")) return;
 
 	const locationId = getCurrentLocation();
 	const panel = getLocationPanel(locationId);
 	if (!panel) return;
+
+	// Bump the token so any animation still running from a previous call stops.
+	crmAnimToken += 1;
 
 	const maxPerBay = getMaxBalesPerBay(locationId);
 	const sheds = new Map();
@@ -2353,16 +2395,11 @@ function updateCrmStats() {
 	const occupiedPct = capacity ? Math.round((total / capacity) * 100) : 0;
 	const availablePct = capacity ? Math.max(0, 100 - occupiedPct) : 0;
 
-	const setText = (id, value) => {
-		const el = document.getElementById(id);
-		if (el) el.textContent = value;
-	};
-
-	setText("crmStatTotal", total.toLocaleString());
-	setText("crmStatTotalPct", `${occupiedPct}% used`);
-	setText("crmStatAvailable", available.toLocaleString());
-	setText("crmStatAvailablePct", `${availablePct}% free`);
-	setText("crmStatCapacity", capacity.toLocaleString());
+	crmCountUp("crmStatTotal", total, animate);
+	crmCountUp("crmStatTotalPct", occupiedPct, animate, (n) => `${n}% used`);
+	crmCountUp("crmStatAvailable", available, animate);
+	crmCountUp("crmStatAvailablePct", availablePct, animate, (n) => `${n}% free`);
+	crmCountUp("crmStatCapacity", capacity, animate);
 
 	const shedEntries = getLocationConfig(locationId).sheds.map((shedId) => {
 		const entry = sheds.get(shedId) || { total: 0, count: 0 };
@@ -2377,40 +2414,59 @@ function updateCrmStats() {
 		};
 	});
 
-	renderCrmDonut(availablePct, available, occupiedPct, total);
-	renderCrmShedBars(shedEntries);
+	renderCrmDonut(availablePct, available, occupiedPct, total, animate);
+	renderCrmShedBars(shedEntries, animate);
 }
 
-function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
+function renderCrmDonut(freePct, freeVal, usedPct, usedVal, animate = false) {
 	const el = document.getElementById("crmDonut");
 	if (!el) return;
 
 	const r = 58;
 	const c = 2 * Math.PI * r;
-	const freeLen = (freePct / 100) * c;
-	const usedLen = (usedPct / 100) * c;
-	const usedRotation = -90 + (freePct / 100) * 360;
 
 	el.innerHTML = `
 		<svg viewBox="0 0 140 140" class="crm-donut__svg" role="img" aria-label="Free space ${freePct}%">
 			<circle class="crm-donut__track" cx="70" cy="70" r="${r}"></circle>
 			<circle class="crm-donut__seg crm-donut__seg--free" cx="70" cy="70" r="${r}"
-				stroke-dasharray="${freeLen.toFixed(2)} ${c.toFixed(2)}"
+				stroke-dasharray="0 ${c.toFixed(2)}"
 				data-pct="${freePct}" data-label="free" data-val="${freeVal.toLocaleString()}">
 				<title>Free: ${freeVal.toLocaleString()} (${freePct}%)</title>
 			</circle>
 			<circle class="crm-donut__seg crm-donut__seg--used" cx="70" cy="70" r="${r}"
-				stroke-dasharray="${usedLen.toFixed(2)} ${c.toFixed(2)}" style="transform: rotate(${usedRotation}deg)"
+				stroke-dasharray="0 ${c.toFixed(2)}" style="transform: rotate(-90deg)"
 				data-pct="${usedPct}" data-label="used" data-val="${usedVal.toLocaleString()}">
 				<title>Used: ${usedVal.toLocaleString()} (${usedPct}%)</title>
 			</circle>
-			<text class="crm-donut__value" x="70" y="68" id="crmDonutValue">${freePct}%</text>
+			<text class="crm-donut__value" x="70" y="68" id="crmDonutValue">0%</text>
 			<text class="crm-donut__caption" x="70" y="88" id="crmDonutCaption">free</text>
 		</svg>`;
 
 	const valueEl = el.querySelector("#crmDonutValue");
 	const captionEl = el.querySelector("#crmDonutCaption");
+	const freeSeg = el.querySelector(".crm-donut__seg--free");
+	const usedSeg = el.querySelector(".crm-donut__seg--used");
 	const segs = el.querySelectorAll(".crm-donut__seg");
+
+	// Paints both arcs (and the center number) for a given progress 0→1: the
+	// free arc grows from the top, the used arc grows right behind it, so the
+	// ring fills clockwise as one continuous sweep.
+	const paint = (p) => {
+		const curFreePct = freePct * p;
+		const curUsedPct = usedPct * p;
+		if (freeSeg) freeSeg.setAttribute("stroke-dasharray", `${((curFreePct / 100) * c).toFixed(2)} ${c.toFixed(2)}`);
+		if (usedSeg) {
+			usedSeg.setAttribute("stroke-dasharray", `${((curUsedPct / 100) * c).toFixed(2)} ${c.toFixed(2)}`);
+			usedSeg.style.transform = `rotate(${-90 + (curFreePct / 100) * 360}deg)`;
+		}
+		if (valueEl) valueEl.textContent = `${Math.round(curFreePct)}%`;
+	};
+
+	if (animate) {
+		crmAnimate(CRM_ANIM_MS, paint);
+	} else {
+		paint(1);
+	}
 
 	const resetCenter = () => {
 		if (valueEl) valueEl.textContent = `${freePct}%`;
@@ -2431,7 +2487,7 @@ function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
 	});
 }
 
-function renderCrmShedBars(shedEntries) {
+function renderCrmShedBars(shedEntries, animate = false) {
 	const el = document.getElementById("crmShedBars");
 	if (!el) return;
 
@@ -2440,13 +2496,36 @@ function renderCrmShedBars(shedEntries) {
 			(shed) => `
 		<div class="crm-bar" title="${shed.name}: ${shed.freeVal.toLocaleString()} free of ${shed.capacity.toLocaleString()}">
 			<span class="crm-bar__name">${shed.name} Shed</span>
-			<span class="crm-bar__pct">${shed.freePct}% free</span>
+			<span class="crm-bar__pct" data-pct="${shed.freePct}">${animate ? 0 : shed.freePct}% free</span>
 			<div class="crm-bar__track">
-				<div class="crm-bar__fill" style="width:${shed.freePct}%"></div>
+				<div class="crm-bar__fill" style="width:${animate ? 0 : shed.freePct}%"></div>
 			</div>
 		</div>`,
 		)
 		.join("");
+
+	if (!animate) return;
+
+	const bars = [...el.querySelectorAll(".crm-bar")];
+	const fills = bars.map((bar) => bar.querySelector(".crm-bar__fill"));
+	const pcts = bars.map((bar) => bar.querySelector(".crm-bar__pct"));
+	const targets = shedEntries.map((shed) => shed.freePct);
+
+	// The fill width is animated by the CSS transition (cheap on weak devices);
+	// the percentage label is counted up in JS to match. Force a reflow first so
+	// the transition runs from 0 → target instead of snapping.
+	void el.offsetWidth;
+	requestAnimationFrame(() => {
+		fills.forEach((fill, i) => {
+			if (fill) fill.style.width = `${targets[i]}%`;
+		});
+	});
+
+	crmAnimate(CRM_ANIM_MS, (p) => {
+		targets.forEach((target, i) => {
+			if (pcts[i]) pcts[i].textContent = `${Math.round(target * p)}% free`;
+		});
+	});
 }
 
 function scheduleCrmStats() {
@@ -2518,7 +2597,6 @@ function initCrmTheme() {
 			requestAnimationFrame(() => {
 				if (!document.body.classList.contains("theme-crm")) return;
 				moveActiveFormIntoSidebar();
-				placeCrmStatsInReports();
 				updateCrmStats();
 			});
 		});
