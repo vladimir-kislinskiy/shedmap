@@ -1,6 +1,5 @@
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
-/** Barr-ag team — edit access to Olds and Siksika */
 export const OLDS_EDITORS = {
 	"operations@barr-ag.com": "Vlad",
 	"tschmitt@barr-ag.com": "Tyler",
@@ -9,7 +8,6 @@ export const OLDS_EDITORS = {
 	"nmathis@barr-ag.com": "Natalie",
 };
 
-/** Siksika-only users — view Olds, edit Siksika. Add emails here and in database.rules.json */
 export const SIKSIKA_EDITORS = {
 	"siksika@barr-ag.com": "Siksika",
 };

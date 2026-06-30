@@ -278,16 +278,13 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		track(window, "pointercancel", onPointerEnd);
 	};
 
-	// Desktop / macOS: native mouse events (reliable in Safari & Chrome)
 	stackEl.addEventListener("mousedown", (e) => {
 		if (e.button !== 0 || !canDrag()) return;
-		// Ignore synthetic mouse events fired after touch on iOS
 		if (e.sourceCapabilities?.firesTouchEvents) return;
 		e.stopPropagation();
 		armMouseSession(e.clientX, e.clientY);
 	});
 
-	// Touch / pen: pointer events (skip mouse — handled by mousedown above)
 	stackEl.addEventListener(
 		"pointerdown",
 		(e) => {

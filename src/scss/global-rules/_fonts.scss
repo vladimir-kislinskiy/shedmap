@@ -1,7 +1,3 @@
-/* Fonts — local files from src/resources/fonts/ → dist/fonts/ */
-
-/* Active app font: Saira Semi Condensed (semi-condensed, saves horizontal
-   space vs DMSans). woff2 latin subset, one file per weight. */
 @font-face {
 	font-family: "Saira Semi Condensed";
 	src: url("../fonts/SairaSemiCondensed-Regular.woff2") format("woff2");
@@ -33,12 +29,3 @@
 	font-style: normal;
 	font-display: swap;
 }
-
-/* Inactive backup: DMSans. Kept in the fallback chain (see --font-primary) and
-   its files retained in src/resources/fonts, but intentionally NOT declared as
-   @font-face and NOT shipped to dist, so it is never downloaded. To reactivate,
-   restore these @font-face includes and re-enable the dist copy in gulpfile.js.
-   @include font-face("DMSans", "DMSans-Medium", 400);
-   @include font-face("DMSans", "DMSans-Medium", 500);
-   @include font-face("DMSans", "DMSans-Bold", 600);
-   @include font-face("DMSans", "DMSans-Bold", 700); */

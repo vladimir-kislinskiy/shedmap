@@ -1,0 +1,65 @@
+#adt-root {
+	margin-top: 20px;
+	padding: 16px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-md);
+	background: var(--color-surface);
+}
+
+#adt-root h3 {
+	margin: 0 0 8px;
+	font-size: 1rem;
+}
+
+#adt-root p {
+	margin: 0 0 14px;
+	font-size: 0.9rem;
+	color: var(--text-muted);
+	line-height: 1.45;
+	max-width: 52rem;
+}
+
+.adt-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+}
+
+.adt-btn {
+	box-sizing: border-box;
+	height: 42px;
+	min-height: 42px;
+	padding: 10px 16px;
+	font-size: 15px;
+	font-family: var(--font-primary);
+	font-weight: 600;
+	color: var(--text-main);
+	background: var(--color-surface);
+	border: 1px solid var(--border-color-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: var(--transition);
+}
+
+.adt-btn:hover {
+	border-color: var(--color-primary);
+	color: var(--color-primary);
+}
+
+.adt-btn--alt {
+	color: var(--color-primary);
+}
+
+.adt-status {
+	margin: 12px 0 0;
+	font-size: 0.9rem;
+	color: var(--color-primary);
+}
+
+.adt-status[hidden] {
+	display: none;
+}
+
+.adt-status--err {
+	color: #b42318;
+}

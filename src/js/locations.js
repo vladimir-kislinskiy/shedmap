@@ -6,7 +6,6 @@ export const LOCATION_IDS = [OLDS_LOCATION_ID, SIKSIKA_LOCATION_ID, SIMPLY_LOCAT
 
 export const DEFAULT_MAX_BALES_PER_BAY = 1400;
 
-/** @type {Record<string, import('./locations.js').LocationConfig>} */
 export const LOCATIONS = {
 	[OLDS_LOCATION_ID]: {
 		id: OLDS_LOCATION_ID,

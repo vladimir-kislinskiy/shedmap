@@ -1,15 +1,11 @@
-// Global rules
 @import "./global-rules/vars";
 @import "./global-rules/mixins";
 @import "./global-rules/fonts";
 @import "./global-rules/reset";
 @import "./global-rules/global";
 
-// Components import
-@import "./components/burger";
-@import "./components/header";
-@import "./components/footer";
 @import "./components/crm";
+@import "./components/admin-backup";
 
 html {
 	background-color: var(--bg-page);
@@ -28,10 +24,6 @@ body {
 	-webkit-font-smoothing: antialiased;
 }
 
-/* Global scrollbar styling — keeps every scrollable area on-palette across the
-   classic, CRM and dark themes. Tokens resolve against the active theme, so the
-   thumb recolors automatically. Firefox uses scrollbar-color; WebKit/Chromium
-   use the ::-webkit-scrollbar pseudo-elements below. */
 * {
 	scrollbar-width: thin;
 	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
@@ -96,7 +88,6 @@ body {
 	min-height: 0;
 	min-width: 0;
 	gap: var(--tabs-gutter);
-	// padding-inline: clamp(0px, 2vw, 16px);
 }
 
 h2,
@@ -104,7 +95,6 @@ h3 {
 	font-family: var(--font-heading);
 }
 
-/* Shared sizing — location tabs, main tabs, shed tabs */
 .location-tabs__btn,
 .tabs__btn,
 .shed-tabs__btn {
@@ -133,7 +123,6 @@ h3 {
 	border-radius: var(--ctrl-bar-radius);
 }
 
-/* Tabs */
 .tabs {
 	display: flex;
 	align-items: stretch;
@@ -227,7 +216,6 @@ h3 {
 	}
 }
 
-/* Inventory settings (header gear) */
 .inventory-settings {
 	display: inline-flex;
 	align-items: center;
@@ -488,7 +476,6 @@ body.page--view-only .inventory__form {
 	width: clamp(120px, 16vw, 160px);
 }
 
-/* Shed tabs */
 #Sheds .inventory__form,
 #Sheds .shed-tabs {
 	flex-shrink: 0;
@@ -550,7 +537,6 @@ body.page--view-only .inventory__form {
 	overflow: hidden;
 }
 
-/* Shed bays — stack area 500px + 20px padding + ~64px chrome ≈ 584px column */
 .shed__columns {
 	display: flex;
 	justify-content: flex-start;
@@ -597,10 +583,6 @@ body.page--view-only .inventory__form {
 	flex-shrink: 0;
 }
 
-/* The bay bottom (stats + edge numbers / labels) doubles as the drag-to-scroll
-   handle: show a grab cursor so the affordance is clear, and never let this text
-   get selected while panning (overrides the bay's default/view-only cursor and
-   selection). */
 .shed__bay-label,
 .shed__bay-stats,
 .shed__bay-exit {
@@ -645,8 +627,6 @@ body.page--dragging .shed__bay-exit {
 	border-color: var(--color-bay-border-hover);
 }
 
-/* Unused bays: look identical to real bays, but faded out and non-interactive
-   so it's clear they're inactive (number replaced by "n/a"). */
 .shed__bay--disabled {
 	opacity: 0.45;
 }
@@ -723,9 +703,6 @@ body.page--dragging .shed__bay-exit {
 	margin-bottom: 8px;
 }
 
-/* Olds only: bay numbers split on the dash and pushed to the left/right edges,
-   shown at the top and at the exit (open front). Built statically in HTML
-   (see shed-bay-olds.html) — no JS involved. */
 #location-olds .shed__bay-label--olds,
 #location-olds .shed__bay-exit {
 	display: flex;
@@ -749,13 +726,10 @@ body.page--dragging .shed__bay-exit {
 	color: var(--text-muted);
 }
 
-/* Top bay numbers for Olds are temporarily hidden.
-   To bring them back, delete this rule. */
 #location-olds .shed__bay-label--olds {
 	display: none;
 }
 
-/* Hay stacks — --stack-height is % of --stack-area-height; min ~48px */
 .hay-stack {
 	--stack-font-size: 0.65rem;
 	height: calc(
@@ -796,14 +770,11 @@ body.page--dragging .shed__bay-exit {
 	min-width: 0;
 }
 
-/* "Bay front" stacks drop to the bottom edge of the bay (toward the entrance). */
 .shed__bay-stack > .hay-stack--bay-front,
 .shed__isle > .hay-stack--bay-front {
 	order: 1;
 }
 
-/* Full-width front stacks reach the bottom because the isles row grows to fill;
-   isle front stacks need an auto top-margin inside their (now full-height) column. */
 .shed__isle > .hay-stack--bay-front {
 	margin-top: auto;
 }
@@ -812,12 +783,6 @@ body.page--dragging .shed__bay-exit {
 	margin-top: 0;
 }
 
-/* When a bay has a single-isle "bay front" stack, that stack gets priority at the
-   very bottom (closest to the entrance), and full-width (two-isle) stacks sit
-   directly above it. The isles row drops below the full-width stacks (order: 2)
-   and stops growing, so the JS-set bottom anchor (.shed__front-anchor, see
-   repairBayLayout) can glue the whole front cluster to the bay's bottom edge with
-   no gap. Marker class is toggled from JS so this works without :has(). */
 .shed__bay-stack--isle-front .shed__isles {
 	order: 2;
 	flex-grow: 0;
@@ -865,8 +830,6 @@ body.page--dragging .shed__bay-exit {
 	overflow: visible;
 }
 
-/* Editable (not view-only) stacks are draggable. Driven purely by the global
-   page--view-only body class instead of a per-stack JS class toggle. */
 body:not(.page--view-only) .hay-stack {
 	cursor: grab;
 	touch-action: none;
@@ -1056,7 +1019,6 @@ body.page--dragging .shed__bay-stack {
 	margin-top: 0;
 }
 
-/* Reports */
 .reports__summary {
 	margin: 0 0 12px;
 	font-size: 0.95rem;
@@ -1136,8 +1098,6 @@ body.page--dragging .shed__bay-stack {
 	align-items: flex-end;
 }
 
-/* "or" separator between the product filter and the contract search, aligned
-   with the inputs (which sit at the bottom of their stacked label). */
 .reports__filter-or {
 	flex: 0 0 auto;
 	align-self: flex-end;
@@ -1189,7 +1149,6 @@ body.page--dragging .shed__bay-stack {
 	border-color: var(--color-primary-light);
 }
 
-/* Log table */
 .log__title {
 	margin: 0 0 12px;
 }
@@ -1414,7 +1373,6 @@ body.page--offline .inventory__form {
 	border-bottom: none;
 }
 
-/* Footer */
 .page-footer {
 	display: flex;
 	align-items: center;
@@ -1451,7 +1409,6 @@ body.page--offline .inventory__form {
 	}
 }
 
-/* Auth */
 .auth-bar {
 	display: grid;
 	grid-template-columns: 1fr auto 1fr;
@@ -1815,7 +1772,6 @@ body.page--offline .inventory__form {
 	background: var(--color-primary-hover);
 }
 
-/* View-only mode */
 body.page--view-only .shed__bay,
 body.page--view-only .shed__bay-stack,
 body.page--view-only .hay-stack {
@@ -1828,5 +1784,4 @@ body.page--view-only .hay-stack--selected {
 	box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
 
-/* Responsiveness */
 @import "./responsive";

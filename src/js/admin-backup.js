@@ -1,39 +1,13 @@
 import { downloadHayShedStateBackup, readHayShedStateFile } from "./state-backup.js";
 
 const ADMIN_EMAIL = "operations@barr-ag.com";
-const STYLE_ID = "adt-styles";
 const ROOT_ID = "adt-root";
 
 let mounted = false;
 let handlers = null;
 
-const PANEL_STYLES = `
-#${ROOT_ID}{margin-top:20px;padding:16px;border:1px solid var(--border-color);border-radius:var(--radius-md);background:var(--color-surface)}
-#${ROOT_ID} h3{margin:0 0 8px;font-size:1rem}
-#${ROOT_ID} p{margin:0 0 14px;font-size:.9rem;color:var(--text-muted);line-height:1.45;max-width:52rem}
-.adt-actions{display:flex;flex-wrap:wrap;gap:10px}
-.adt-btn{box-sizing:border-box;height:42px;min-height:42px;padding:10px 16px;font-size:15px;font-family:var(--font-primary);font-weight:600;color:var(--text-main);background:var(--color-surface);border:1px solid var(--border-color-strong);border-radius:var(--radius-sm);cursor:pointer;transition:var(--transition)}
-.adt-btn:hover{border-color:var(--color-primary);color:var(--color-primary)}
-.adt-btn--alt{color:var(--color-primary)}
-.adt-status{margin:12px 0 0;font-size:.9rem;color:var(--color-primary)}
-.adt-status[hidden]{display:none}
-.adt-status--err{color:#b42318}
-`;
-
 function isAdminSession(email) {
 	return email?.toLowerCase() === ADMIN_EMAIL;
-}
-
-function ensureStyles() {
-	if (document.getElementById(STYLE_ID)) return;
-	const style = document.createElement("style");
-	style.id = STYLE_ID;
-	style.textContent = PANEL_STYLES;
-	document.head.appendChild(style);
-}
-
-function removeStyles() {
-	document.getElementById(STYLE_ID)?.remove();
 }
 
 function showStatus(message, { isError = false } = {}) {
@@ -115,7 +89,6 @@ export function mountAdminBackup(email, { collectAppState, restoreState, exporte
 	const logSection = document.getElementById("Log");
 	if (!logSection) return;
 
-	ensureStyles();
 	handlers = { collectAppState, restoreState, exportedBy };
 	logSection.appendChild(buildPanel());
 	mounted = true;
@@ -123,7 +96,6 @@ export function mountAdminBackup(email, { collectAppState, restoreState, exporte
 
 export function unmountAdminBackup() {
 	document.getElementById(ROOT_ID)?.remove();
-	removeStyles();
 	mounted = false;
 	handlers = null;
 }

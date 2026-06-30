@@ -4,26 +4,15 @@
 
 <body class="page page--view-only">
 	<script>
-		/* The classic design is retained in code/styles but disabled: the app
-		   always runs in the new CRM theme. We set the class before first paint to
-		   avoid any flash. */
 		(function () {
-			/* The sidebar always starts hidden: it only opens when the user calls
-			   it (menu toggle or clicking a stack). Set the collapsed class before
-			   first paint so it never flashes open. */
 			document.body.classList.add("theme-crm", "crm-collapsed");
-			/* Mirror the theme classes onto <html> too so the document-level
-			   scrollbar (which resolves CSS variables against the root element,
-			   not <body>) picks up the active theme palette. */
 			document.documentElement.classList.add("theme-crm");
 			try {
 				if (localStorage.getItem("uiCrmDark") === "1") {
 					document.body.classList.add("theme-dark");
 					document.documentElement.classList.add("theme-dark");
 				}
-			} catch (e) {
-				/* ignore storage failures */
-			}
+			} catch (e) {}
 		})();
 	</script>
 	<aside class="crm-sidebar" id="crmSidebar" aria-label="Inventory controls">
@@ -43,9 +32,7 @@
 				<button type="button" class="tabs__btn" data-tab="Overview">Overview</button>
 			</div>
 		</nav>
-		<div class="crm-sidebar__controls" id="crmControlsSlot">
-			<p class="crm-sidebar__controls-hint" id="crmControlsHint">Sign in to manage inventory.</p>
-		</div>
+		<div class="crm-sidebar__controls" id="crmControlsSlot"></div>
 		<button type="button" class="crm-sidebar__collapse" id="crmCollapse" aria-label="Collapse panel">
 			<span class="crm-sidebar__collapse-icon" aria-hidden="true"></span>
 			<span class="crm-sidebar__collapse-text">Collapse</span>
@@ -464,9 +451,6 @@
 	<footer class="page-footer">
 		<span class="page-footer__copy">&copy; 2026 <a href="https://vkys.ca" target="_blank" rel="noopener noreferrer"
 				class="page-footer__link">Volodymyr Kyslynskyi</a></span>
-		<!-- The classic design is disabled; the toggle is kept in markup but hidden. -->
-		<button type="button" id="themeToggle" class="theme-toggle" title="Switch design" aria-label="Switch design"
-			hidden>New design</button>
 	</footer>
 
 	<template id="hayStackTemplate">

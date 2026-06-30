@@ -80,9 +80,6 @@ function buildEmptyShedState(locationId = getCurrentLocationId()) {
 	return { changeLog: [], sheds };
 }
 
-// Firebase removes nodes whose only content is empty arrays/objects, which would
-// collapse a cleared location to null and make the reset invisible to other
-// devices. Stamping updatedAt keeps the node alive so an empty state syncs.
 function stampStateForWrite(state) {
 	return { ...state, updatedAt: Date.now() };
 }
@@ -115,7 +112,6 @@ async function resetAllBays({ confirm = true, locationId = getCurrentLocationId(
 	}
 
 	clearAllBaysUI(locationId);
-	// Prevent stale local cache from resurrecting data later this session.
 	hasRemoteStateByLocation[locationId] = true;
 
 	try {
@@ -225,8 +221,6 @@ function setActiveTab(tabId) {
 		tabBtn.classList.toggle("tabs__btn--active", tabBtn.dataset.tab === tabId);
 	});
 
-	// Tab buttons are shared in the header, but each location keeps its own
-	// panels — keep both locations in sync so switching location preserves the tab.
 	LOCATION_IDS.forEach((locId) => {
 		const panelRoot = getLocationPanel(locId);
 		if (!panelRoot) return;
@@ -236,8 +230,6 @@ function setActiveTab(tabId) {
 		});
 	});
 
-	// The Overview tab shows the global stats block (a direct child of page main)
-	// and hides the per-location content; CSS keys off `body.tab-overview`.
 	document.body.classList.toggle("tab-overview", tabId === "Overview");
 
 	if (tabId === "Overview") {
@@ -605,8 +597,6 @@ function bindStackSelect(stackEl) {
 }
 
 function updateStackInteractionState() {
-	// Draggable/grab styling is handled in CSS via the body `page--view-only`
-	// class; here we only clear any selection on stacks that became read-only.
 	document.querySelectorAll(".hay-stack--selected").forEach((stack) => {
 		const locationId = stack.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
 		if (!canEdit(locationId)) stack.classList.remove("hay-stack--selected");
@@ -728,8 +718,6 @@ function handleHay() {
 		const targetContainer = getIsleContainer(bayStackEl, isle);
 		let foundStack = findStackInContainer(targetContainer, stackKey);
 
-		// Fall back to the stack the user selected, so Update can change the
-		// contract or toggle "No tags" on an existing stack (its identity changes).
 		if (!foundStack && transferSource?.stackEl?.isConnected && transferSource.locationId === locationId) {
 			foundStack = transferSource.stackEl;
 		}
@@ -743,7 +731,6 @@ function handleHay() {
 		const foundIsle = foundStack.dataset.isle || "both";
 		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
 
-		// Apply product/contract/no-tags identity in place, then the flags.
 		updateHayStack(foundStack, type, contract, currentBales);
 		applyStackRejected(foundStack, rejected);
 		applyStackComment(foundStack, stackComment);
@@ -830,8 +817,6 @@ function handleHay() {
 
 		const destContainer = getIsleContainer(destBayStackEl, destIsle);
 		const isRejectSplitInPlace = isSameBay && isSameIsle && rejected && !separateStack;
-		// Splitting bales within the same isle (reject or separate) leaves the bay/isle
-		// totals unchanged, so the capacity checks below should be skipped.
 		const isSplitInPlace = isSameBay && isSameIsle && (rejected || separateStack);
 
 		if (!isSplitInPlace) {
@@ -963,8 +948,6 @@ function handleHay() {
 			return;
 		}
 
-		// "Separate" forces a brand-new stack instead of merging into a matching
-		// contract already in this isle, allowing several piles of the same contract.
 		const existingStack = separateStack ? null : findStackInContainer(targetContainer, stackKey);
 
 		if (existingStack) {
@@ -1280,23 +1263,16 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 	return rows;
 }
 
-// Masks a contract search value to the "25-5711" shape: 2 leading digits, an
-// auto-inserted dash, up to 4 more digits, and an optional single trailing
-// letter (e.g. "25-5711A"). Anything else the user types is dropped.
 function formatContractSearch(raw) {
 	const digits = (raw.match(/\d/g) || []).join("").slice(0, 6);
 	const letterMatch = raw.match(/[a-zA-Z]/g);
 	const letter = letterMatch ? letterMatch[letterMatch.length - 1].toUpperCase() : "";
 
 	let out = digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits;
-	// The trailing letter only belongs after the full 4-digit contract number.
 	if (letter && digits.length === 6) out += letter;
 	return out;
 }
 
-// Scans every stack in the active location for contracts matching `query`
-// (substring, case-insensitive) across all products. Used by the Reports
-// "Contract #" search, which is an alternative to the product filter.
 function collectContractReport(query, { includeRejected = false } = {}, locationId = getCurrentLocation()) {
 	const needle = query.trim().toLowerCase();
 	if (!needle) return [];
@@ -1376,9 +1352,6 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 
 	reportBody.replaceChildren();
 
-	// Contract search takes precedence over the product filter: the two are an
-	// "or" choice, so when a query is typed we ignore the selected product and
-	// list every matching contract (across all products) in this location.
 	if (searchMode) {
 		syncReportGradeFilterVisibility("", locationId);
 		setReportGradeColumnVisible(false, locationId);
@@ -1462,8 +1435,6 @@ async function printCurrentReportPdf(locationId = getCurrentLocation()) {
 	const productLabel = getHayTypeLabel(productId);
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 
-	// jsPDF is heavy and only needed on demand, so load it lazily on click to
-	// keep it out of the initial bundle.
 	const { openReportPdf } = await import("./report-pdf.js");
 	openReportPdf({
 		productLabel,
@@ -1481,8 +1452,6 @@ function initReports(locationId = getCurrentLocation()) {
 	const searchEl = getScopedElement("reportContractSearch", locationId);
 	const refresh = () => updateReportsTable(locationId);
 
-	// Product filter and contract search are mutually exclusive ("or"): using one
-	// clears the other so it's obvious which mode the table is showing.
 	filterEl.addEventListener("change", () => {
 		if (filterEl.value && searchEl) searchEl.value = "";
 		refresh();
@@ -1491,7 +1460,6 @@ function initReports(locationId = getCurrentLocation()) {
 		const formatted = formatContractSearch(searchEl.value);
 		if (searchEl.value !== formatted) {
 			searchEl.value = formatted;
-			// Keep the caret at the end since the mask only ever appends.
 			searchEl.setSelectionRange(formatted.length, formatted.length);
 		}
 		if (searchEl.value.trim()) filterEl.value = "";
@@ -1642,8 +1610,6 @@ function updateSyncBanner() {
 		return;
 	}
 
-	// Firebase reports "disconnected" on initial load before the socket opens.
-	// Wait out a grace period so the banner only appears on a genuine outage.
 	if (offlineBannerTimer) return;
 	offlineBannerTimer = setTimeout(() => {
 		offlineBannerTimer = null;
@@ -1678,7 +1644,6 @@ function applyRemoteState(locationId, state) {
 }
 
 function initFirebaseSync() {
-	// Legacy flat data at hayShedState root (changeLog + sheds at top level)
 	onValue(
 		ref(db, "hayShedState"),
 		(snapshot) => {
@@ -1691,7 +1656,6 @@ function initFirebaseSync() {
 					return;
 				}
 
-				// Hybrid: legacy Olds data at root alongside nested location nodes
 				if (root.sheds && Array.isArray(root.changeLog) && !root.olds) {
 					applyRemoteState(OLDS_LOCATION_ID, {
 						changeLog: root.changeLog,
@@ -1705,7 +1669,6 @@ function initFirebaseSync() {
 		(err) => console.error("Firebase legacy read error:", err),
 	);
 
-	// Per-location paths — reliable sync for Olds and Siksika independently
 	LOCATION_IDS.forEach((locationId) => {
 		onValue(
 			ref(db, getLocationFirebasePath(locationId)),
@@ -1765,9 +1728,6 @@ function setInventoryControlsOpen(open) {
 	controls.hidden = !open;
 	controls.classList.toggle("inventory__form--hidden", !open);
 
-	const crmHint = document.getElementById("crmControlsHint");
-	if (crmHint) crmHint.hidden = open;
-
 	toggleBtn.classList.toggle("inventory-settings--active", open);
 	toggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
 	const label = open ? "Close inventory management" : "Manage inventory";
@@ -1785,8 +1745,6 @@ function refreshEditAccess() {
 	if (!editable) setInventoryControlsOpen(false);
 	updateStackInteractionState();
 
-	// In the CRM theme the inventory form lives in the sidebar and is always
-	// visible while editable — no gear toggle required.
 	syncCrmFormVisibility();
 }
 
@@ -1973,18 +1931,14 @@ function getSavedLocationId() {
 	try {
 		const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
 		if (saved && LOCATION_IDS.includes(saved)) return saved;
-	} catch {
-		// localStorage unavailable (private mode, etc.)
-	}
+	} catch {}
 	return OLDS_LOCATION_ID;
 }
 
 function saveLocationPreference(locationId) {
 	try {
 		localStorage.setItem(LOCATION_STORAGE_KEY, locationId);
-	} catch {
-		// ignore
-	}
+	} catch {}
 }
 
 const MAIN_TAB_STORAGE_KEY = "hayShedMainTab";
@@ -1995,27 +1949,21 @@ function getSavedMainTab() {
 	try {
 		const saved = localStorage.getItem(MAIN_TAB_STORAGE_KEY);
 		if (saved && MAIN_TAB_IDS.includes(saved)) return saved;
-	} catch {
-		// localStorage unavailable
-	}
+	} catch {}
 	return "Sheds";
 }
 
 function saveMainTabPreference(tabId) {
 	try {
 		localStorage.setItem(MAIN_TAB_STORAGE_KEY, tabId);
-	} catch {
-		// ignore
-	}
+	} catch {}
 }
 
 function getSavedShedTabs() {
 	try {
 		const parsed = JSON.parse(localStorage.getItem(SHED_TAB_STORAGE_KEY) || "null");
 		if (parsed && typeof parsed === "object") return parsed;
-	} catch {
-		// ignore
-	}
+	} catch {}
 	return {};
 }
 
@@ -2025,9 +1973,7 @@ function saveShedTabPreference(locationId, shed) {
 		const all = getSavedShedTabs();
 		all[locationId] = shed;
 		localStorage.setItem(SHED_TAB_STORAGE_KEY, JSON.stringify(all));
-	} catch {
-		// ignore
-	}
+	} catch {}
 }
 
 function getSavedShedForLocation(locationId) {
@@ -2254,8 +2200,6 @@ function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurren
 
 	const options = Array.from(select.options);
 	options.forEach((option, position) => {
-		// Tag each option with its stable bay index on first run so we can safely
-		// reorder them later without losing the option <-> bay mapping.
 		if (option.dataset.bayIndex === undefined) option.dataset.bayIndex = String(position);
 		const index = Number(option.dataset.bayIndex);
 		const isDisabled = disabledBays.includes(index);
@@ -2336,14 +2280,6 @@ function initToggleControls() {
 	});
 }
 
-/* ==========================================================================
-   CRM design variant (theme-crm)
-   Non-destructive second layout toggled at runtime. It reuses every existing
-   handler by MOVING the main nav and the active inventory form into the
-   sidebar instead of duplicating logic. The Olds/Siksika switch and account
-   info stay in the top bar. A temporary floating button flips between designs.
-   ========================================================================== */
-
 const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
 const CRM_DARK_STORAGE_KEY = "uiCrmDark";
 let crmStatsScheduled = false;
@@ -2351,28 +2287,21 @@ let crmStatsScheduled = false;
 function saveCrmCollapsed(collapsed) {
 	try {
 		localStorage.setItem(CRM_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
-	} catch {
-		// ignore storage failures
-	}
+	} catch {}
 }
 
-// Reveal the sidebar (with the inventory form). Used when a stack is clicked so
-// the control panel slides in for editing.
 function openCrmSidebar() {
 	if (!document.body.classList.contains("theme-crm")) return;
 	document.body.classList.remove("crm-collapsed");
 	saveCrmCollapsed(false);
 }
 
-// Remember where moved elements live in the classic layout, so the original
-// markup is restored verbatim when switching back.
 const crmOriginalParents = new WeakMap();
 
 function getCrmEls() {
 	return {
 		navSlot: document.getElementById("crmNavSlot"),
 		controlsSlot: document.getElementById("crmControlsSlot"),
-		controlsHint: document.getElementById("crmControlsHint"),
 		collapseBtn: document.getElementById("crmCollapse"),
 		menuToggle: document.getElementById("crmMenuToggle"),
 		darkSwitch: document.getElementById("crmThemeSwitch"),
@@ -2411,13 +2340,7 @@ function moveActiveFormIntoSidebar() {
 	syncCrmFormVisibility();
 }
 
-// In the CRM theme the form is part of the sidebar and is always visible. Guests
-// see the same buttons and fields, but the whole form is made inert (fully
-// non-interactive) instead of hidden. Using `inert` (with a CSS fallback class)
-// rather than toggling each control keeps the app's own per-field disabled logic
-// (bale count, contract, etc.) intact for signed-in users.
 function syncCrmFormVisibility() {
-	const { controlsHint } = getCrmEls();
 	if (!document.body.classList.contains("theme-crm")) return;
 
 	const editable = canEdit();
@@ -2425,19 +2348,11 @@ function syncCrmFormVisibility() {
 	if (activeForm) {
 		activeForm.hidden = false;
 		activeForm.classList.remove("inventory__form--hidden");
-		// `inert` makes the whole form non-interactive for guests; CSS dims it
-		// via the [inert] selector, so no extra class toggle is needed.
 		activeForm.inert = !editable;
 	}
-	if (controlsHint) controlsHint.hidden = editable;
 }
 
 function applyUiTheme() {
-	// The classic design is permanently disabled — the app always runs the CRM
-	// theme. The `theme-crm` class is applied before first paint by the inline
-	// script in index.html, and the location switcher + main nav are pre-placed
-	// in the sidebar markup. So the only relocation needed here is the per-location
-	// inventory form and the stats block, which depend on the active location.
 	document.body.classList.add("theme-crm");
 	moveActiveFormIntoSidebar();
 	updateCrmStats();
@@ -2556,33 +2471,21 @@ function scheduleCrmStats() {
 function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
-	// The classic design is intentionally retained in code/styles but disabled:
-	// the app always runs in the CRM theme. The theme toggle is therefore not
-	// wired up and no classic code path ever executes at runtime.
-
-	// Dark variant: a slightly darker, eye-friendly version of the same corporate
-	// grays. State is applied before first paint by the inline script in
-	// index.html; here we sync the switch UI and handle clicks.
 	const applyDark = (dark) => {
 		document.body.classList.toggle("theme-dark", dark);
-		// Keep <html> in sync so the document-level scrollbar follows the theme.
 		document.documentElement.classList.toggle("theme-dark", dark);
 		if (darkSwitch) darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
 	};
 	let dark = false;
 	try {
 		dark = localStorage.getItem(CRM_DARK_STORAGE_KEY) === "1";
-	} catch {
-		// ignore storage failures
-	}
+	} catch {}
 	applyDark(dark);
 	darkSwitch?.addEventListener("click", () => {
 		const next = !document.body.classList.contains("theme-dark");
 		try {
 			localStorage.setItem(CRM_DARK_STORAGE_KEY, next ? "1" : "0");
-		} catch {
-			// ignore storage failures
-		}
+		} catch {}
 		applyDark(next);
 	});
 
@@ -2593,8 +2496,6 @@ function initCrmTheme() {
 	collapseBtn?.addEventListener("click", toggleSidebar);
 	menuToggle?.addEventListener("click", toggleSidebar);
 
-	// On the overlay sidebar (mobile/tablet) it covers the content, so after the
-	// user picks a section collapse it automatically to reveal the selection.
 	navSlot?.addEventListener("click", (e) => {
 		if (!e.target.closest(".tabs__btn[data-tab]")) return;
 		if (!window.matchMedia("(max-width: 900px)").matches) return;
@@ -2602,12 +2503,6 @@ function initCrmTheme() {
 		saveCrmCollapsed(true);
 	});
 
-	// The sidebar always boots collapsed (set by the inline script in index.html);
-	// it is revealed only on an explicit user action, so we do not restore any
-	// previously persisted open/closed state here.
-
-	// After the location switch handlers run, re-sync which form is in the
-	// sidebar and refresh the stat cards for the now-active location.
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => {
 			requestAnimationFrame(() => {
@@ -2618,8 +2513,6 @@ function initCrmTheme() {
 		});
 	});
 
-	// Classic design disabled — always run the CRM theme (matches the early inline
-	// script in index.html).
 	applyUiTheme();
 }
 
