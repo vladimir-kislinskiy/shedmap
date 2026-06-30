@@ -8,13 +8,18 @@
 		   always runs in the new CRM theme. We set the class before first paint to
 		   avoid any flash. */
 		(function () {
-			document.body.classList.add("theme-crm");
+			/* The sidebar always starts hidden: it only opens when the user calls
+			   it (menu toggle or clicking a stack). Set the collapsed class before
+			   first paint so it never flashes open. */
+			document.body.classList.add("theme-crm", "crm-collapsed");
+			/* Mirror the theme classes onto <html> too so the document-level
+			   scrollbar (which resolves CSS variables against the root element,
+			   not <body>) picks up the active theme palette. */
+			document.documentElement.classList.add("theme-crm");
 			try {
-				if (localStorage.getItem("uiCrmCollapsed") === "1") {
-					document.body.classList.add("crm-collapsed");
-				}
 				if (localStorage.getItem("uiCrmDark") === "1") {
 					document.body.classList.add("theme-dark");
+					document.documentElement.classList.add("theme-dark");
 				}
 			} catch (e) {
 				/* ignore storage failures */

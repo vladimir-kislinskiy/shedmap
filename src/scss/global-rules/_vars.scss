@@ -101,4 +101,12 @@
 
 	/* Transitions */
 	--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+
+	/* Scrollbars — reference neutral theme tokens (not the accent) so every
+	   scrollable area blends with the surrounding chrome in the classic, CRM and
+	   dark themes. */
+	--scrollbar-size: 10px;
+	--scrollbar-track: transparent;
+	--scrollbar-thumb: var(--border-color-strong);
+	--scrollbar-thumb-hover: var(--text-muted);
 }

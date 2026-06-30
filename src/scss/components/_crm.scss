@@ -456,6 +456,24 @@
 	box-shadow: 0 -5px 0 currentColor, 0 5px 0 currentColor;
 }
 
+/* Keep every interactive sidebar item at one consistent 14px size (placeholder
+   included) — previously the location tabs, nav links, form fields and collapse
+   button all differed. */
+.theme-crm .crm-sidebar__loc .location-tabs__btn,
+.theme-crm .crm-sidebar__nav .tabs__btn,
+.theme-crm .crm-sidebar__controls .inventory__field,
+.theme-crm .crm-sidebar__controls .inventory__submit,
+.theme-crm .crm-sidebar__collapse {
+	font-size: 14px;
+}
+
+/* Bump fields to 16px only once focused/being typed into: iOS evaluates the
+   focused element's font-size to decide whether to zoom, so 16px on focus keeps
+   the resting/placeholder size at 14px while still avoiding the zoom-in. */
+.theme-crm .crm-sidebar__controls .inventory__field:focus {
+	font-size: 16px;
+}
+
 /* Dark-mode switch — an animated sun/moon icon that lives in the top bar, just
    before the username. The classic theme is disabled, but keep it scoped so it
    only shows in the CRM chrome. */

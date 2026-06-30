@@ -2470,6 +2470,8 @@ function initCrmTheme() {
 	// index.html; here we sync the switch UI and handle clicks.
 	const applyDark = (dark) => {
 		document.body.classList.toggle("theme-dark", dark);
+		// Keep <html> in sync so the document-level scrollbar follows the theme.
+		document.documentElement.classList.toggle("theme-dark", dark);
 		if (darkSwitch) darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
 	};
 	let dark = false;
@@ -2505,11 +2507,9 @@ function initCrmTheme() {
 		saveCrmCollapsed(true);
 	});
 
-	try {
-		document.body.classList.toggle("crm-collapsed", localStorage.getItem(CRM_COLLAPSED_STORAGE_KEY) === "1");
-	} catch {
-		// ignore storage failures
-	}
+	// The sidebar always boots collapsed (set by the inline script in index.html);
+	// it is revealed only on an explicit user action, so we do not restore any
+	// previously persisted open/closed state here.
 
 	// After the location switch handlers run, re-sync which form is in the
 	// sidebar and refresh the stat cards for the now-active location.

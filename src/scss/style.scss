@@ -28,6 +28,41 @@ body {
 	-webkit-font-smoothing: antialiased;
 }
 
+/* Global scrollbar styling — keeps every scrollable area on-palette across the
+   classic, CRM and dark themes. Tokens resolve against the active theme, so the
+   thumb recolors automatically. Firefox uses scrollbar-color; WebKit/Chromium
+   use the ::-webkit-scrollbar pseudo-elements below. */
+* {
+	scrollbar-width: thin;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+::-webkit-scrollbar {
+	width: var(--scrollbar-size);
+	height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+	background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+	background: var(--scrollbar-thumb);
+	border: 2px solid transparent;
+	border-radius: 999px;
+	background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: var(--scrollbar-thumb-hover);
+	border: 2px solid transparent;
+	background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+	background: transparent;
+}
+
 .page {
 	display: flex;
 	flex-direction: column;
@@ -534,7 +569,7 @@ body.page--view-only .inventory__form {
 	overscroll-behavior-x: contain;
 	overscroll-behavior-y: auto;
 	scrollbar-width: thin;
-	scrollbar-color: var(--color-primary-light) transparent;
+	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 	-webkit-overflow-scrolling: touch;
 	touch-action: auto;
 	cursor: grab;
