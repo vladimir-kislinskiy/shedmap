@@ -36,6 +36,7 @@
 	</aside>
 
 	<header class="page-hero">
+		<h1 class="visually-hidden">Shed map</h1>
 		<div class="auth-bar auth-bar--guest" id="authBar">
 			<button type="button" id="crmMenuToggle" class="crm-menu-toggle" aria-label="Toggle controls panel">
 				<span class="crm-menu-toggle__icon" aria-hidden="true"></span>
@@ -103,7 +104,7 @@
 
 	<div class="page__wrapper">
 		<main class="page__main">
-			<div class="crm-stats" id="crmStats" aria-label="Inventory summary">
+			<div class="crm-stats" id="crmStats" role="region" aria-label="Inventory summary">
 				<div class="crm-stats__cards">
 					<div class="crm-card">
 						<span class="crm-card__label">Total Bales</span>
@@ -135,7 +136,7 @@
 			<div id="location-olds" class="location-panel location-panel--active">
 				<div class="page__content">
 
-					<section id="Sheds" class="tabs__panel tabs__panel--active">
+					<div id="Sheds" class="tabs__panel tabs__panel--active" role="tabpanel">
 						<form class="inventory__form" id="inventoryControls" hidden novalidate>
 							<select id="hayType" class="inventory__field inventory__field--select" required>
 								<option value="" selected disabled>Product</option>
@@ -271,7 +272,7 @@
 						<div class="shed-tabs__panel" id="east-shed-tab">
 							@include('partials/shed-columns-east.html')
 						</div>
-					</section>
+					</div>
 
 					<section id="Reports" class="tabs__panel">
 						<h2 class="log__title">Inventory Reports</h2>
@@ -465,7 +466,7 @@
 	</template>
 
 	<template id="logFilterYearOptionTemplate">
-		<option></option>
+		<option label="Year" value=""></option>
 	</template>
 
 	<template id="reportRowTemplate">
