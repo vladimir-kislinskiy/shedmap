@@ -657,6 +657,28 @@ body.page--dragging .shed__bay-exit {
 	align-self: stretch;
 }
 
+.shed__isle--has-front-split {
+	justify-content: flex-start;
+}
+
+.shed__isle--has-front-split > .hay-stack:not(.hay-stack--bay-front) {
+	flex-shrink: 0;
+}
+
+.shed__isle--front-only {
+	justify-content: flex-start;
+}
+
+.shed__isle--front-only > .hay-stack--bay-front:first-child {
+	margin-top: auto;
+}
+
+.shed__bay-stack--has-front-split > .hay-stack--bay-front,
+.shed__bay-stack--has-front-split > .shed__front-anchor {
+	margin-top: 0;
+	flex-shrink: 0;
+}
+
 .shed__isle--drop-target {
 	background: var(--color-primary-soft);
 	border-radius: var(--radius-sm);
@@ -781,8 +803,25 @@ body.page--dragging .shed__bay-exit {
 	margin-top: auto;
 }
 
+.shed__bay-stack--has-front-split > .hay-stack--bay-front,
+.shed__bay-stack--has-front-split > .shed__front-anchor,
+.shed__isle--has-front-split > .hay-stack--bay-front {
+	margin-top: 0;
+}
+
 .shed__isle > .hay-stack--bay-front ~ .hay-stack--bay-front {
 	margin-top: 0;
+}
+
+.shed__stack-spacer {
+	flex: 1 1 auto;
+	min-height: 0;
+	width: 100%;
+}
+
+.shed__bay-stack--has-front-split > .shed__isles {
+	flex: 1 1 0;
+	min-height: 0;
 }
 
 .hay-stack--full {
