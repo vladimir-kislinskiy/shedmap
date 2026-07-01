@@ -437,9 +437,27 @@ function resetSelectToDefault(selectEl) {
 	}
 }
 
+function getActiveShedId(locationId = getCurrentLocation()) {
+	const config = getLocationConfig(locationId);
+	const panelRoot = getLocationPanel(locationId);
+	const activeTabBtn = panelRoot?.querySelector(".shed-tabs__btn--active");
+
+	if (activeTabBtn?.dataset.subtab) {
+		const panelId = activeTabBtn.dataset.subtab;
+		const shed = config.sheds.find((shedId) => panelId.endsWith(`${shedId}-shed-tab`));
+		if (shed) return shed;
+	}
+
+	const shedSelect = getScopedElement("shedSelect", locationId);
+	if (shedSelect?.value && config.sheds.includes(shedSelect.value)) {
+		return shedSelect.value;
+	}
+
+	return config.defaultShed;
+}
+
 function resetInventoryFormFields() {
 	const locationId = getCurrentLocation();
-	const config = getLocationConfig(locationId);
 
 	resetSelectToDefault(getScopedElement("reportedBy", locationId));
 	resetSelectToDefault(getScopedElement("hayType", locationId));
@@ -475,10 +493,11 @@ function resetInventoryFormFields() {
 
 	setIsleCheckboxes("both", locationId);
 
+	const currentShed = getActiveShedId(locationId);
 	const shedSelect = getScopedElement("shedSelect", locationId);
 	if (shedSelect) {
-		shedSelect.value = config.defaultShed;
-		updateBaySelectForShed(config.defaultShed, null, locationId);
+		shedSelect.value = currentShed;
+		updateBaySelectForShed(currentShed, null, locationId);
 	}
 
 	syncInventoryActionFields(locationId);
