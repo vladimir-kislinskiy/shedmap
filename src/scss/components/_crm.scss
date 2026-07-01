@@ -8,6 +8,7 @@
 	--crm-sidebar-w: 320px;
 	--page-header-h: 64px;
 	--crm-gutter: clamp(12px, 2vw, 20px);
+	--auth-bar-control-size: 40px;
 }
 
 .theme-dark .crm-sidebar__nav .tabs__btn--active {
@@ -74,7 +75,7 @@
 	padding-left: 12px;
 	border-left: 1px solid var(--border-color);
 	font-family: var(--font-heading);
-	font-size: 1rem;
+	font-size: calc(1rem + 2px);
 	font-weight: 600;
 	line-height: 1.2;
 	color: var(--text-heading);
@@ -87,14 +88,22 @@
 	display: none;
 }
 
-.theme-crm .auth-action {
-	width: 30px;
-	height: 30px;
+.theme-crm .auth-bar__auth.location-tabs {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	flex: 0 0 auto;
+	width: var(--auth-bar-control-size);
+	height: var(--auth-bar-control-size);
+	padding: 0;
+	gap: 0;
+	border: 1px solid var(--border-color-strong);
+	border-radius: var(--radius-sm);
 }
 
-.theme-crm .auth-action__icon {
-	width: 15px;
-	height: 15px;
+.theme-crm .auth-bar__auth .auth-action {
+	width: 100%;
+	height: 100%;
 }
 
 .theme-crm .auth-bar__menu-toggle {
@@ -102,8 +111,8 @@
 	align-items: center;
 	justify-content: center;
 	flex: 0 0 auto;
-	width: 40px;
-	height: 40px;
+	width: var(--auth-bar-control-size);
+	height: var(--auth-bar-control-size);
 	padding: 0;
 	background: var(--color-surface);
 	border: 1px solid var(--border-color-strong);
@@ -354,6 +363,7 @@
 @media (max-width: 768px) {
 	.theme-crm {
 		--page-header-h: 48px;
+		--auth-bar-control-size: 30px;
 	}
 
 	.theme-crm .auth-bar {
@@ -366,9 +376,8 @@
 		gap: 8px;
 	}
 
+	.theme-crm .auth-bar__auth.location-tabs,
 	.theme-crm .auth-bar__menu-toggle {
-		width: 30px;
-		height: 30px;
 		border-radius: var(--ctrl-radius);
 	}
 
@@ -390,7 +399,7 @@
 		padding-left: 8px;
 		max-width: min(140px, 32vw);
 		font-family: inherit;
-		font-size: clamp(0.75rem, 2vw, 0.95rem);
+		font-size: clamp(calc(0.75rem + 2px), calc(2vw + 2px), calc(0.95rem + 2px));
 		font-weight: 600;
 		line-height: 1.2;
 	}
