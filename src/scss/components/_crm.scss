@@ -383,17 +383,35 @@
 
 .theme-crm .crm-sidebar .location-tabs__btn,
 .theme-crm .crm-sidebar .tabs__btn,
-.theme-crm .crm-sidebar .inventory__field,
-.theme-crm .crm-sidebar .inventory__submit,
 .theme-crm .crm-sidebar .inventory__isle-option,
 .theme-crm .crm-sidebar .inventory__reject-option,
 .theme-crm .crm-sidebar .crm-sidebar__collapse {
 	font-size: 14px;
 }
 
+.theme-crm .crm-sidebar .inventory__field,
+.theme-crm .crm-sidebar .inventory__submit {
+	font-size: 14px;
+	transition: none;
+}
+
+.theme-crm .crm-sidebar .inventory__field:focus,
+.theme-crm .crm-sidebar .inventory__field:focus-visible {
+	border-color: var(--color-primary);
+	box-shadow: 0 0 0 3px var(--color-primary-focus);
+}
+
 @media (max-width: 768px) {
-	.theme-crm .crm-sidebar .inventory__field:focus {
+	.theme-crm .crm-sidebar input.inventory__field {
 		font-size: 16px;
+		-webkit-text-size-adjust: 100%;
+	}
+
+	.theme-crm .crm-sidebar input.inventory__field:focus,
+	.theme-crm .crm-sidebar input.inventory__field:focus-visible {
+		font-size: 16px;
+		box-shadow: none;
+		border-color: var(--color-primary);
 	}
 }
 

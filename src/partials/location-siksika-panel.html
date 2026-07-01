@@ -13,17 +13,6 @@
 				<option value="wheat-straw">Wheat Straw</option>
 			</select>
 
-			<select id="siksika-stackGrade" class="inventory__field inventory__field--select inventory__field--grade" hidden>
-				<option value="" selected>Grade</option>
-				<option value="premium">Premium</option>
-				<option value="low-premium">LP</option>
-				<option value="1a">#1A</option>
-				<option value="1">#1</option>
-				<option value="low-1">Low #1</option>
-				<option value="standard">Standard</option>
-				<option value="economy">Economy</option>
-			</select>
-
 			<input type="text" id="siksika-contractNumber" class="inventory__field inventory__field--contract"
 				placeholder="e.g. 25-xxxx" maxlength="8" inputmode="text" autocomplete="off"
 				autocapitalize="characters" spellcheck="false" pattern="^\d{2}-\d{4}[A-Z]?$"
@@ -81,6 +70,17 @@
 
 			<input type="text" id="siksika-stackComment" class="inventory__field inventory__field--comment"
 				placeholder="Comment" maxlength="24" autocomplete="off" spellcheck="false">
+
+			<select id="siksika-stackGrade" class="inventory__field inventory__field--select inventory__field--grade" hidden>
+				<option value="" selected>Grade</option>
+				<option value="premium">Premium</option>
+				<option value="low-premium">LP</option>
+				<option value="1a">#1A</option>
+				<option value="1">#1</option>
+				<option value="low-1">Low #1</option>
+				<option value="standard">Standard</option>
+				<option value="economy">Economy</option>
+			</select>
 
 			<select id="siksika-reportedBy" class="inventory__field inventory__field--select inventory__field--reported-by"
 				required>
