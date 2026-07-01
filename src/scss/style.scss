@@ -704,7 +704,14 @@ body.page--dragging .shed__bay-exit {
 }
 
 #location-olds .shed__bay-label--olds,
-#location-olds .shed__bay-exit {
+#location-siksika .shed__bay-label,
+#location-simply .shed__bay-label {
+	display: none;
+}
+
+#location-olds .shed__bay-exit,
+#location-siksika .shed__bay-exit,
+#location-simply .shed__bay-exit {
 	display: flex;
 	justify-content: space-between;
 	align-items: baseline;
@@ -713,21 +720,21 @@ body.page--dragging .shed__bay-exit {
 	padding: 0 4px;
 	white-space: nowrap;
 	line-height: 1.1;
-}
-
-#location-olds .shed__bay-exit {
 	margin-top: 6px;
 	min-height: 16px;
 }
 
-#location-olds .shed__bay-num {
+#location-siksika .shed__bay-exit,
+#location-simply .shed__bay-exit {
+	justify-content: center;
+}
+
+#location-olds .shed__bay-num,
+#location-siksika .shed__bay-num,
+#location-simply .shed__bay-num {
 	font-size: 0.85rem;
 	font-weight: 600;
 	color: var(--text-muted);
-}
-
-#location-olds .shed__bay-label--olds {
-	display: none;
 }
 
 .hay-stack {
