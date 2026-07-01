@@ -2024,12 +2024,21 @@ function getSavedShedForLocation(locationId) {
 	return config.defaultShed;
 }
 
+function updateCrmLocBadge(locationId) {
+	const nameEl = document.getElementById("crmLocBadgeName");
+	if (!nameEl) return;
+	const label = getLocationConfig(locationId).label;
+	nameEl.textContent = label;
+	nameEl.setAttribute("aria-label", `Current location: ${label}`);
+}
+
 function setActiveLocation(locationId, btn) {
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((tabBtn) => {
 		tabBtn.classList.toggle("location-tabs__btn--active", tabBtn.dataset.location === locationId);
 	});
 	setCurrentLocationId(locationId);
 	saveLocationPreference(locationId);
+	updateCrmLocBadge(locationId);
 
 	document.querySelectorAll(".location-panel").forEach((panel) => {
 		const isActive = panel.id === `location-${locationId}`;

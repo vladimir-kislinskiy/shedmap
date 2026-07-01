@@ -60,6 +60,29 @@
 	margin-left: auto;
 }
 
+.theme-crm .crm-topbar-start {
+	display: inline-flex;
+	align-items: center;
+	gap: 12px;
+	min-width: 0;
+	flex: 0 1 auto;
+}
+
+.theme-crm .crm-current-loc {
+	min-width: 0;
+	max-width: min(180px, 36vw);
+	padding-left: 12px;
+	border-left: 1px solid var(--border-color);
+	font-family: var(--font-heading);
+	font-size: 1rem;
+	font-weight: 600;
+	line-height: 1.2;
+	color: var(--text-heading);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
 .theme-crm .inventory-settings {
 	display: none;
 }

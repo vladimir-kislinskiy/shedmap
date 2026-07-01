@@ -30,9 +30,12 @@
 	<header class="page-hero">
 		<h1 class="visually-hidden">Shed map</h1>
 		<div class="auth-bar auth-bar--guest" id="authBar">
-			<button type="button" id="crmMenuToggle" class="crm-menu-toggle" aria-label="Toggle controls panel">
-				<span class="crm-menu-toggle__icon" aria-hidden="true"></span>
-			</button>
+			<div class="crm-topbar-start">
+				<button type="button" id="crmMenuToggle" class="crm-menu-toggle" aria-label="Toggle controls panel">
+					<span class="crm-menu-toggle__icon" aria-hidden="true"></span>
+				</button>
+				<span class="crm-current-loc" id="crmLocBadgeName" aria-label="Current location: Olds">Olds</span>
+			</div>
 			<div class="auth-bar__actions">
 				<div class="auth-bar__status">
 					<button type="button" class="theme-switch" id="crmThemeSwitch" role="switch" aria-checked="false"
