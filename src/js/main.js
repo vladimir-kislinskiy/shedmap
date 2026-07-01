@@ -419,7 +419,8 @@ function syncGradeFieldVisibility(type = getScopedElement("hayType")?.value || "
 	const gradeEl = getScopedElement("stackGrade", locationId);
 	if (!gradeEl) return;
 
-	const show = isGradeEligibleType(type);
+	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
+	const show = !rejected && isGradeEligibleType(type);
 	gradeEl.hidden = !show;
 
 	if (!show) {
@@ -539,7 +540,6 @@ function fillFormFromStack(stackEl) {
 
 	setCurrentLocationId(locationId);
 	getScopedElement("hayType", locationId).value = type;
-	syncGradeFieldVisibility(type, locationId);
 
 	const isNoTags = contract === NO_TAGS_CONTRACT;
 	const noTagsCheck = getScopedElement("noTagsCheck", locationId);
@@ -562,6 +562,8 @@ function fillFormFromStack(stackEl) {
 
 	const stackGradeEl = getScopedElement("stackGrade", locationId);
 	if (stackGradeEl) stackGradeEl.value = stackEl.dataset.grade || "";
+
+	syncGradeFieldVisibility(type, locationId);
 
 	const tabBtn = locQuery(`.shed-tabs__btn[data-subtab$="${shed}-shed-tab"]`, locationId);
 	if (tabBtn) {
@@ -702,7 +704,9 @@ function handleHay() {
 	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
 	const separateStack = getScopedElement("separateStackCheck", locationId)?.checked ?? false;
 	const stackComment = normalizeStackComment(getScopedElement("stackComment", locationId)?.value || "");
-	const stackGrade = normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
+	const stackGrade = rejected
+		? ""
+		: normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
 
 	if (!reportedBy) {
 		alert("Please select who reported this change (or N/A).");
@@ -866,7 +870,7 @@ function handleHay() {
 
 		const sourceGrade = foundSource.dataset.grade || "";
 		const sourceComment = foundSource.dataset.comment || "";
-		const transferGrade = stackGrade || sourceGrade;
+		const transferGrade = rejected ? "" : stackGrade || sourceGrade;
 		const transferComment = stackComment || sourceComment;
 
 		const newSourceCount = currentSourceBales - baleCount;
@@ -891,7 +895,7 @@ function handleHay() {
 			updateHayStack(existingDest, type, contract, newDestCount);
 			if (rejected) applyStackRejected(existingDest, true);
 			if (transferComment) applyStackComment(existingDest, transferComment);
-			if (transferGrade) applyStackGrade(existingDest, transferGrade);
+			applyStackGrade(existingDest, transferGrade);
 		} else {
 			const stack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
 				rejected,
@@ -973,7 +977,7 @@ function handleHay() {
 			updateHayStack(existingStack, type, contract, newCount);
 			if (rejected) applyStackRejected(existingStack, true);
 			if (stackComment) applyStackComment(existingStack, stackComment);
-			if (stackGrade) applyStackGrade(existingStack, stackGrade);
+			applyStackGrade(existingStack, stackGrade);
 		} else {
 			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
 				rejected,
@@ -2274,6 +2278,10 @@ function initInventoryForm(locationId = getCurrentLocation()) {
 
 	getScopedElement("hayType", locationId)?.addEventListener("change", (e) => {
 		syncGradeFieldVisibility(e.target.value, locationId);
+	});
+
+	getScopedElement("rejectCheck", locationId)?.addEventListener("change", () => {
+		syncGradeFieldVisibility(getScopedElement("hayType", locationId)?.value || "", locationId);
 	});
 
 	getScopedElement("noTagsCheck", locationId)?.addEventListener("change", () => syncNoTagsState(locationId));
