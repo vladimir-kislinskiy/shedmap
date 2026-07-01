@@ -333,11 +333,13 @@ function ensureStackFitsContent(stackEl) {
 
 	if (requiredHeight <= renderedHeight + 1) {
 		stackEl.style.removeProperty("min-height");
+		stackEl.style.removeProperty("height");
 		delete stackEl.dataset.contentMinHeight;
 		return false;
 	}
 
 	stackEl.style.minHeight = `${requiredHeight}px`;
+	stackEl.style.height = "auto";
 	stackEl.dataset.contentMinHeight = String(requiredHeight);
 	return true;
 }
@@ -345,6 +347,7 @@ function ensureStackFitsContent(stackEl) {
 function finalizeBayStackLayout(bayStackEl) {
 	getBayStacks(bayStackEl).forEach((stack) => {
 		stack.style.removeProperty("min-height");
+		stack.style.removeProperty("height");
 		delete stack.dataset.contentMinHeight;
 	});
 	applyBayStackAreaBudget(bayStackEl);
@@ -361,7 +364,8 @@ function getStackAbsoluteHeightPx(stack, bayStackEl) {
 	const pct = getStackHeightPercent(bales, getIsleMaxBales(isle, locationId), areaBudget, bayMax);
 	const pctHeight = Math.round((pct / 100) * areaBudget);
 	const minHeight = parseFloat(stack.dataset.contentMinHeight) || 0;
-	return Math.max(pctHeight, minHeight);
+	const actualHeight = stack.offsetHeight || 0;
+	return Math.max(pctHeight, minHeight, actualHeight);
 }
 
 function measureStacksBlockHeight(stacks, bayStackEl) {
@@ -525,6 +529,7 @@ export function setStackHeight(stackEl, baleCount, maxBales) {
 	const pct = getStackHeightPercent(baleCount, maxBales, areaBudget, bayMax);
 	stackEl.style.setProperty("--stack-height", String(pct));
 	stackEl.style.removeProperty("min-height");
+	stackEl.style.removeProperty("height");
 	delete stackEl.dataset.contentMinHeight;
 }
 
