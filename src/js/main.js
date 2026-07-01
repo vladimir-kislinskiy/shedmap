@@ -1949,14 +1949,14 @@ function getSavedLocationId() {
 	try {
 		const saved = localStorage.getItem(LOCATION_STORAGE_KEY);
 		if (saved && LOCATION_IDS.includes(saved)) return saved;
-	} catch {}
+	} catch (e) {}
 	return OLDS_LOCATION_ID;
 }
 
 function saveLocationPreference(locationId) {
 	try {
 		localStorage.setItem(LOCATION_STORAGE_KEY, locationId);
-	} catch {}
+	} catch (e) {}
 }
 
 const MAIN_TAB_STORAGE_KEY = "hayShedMainTab";
@@ -1967,21 +1967,21 @@ function getSavedMainTab() {
 	try {
 		const saved = localStorage.getItem(MAIN_TAB_STORAGE_KEY);
 		if (saved && MAIN_TAB_IDS.includes(saved)) return saved;
-	} catch {}
+	} catch (e) {}
 	return "Sheds";
 }
 
 function saveMainTabPreference(tabId) {
 	try {
 		localStorage.setItem(MAIN_TAB_STORAGE_KEY, tabId);
-	} catch {}
+	} catch (e) {}
 }
 
 function getSavedShedTabs() {
 	try {
 		const parsed = JSON.parse(localStorage.getItem(SHED_TAB_STORAGE_KEY) || "null");
 		if (parsed && typeof parsed === "object") return parsed;
-	} catch {}
+	} catch (e) {}
 	return {};
 }
 
@@ -1991,7 +1991,7 @@ function saveShedTabPreference(locationId, shed) {
 		const all = getSavedShedTabs();
 		all[locationId] = shed;
 		localStorage.setItem(SHED_TAB_STORAGE_KEY, JSON.stringify(all));
-	} catch {}
+	} catch (e) {}
 }
 
 function getSavedShedForLocation(locationId) {
@@ -2305,7 +2305,7 @@ let crmStatsScheduled = false;
 function saveCrmCollapsed(collapsed) {
 	try {
 		localStorage.setItem(CRM_COLLAPSED_STORAGE_KEY, collapsed ? "1" : "0");
-	} catch {}
+	} catch (e) {}
 }
 
 function openCrmSidebar() {
@@ -2497,13 +2497,13 @@ function initCrmTheme() {
 	let dark = false;
 	try {
 		dark = localStorage.getItem(CRM_DARK_STORAGE_KEY) === "1";
-	} catch {}
+	} catch (e) {}
 	applyDark(dark);
 	darkSwitch?.addEventListener("click", () => {
 		const next = !document.body.classList.contains("theme-dark");
 		try {
 			localStorage.setItem(CRM_DARK_STORAGE_KEY, next ? "1" : "0");
-		} catch {}
+		} catch (e) {}
 		applyDark(next);
 	});
 

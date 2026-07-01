@@ -1,12 +1,4 @@
-<script>
-	(function () {
-		var root = document.documentElement;
-		root.classList.add("theme-crm");
-		if (window.localStorage && localStorage.getItem("uiCrmDark") === "1") {
-			root.classList.add("theme-dark");
-		}
-	})();
-</script>
+<script>window.localStorage&&localStorage.getItem("uiCrmDark")==="1"&&document.documentElement.classList.add("theme-dark");</script>
 <style>
 	html {
 		background-color: #eef1f5;

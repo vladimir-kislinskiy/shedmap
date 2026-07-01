@@ -1,16 +1,8 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="theme-crm">
 @include('partials/head.html', { 'title': 'Shed map' })
 
-<body class="page page--view-only">
-	<script>
-		(function () {
-			document.body.classList.add("theme-crm", "crm-collapsed");
-			if (window.localStorage && localStorage.getItem("uiCrmDark") === "1") {
-				document.body.classList.add("theme-dark");
-			}
-		})();
-	</script>
+<body class="page page--view-only theme-crm crm-collapsed">
 	<aside class="crm-sidebar" id="crmSidebar" aria-label="Inventory controls">
 		<div class="crm-sidebar__loc" id="crmLocSlot">
 			<nav class="location-tabs" aria-label="Location">
