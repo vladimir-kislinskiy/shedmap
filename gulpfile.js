@@ -164,7 +164,7 @@ const htmlInclude = () => {
 					collapseWhitespace: true,
 					removeComments: true,
 					minifyCSS: true,
-					minifyJS: true,
+					minifyJS: false,
 				}),
 			),
 		)

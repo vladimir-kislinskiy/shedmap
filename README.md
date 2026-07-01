@@ -81,7 +81,7 @@ Add or update mappings in `src/js/auth.js` → `USERS` (and the same emails in `
 
 1. **Disable public sign-up:** Firebase Console → Authentication → Settings → **User account creation** → disable *Allow users to sign up* (wording may vary). Only create users manually in the Users tab.
 2. **Deploy database rules** after any change: `firebase deploy --only database`
-3. **API key referrers** in Google Cloud: `localhost`, `*.netlify.app`, your domain.
+3. **API key referrers** in Google Cloud: `localhost`, `127.0.0.1`, `*.netlify.app`, `*.firebaseapp.com`, `*.web.app`, and any custom domain.
 4. Use strong unique passwords for each team account.
 
 Firebase config is **not** stored in source code. Set `FIREBASE_*` in `.env` (local) and Netlify environment variables (production).
@@ -89,7 +89,7 @@ Firebase config is **not** stored in source code. Set `FIREBASE_*` in `.env` (lo
 If GitHub flagged an exposed API key:
 
 1. **Rotate** the key in [Google Cloud Console](https://console.cloud.google.com/apis/credentials) → select the Firebase API key → Regenerate (or create a new key and update Firebase).
-2. **Restrict** the key: Application restrictions → HTTP referrers → add your domains (`localhost`, `*.netlify.app`, custom domain).
+2. **Restrict** the key: Application restrictions → HTTP referrers → add your domains (`localhost`, `127.0.0.1`, `*.netlify.app`, `https://YOUR-PROJECT.firebaseapp.com/*`, `https://YOUR-PROJECT.web.app/*`, custom domain).
 3. Update `.env` and Netlify env vars with the new key.
 4. Push this repo change so the key is no longer in `src/js/main.js`. Old commits may still contain it; rotation limits the damage.
 

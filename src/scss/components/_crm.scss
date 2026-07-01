@@ -29,8 +29,7 @@
 }
 
 .theme-dark .auth-action:hover,
-.theme-dark
-	.location-tabs__btn:not(.location-tabs__btn--active):hover {
+.theme-dark .location-tabs__btn:not(.location-tabs__btn--active):hover {
 	color: var(--text-main);
 	background-color: var(--color-surface-hover);
 }
@@ -233,6 +232,7 @@
 	gap: 10px;
 	padding-top: 24px;
 	border-top: 1px solid var(--border-color);
+	margin-bottom: 50px;
 }
 
 .theme-crm .crm-sidebar__controls .inventory__form {

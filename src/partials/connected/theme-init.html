@@ -2,11 +2,9 @@
 	(function () {
 		var root = document.documentElement;
 		root.classList.add("theme-crm");
-		try {
-			if (localStorage.getItem("uiCrmDark") === "1") {
-				root.classList.add("theme-dark");
-			}
-		} catch (e) {}
+		if (window.localStorage && localStorage.getItem("uiCrmDark") === "1") {
+			root.classList.add("theme-dark");
+		}
 	})();
 </script>
 <style>
