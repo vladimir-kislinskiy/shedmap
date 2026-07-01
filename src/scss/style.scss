@@ -169,7 +169,7 @@ h3 {
 
 .tabs__panel {
 	display: none;
-	padding: clamp(16px, 3vw, 30px);
+	padding: clamp(12px, 2.5vw, 25px);
 	background: var(--card-bg);
 	backdrop-filter: blur(20px);
 	border-radius: var(--radius-lg);
