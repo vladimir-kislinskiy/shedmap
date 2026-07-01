@@ -62,7 +62,7 @@ body {
 	min-height: 100vh;
 }
 
-.page-hero {
+.page__header {
 	width: 100%;
 	flex-shrink: 0;
 }
@@ -1367,7 +1367,7 @@ body.page--offline .inventory__form {
 	border-bottom: none;
 }
 
-.page-footer {
+.page__footer {
 	display: flex;
 	align-items: center;
 	justify-content: flex-end;
@@ -1388,7 +1388,7 @@ body.page--offline .inventory__form {
 	width: 100%;
 	background: transparent;
 
-	a.page-footer__link {
+	a.page__footer-link {
 		font-size: inherit;
 		color: var(--text-muted);
 		text-decoration: none;

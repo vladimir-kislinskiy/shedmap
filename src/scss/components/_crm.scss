@@ -1,12 +1,12 @@
 .crm-sidebar,
 .crm-stats,
-.crm-menu-toggle {
+.auth-bar__menu-toggle {
 	display: none;
 }
 
 .theme-crm {
 	--crm-sidebar-w: 320px;
-	--crm-topbar-h: 64px;
+	--page-header-h: 64px;
 	--crm-gutter: clamp(12px, 2vw, 20px);
 }
 
@@ -34,7 +34,7 @@
 	background-color: var(--color-surface-hover);
 }
 
-.theme-crm .page-hero {
+.theme-crm .page__header {
 	position: sticky;
 	top: 0;
 	z-index: 60;
@@ -44,7 +44,7 @@
 	display: flex;
 	align-items: center;
 	gap: clamp(8px, 1.5vw, 16px);
-	min-height: var(--crm-topbar-h);
+	min-height: var(--page-header-h);
 	padding: 0 clamp(12px, 2vw, 20px);
 	background: var(--color-surface);
 	backdrop-filter: none;
@@ -60,7 +60,7 @@
 	margin-left: auto;
 }
 
-.theme-crm .crm-topbar-start {
+.theme-crm .auth-bar__start {
 	display: inline-flex;
 	align-items: center;
 	gap: 12px;
@@ -68,7 +68,7 @@
 	flex: 0 1 auto;
 }
 
-.theme-crm .crm-current-loc {
+.theme-crm .auth-bar__location {
 	min-width: 0;
 	max-width: min(180px, 36vw);
 	padding-left: 12px;
@@ -97,7 +97,7 @@
 	height: 15px;
 }
 
-.theme-crm .crm-menu-toggle {
+.theme-crm .auth-bar__menu-toggle {
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -111,13 +111,13 @@
 	cursor: pointer;
 }
 
-.theme-crm .crm-menu-toggle:hover {
+.theme-crm .auth-bar__menu-toggle:hover {
 	background: var(--color-surface-hover);
 }
 
-.crm-menu-toggle__icon,
-.crm-menu-toggle__icon::before,
-.crm-menu-toggle__icon::after {
+.auth-bar__menu-icon,
+.auth-bar__menu-icon::before,
+.auth-bar__menu-icon::after {
 	display: block;
 	width: 18px;
 	height: 2px;
@@ -125,22 +125,22 @@
 	background: var(--text-main);
 }
 
-.crm-menu-toggle__icon {
+.auth-bar__menu-icon {
 	position: relative;
 }
 
-.crm-menu-toggle__icon::before,
-.crm-menu-toggle__icon::after {
+.auth-bar__menu-icon::before,
+.auth-bar__menu-icon::after {
 	content: "";
 	position: absolute;
 	left: 0;
 }
 
-.crm-menu-toggle__icon::before {
+.auth-bar__menu-icon::before {
 	top: -6px;
 }
 
-.crm-menu-toggle__icon::after {
+.auth-bar__menu-icon::after {
 	top: 6px;
 }
 
@@ -148,7 +148,7 @@
 	display: flex;
 	flex-direction: column;
 	position: fixed;
-	top: var(--crm-topbar-h);
+	top: var(--page-header-h);
 	left: 0;
 	bottom: 0;
 	z-index: 55;
@@ -352,6 +352,60 @@
 }
 
 @media (max-width: 768px) {
+	.theme-crm {
+		--page-header-h: 48px;
+	}
+
+	.theme-crm .auth-bar {
+		min-height: var(--page-header-h);
+		padding: 0 12px;
+		gap: 8px;
+	}
+
+	.theme-crm .auth-bar__start {
+		gap: 8px;
+	}
+
+	.theme-crm .auth-bar__menu-toggle {
+		width: 30px;
+		height: 30px;
+		border-radius: var(--ctrl-radius);
+	}
+
+	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon,
+	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::before,
+	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::after {
+		width: 14px;
+	}
+
+	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::before {
+		top: -5px;
+	}
+
+	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::after {
+		top: 5px;
+	}
+
+	.theme-crm .auth-bar__location {
+		padding-left: 8px;
+		max-width: min(140px, 32vw);
+		font-family: inherit;
+		font-size: clamp(0.75rem, 2vw, 0.95rem);
+		font-weight: 600;
+		line-height: 1.2;
+	}
+
+	.theme-crm .theme-switch {
+		width: 30px;
+		height: 30px;
+	}
+
+	.theme-crm .theme-switch__icons,
+	.theme-crm .theme-switch__icon {
+		width: 17px;
+		height: 17px;
+	}
+
 	.theme-crm .crm-sidebar input.inventory__field {
 		font-size: 16px;
 		-webkit-text-size-adjust: 100%;
@@ -443,11 +497,11 @@
 	}
 }
 
-.theme-crm .page-footer {
+.theme-crm .page__footer {
 	padding-left: calc(var(--crm-sidebar-w) + var(--crm-gutter));
 }
 
-.theme-crm.crm-collapsed .page-footer {
+.theme-crm.crm-collapsed .page__footer {
 	padding-left: var(--crm-gutter);
 }
 
@@ -681,9 +735,13 @@
 }
 
 @media (max-width: 900px) {
-	.theme-crm .page__wrapper,
-	.theme-crm .page-footer {
+	.theme-crm .page__wrapper {
+		padding: var(--crm-gutter) var(--crm-gutter) 0;
+	}
+
+	.theme-crm .page__footer {
 		padding-left: var(--crm-gutter);
+		padding-right: var(--crm-gutter);
 	}
 
 	.theme-crm .crm-sidebar {
