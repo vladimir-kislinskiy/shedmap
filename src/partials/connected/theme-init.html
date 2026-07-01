@@ -1,0 +1,20 @@
+<script>
+	(function () {
+		var root = document.documentElement;
+		root.classList.add("theme-crm");
+		try {
+			if (localStorage.getItem("uiCrmDark") === "1") {
+				root.classList.add("theme-dark");
+			}
+		} catch (e) {}
+	})();
+</script>
+<style>
+	html {
+		background-color: #eef1f5;
+	}
+
+	html.theme-dark {
+		background-color: #21262d;
+	}
+</style>

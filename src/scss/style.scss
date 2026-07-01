@@ -240,7 +240,7 @@ h3 {
 }
 
 .inventory-settings:hover {
-	background-color: rgba(252, 249, 244, 0.85);
+	background-color: var(--color-surface-hover);
 	border-color: var(--border-color);
 }
 
@@ -486,7 +486,7 @@ body.page--view-only .inventory__form {
 	flex-wrap: nowrap;
 	justify-content: center;
 	align-items: stretch;
-	background-color: rgba(252, 249, 244, 0.45);
+	background-color: var(--color-surface-muted);
 	margin: 0 auto clamp(12px, 2vw, 20px) auto;
 	width: 100%;
 	max-width: min(500px, 100%);
@@ -505,7 +505,7 @@ body.page--view-only .inventory__form {
 
 .shed-tabs__btn:not(.shed-tabs__btn--active):hover {
 	color: var(--text-main);
-	background-color: rgba(252, 249, 244, 0.45);
+	background-color: var(--color-surface-muted);
 }
 
 .shed-tabs__btn--active {
@@ -1254,9 +1254,9 @@ body.page--dragging .shed__bay-stack {
 .sync-banner {
 	margin: 0;
 	padding: 10px 16px;
-	background: #fff4df;
-	border-bottom: 1px solid #e8c98d;
-	color: #6a4d12;
+	background: var(--color-primary-soft);
+	border-bottom: 1px solid var(--border-color-strong);
+	color: var(--text-main);
 }
 
 .sync-banner[hidden] {
@@ -1418,7 +1418,7 @@ body.page--offline .inventory__form {
 	row-gap: clamp(8px, 2vw, 12px);
 	width: 100%;
 	padding: clamp(10px, 2vw, 14px) clamp(12px, 3vw, 24px);
-	background: rgba(252, 249, 244, 0.96);
+	background: var(--color-surface-glass);
 	backdrop-filter: blur(10px);
 	border: none;
 	border-bottom: 1px solid var(--border-color);
@@ -1484,7 +1484,7 @@ body.page--offline .inventory__form {
 
 .location-tabs__btn:not(.location-tabs__btn--active):hover {
 	color: var(--text-main);
-	background-color: rgba(252, 249, 244, 0.65);
+	background-color: var(--color-surface-hover);
 }
 
 .location-tabs__btn--active {
@@ -1573,7 +1573,7 @@ body.page--offline .inventory__form {
 }
 
 .auth-action:hover {
-	background-color: rgba(252, 249, 244, 0.65);
+	background-color: var(--color-surface-hover);
 }
 
 .auth-action:active {

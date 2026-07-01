@@ -2,35 +2,36 @@
 	--font-primary: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	--font-heading: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
-	--bg-page: #e8e2d6;
-	--bg-gradient: linear-gradient(135deg, #f5f0e8 0%, #e8e2d6 100%);
-	--color-surface: #fffefb;
-	--color-surface-muted: #faf6ef;
-	--color-surface-hover: #f3ede3;
-	--color-surface-glass: rgba(252, 249, 244, 0.82);
-	--card-bg: rgba(252, 249, 244, 0.92);
-	--card-shadow: 0 10px 30px rgba(60, 48, 32, 0.06);
+	--bg-page: #eef1f5;
+	--bg-gradient: linear-gradient(135deg, #f4f6f9 0%, #eef1f5 100%);
+	--color-surface: #ffffff;
+	--color-surface-muted: #f6f8fa;
+	--color-surface-hover: #eef1f5;
+	--color-surface-glass: rgba(255, 255, 255, 0.85);
+	--card-bg: #ffffff;
+	--card-shadow:
+		0 1px 3px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04);
 
-	--color-primary: #6d7b4e;
-	--color-primary-hover: #5a6640;
-	--color-primary-light: #a8b48c;
-	--color-primary-focus: rgba(109, 123, 78, 0.2);
-	--color-primary-shadow: rgba(109, 123, 78, 0.22);
-	--color-primary-shadow-strong: rgba(109, 123, 78, 0.3);
-	--color-primary-soft: rgba(109, 123, 78, 0.12);
+	--color-primary: #1f3a5f;
+	--color-primary-hover: #16304f;
+	--color-primary-light: #4f6b8f;
+	--color-primary-focus: rgba(31, 58, 95, 0.18);
+	--color-primary-shadow: rgba(31, 58, 95, 0.25);
+	--color-primary-shadow-strong: rgba(31, 58, 95, 0.32);
+	--color-primary-soft: rgba(31, 58, 95, 0.1);
 
-	--text-main: #3c352c;
-	--text-muted: #7a7268;
-	--text-heading: #2f2923;
-	--text-placeholder: #a9a093;
+	--text-main: #1e293b;
+	--text-muted: #64748b;
+	--text-heading: #0f172a;
+	--text-placeholder: #94a3b8;
 
-	--border-color: rgba(196, 181, 160, 0.75);
-	--border-color-strong: #cfc4b4;
+	--border-color: #e2e8f0;
+	--border-color-strong: #cbd5e1;
 
-	--color-bay-bg: #faf6ef;
-	--color-bay-bg-hover: #f0e9dc;
-	--color-bay-border: #ddd4c4;
-	--color-bay-border-hover: #cfc4b4;
+	--color-bay-bg: #f6f8fa;
+	--color-bay-bg-hover: #eef1f5;
+	--color-bay-border: #e2e8f0;
+	--color-bay-border-hover: #cbd5e1;
 
 	--color-alfalfa-solid: #588f66;
 	--color-alfalfa: linear-gradient(135deg, #588f66 0%, #78ad84 100%);
@@ -74,13 +75,13 @@
 	--ctrl-bar-gap: clamp(0.125rem, 0.08rem + 0.12vw, 0.25rem);
 	--ctrl-bar-radius: clamp(0.5625rem, 0.48rem + 0.35vw, 1rem);
 
-	--color-badge-text: #7a5c2e;
-	--color-badge-bg: #f0e4cc;
+	--color-badge-text: #1f3a5f;
+	--color-badge-bg: #e2e8f0;
 	--color-error: #a84d48;
 	--color-drop-target: #b55a55;
-	--color-overlay: rgba(47, 41, 35, 0.45);
-	--color-row-hover: #f5f0e8;
-	--color-on-primary: #fffef9;
+	--color-overlay: rgba(15, 23, 42, 0.45);
+	--color-row-hover: #f1f5f9;
+	--color-on-primary: #ffffff;
 
 	--radius-lg: 16px;
 	--radius-md: 10px;
@@ -92,4 +93,42 @@
 	--scrollbar-track: transparent;
 	--scrollbar-thumb: var(--border-color-strong);
 	--scrollbar-thumb-hover: var(--text-muted);
+}
+
+:root.theme-dark {
+	--bg-page: #21262d;
+	--bg-gradient: linear-gradient(135deg, #262c34 0%, #1d2228 100%);
+	--color-surface: #2b313a;
+	--color-surface-muted: #242a32;
+	--color-surface-hover: #333b45;
+	--color-surface-glass: rgba(43, 49, 58, 0.85);
+	--card-bg: #2b313a;
+	--card-shadow: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.3);
+
+	--color-primary: #3d5a80;
+	--color-primary-hover: #4a6a93;
+	--color-primary-light: #6b86ab;
+	--color-primary-focus: rgba(107, 134, 171, 0.32);
+	--color-primary-shadow: rgba(0, 0, 0, 0.45);
+	--color-primary-shadow-strong: rgba(0, 0, 0, 0.55);
+	--color-primary-soft: rgba(107, 134, 171, 0.16);
+
+	--text-main: #dce3ec;
+	--text-muted: #94a3b8;
+	--text-heading: #f1f5f9;
+	--text-placeholder: #6b7686;
+
+	--border-color: #3a424d;
+	--border-color-strong: #4b5563;
+
+	--color-bay-bg: #2b313a;
+	--color-bay-bg-hover: #333b45;
+	--color-bay-border: #3a424d;
+	--color-bay-border-hover: #4b5563;
+
+	--color-row-hover: #2f3640;
+	--color-on-primary: #ffffff;
+	--color-badge-text: #cbd5e1;
+	--color-badge-bg: #3a424d;
+	--color-overlay: rgba(0, 0, 0, 0.55);
 }
