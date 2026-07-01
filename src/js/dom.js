@@ -639,7 +639,7 @@ export function restoreStackPosition(stackEl, origin) {
 
 export const STACK_GRADES = [
 	{ id: "premium", label: "Premium" },
-	{ id: "low-premium", label: "Low Premium" },
+	{ id: "low-premium", label: "LP" },
 	{ id: "1a", label: "#1A" },
 	{ id: "1", label: "#1" },
 	{ id: "low-1", label: "Low #1" },

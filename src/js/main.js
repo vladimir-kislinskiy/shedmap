@@ -427,19 +427,34 @@ function syncGradeFieldVisibility(type = getScopedElement("hayType")?.value || "
 	}
 }
 
+function resetSelectToDefault(selectEl) {
+	if (!selectEl) return;
+	if (selectEl.querySelector('option[value=""]')) {
+		selectEl.value = "";
+	} else {
+		selectEl.selectedIndex = 0;
+	}
+}
+
 function resetInventoryFormFields() {
 	const locationId = getCurrentLocation();
-	const reportedBy = getScopedElement("reportedBy", locationId);
-	if (reportedBy) reportedBy.value = "";
+	const config = getLocationConfig(locationId);
 
-	const hayType = getScopedElement("hayType", locationId);
-	if (hayType) hayType.value = "";
+	resetSelectToDefault(getScopedElement("reportedBy", locationId));
+	resetSelectToDefault(getScopedElement("hayType", locationId));
+	resetSelectToDefault(getScopedElement("actionSelect", locationId));
 
 	const contractNumber = getScopedElement("contractNumber", locationId);
-	if (contractNumber) contractNumber.value = "";
+	if (contractNumber) {
+		contractNumber.value = "";
+		contractNumber.disabled = false;
+	}
 
 	const baleCount = getScopedElement("baleCount", locationId);
-	if (baleCount) baleCount.value = "";
+	if (baleCount) {
+		baleCount.value = "";
+		baleCount.disabled = false;
+	}
 
 	const rejectCheck = getScopedElement("rejectCheck", locationId);
 	if (rejectCheck) rejectCheck.checked = false;
@@ -459,8 +474,11 @@ function resetInventoryFormFields() {
 
 	setIsleCheckboxes("both", locationId);
 
-	const actionSelect = getScopedElement("actionSelect", locationId);
-	if (actionSelect) actionSelect.value = "";
+	const shedSelect = getScopedElement("shedSelect", locationId);
+	if (shedSelect) {
+		shedSelect.value = config.defaultShed;
+		updateBaySelectForShed(config.defaultShed, null, locationId);
+	}
 
 	syncInventoryActionFields(locationId);
 	syncGradeFieldVisibility("", locationId);
