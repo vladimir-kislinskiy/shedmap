@@ -752,7 +752,7 @@ body.page--dragging .shed__bay-exit {
 	min-height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
 	);
-	overflow: hidden;
+	overflow: visible;
 	margin-bottom: 0;
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
@@ -809,8 +809,7 @@ body.page--dragging .shed__bay-exit {
 
 .hay-stack__type,
 .hay-stack__contract,
-.hay-stack__grade,
-.hay-stack__count {
+.hay-stack__grade {
 	display: block;
 	width: 100%;
 	max-width: 100%;
@@ -977,6 +976,7 @@ body.page--dragging .shed__bay-stack {
 	font-weight: inherit;
 	line-height: 1.15;
 	text-align: center;
+	overflow: hidden;
 }
 
 .hay-stack__comment-word {
@@ -1004,8 +1004,14 @@ body.page--dragging .shed__bay-stack {
 }
 
 .hay-stack__count {
+	display: block;
+	flex-shrink: 0;
+	width: max-content;
+	max-width: 100%;
+	overflow: visible;
 	font-weight: 800;
 	font-size: 1em;
+	line-height: 1.2;
 	margin-top: 0;
 }
 
