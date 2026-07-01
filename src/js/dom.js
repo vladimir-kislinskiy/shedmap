@@ -1004,7 +1004,7 @@ export function createLogRow(entry) {
 		dateTime: entry.dateTime,
 		person: entry.person,
 		reportedBy: entry.reportedBy || "—",
-		action: entry.note ? `${entry.action} — ${entry.note}` : entry.action,
+		action: entry.action,
 		type: entry.type,
 		contract: entry.contract,
 		bay: entry.bay ?? entry.row,

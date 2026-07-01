@@ -609,7 +609,7 @@ body.page--dragging .shed__bay-exit {
 	min-height: calc(var(--stack-area-height) + 20px);
 	background: var(--color-bay-bg);
 	border: 2px solid var(--color-bay-border);
-	padding: 10px 6px;
+	padding: 6px 6px 10px 6px;
 	border-radius: var(--radius-md) var(--radius-md) 0 0;
 	display: flex;
 	flex-direction: column;
