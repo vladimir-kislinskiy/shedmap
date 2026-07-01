@@ -576,18 +576,16 @@ export function repairBayLayout(bayStackEl) {
 		});
 	});
 
-	const hasIsleFront = !!bayStackEl.querySelector(".shed__isle > .hay-stack--bay-front");
-	bayStackEl.classList.toggle("shed__bay-stack--isle-front", hasIsleFront);
+	bayStackEl.classList.remove("shed__bay-stack--isle-front");
 
 	islesRow.classList.remove("shed__front-anchor");
 	bayStackEl
 		.querySelectorAll(":scope > .hay-stack")
 		.forEach((el) => el.classList.remove("shed__front-anchor"));
 
-	if (hasIsleFront) {
-		const firstFullFront = bayStackEl.querySelector(":scope > .hay-stack--bay-front");
-		(firstFullFront || islesRow).classList.add("shed__front-anchor");
-	}
+	bayStackEl
+		.querySelectorAll(":scope > .hay-stack--bay-front")
+		.forEach((el) => el.classList.add("shed__front-anchor"));
 }
 
 export function repairAllBayLayouts() {
@@ -682,8 +680,14 @@ export function normalizeStackComment(value = "") {
 }
 
 export function isBayFrontComment(comment = "") {
-	const normalized = normalizeStackComment(comment).toLowerCase();
-	return normalized === "fr" || normalized === "bay front";
+	const words = String(comment).trim().toLowerCase().split(/\s+/).filter(Boolean);
+	if (words.includes("fr")) return true;
+
+	for (let i = 0; i < words.length - 1; i++) {
+		if (words[i] === "bay" && words[i + 1] === "front") return true;
+	}
+
+	return false;
 }
 
 export function sanitizeCommentInput(value = "") {
@@ -770,6 +774,7 @@ export function applyStackComment(stackEl, comment = "") {
 
 	const bayStack = stackEl.closest(".shed__bay-stack");
 	if (bayStack) {
+		repairBayLayout(bayStack);
 		finalizeBayStackLayout(bayStack);
 	}
 }
