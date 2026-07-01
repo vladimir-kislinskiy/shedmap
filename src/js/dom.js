@@ -546,6 +546,19 @@ function getStackIsle(stackEl) {
 	return "both";
 }
 
+function orderFrontStacksLast(container) {
+	if (!container) return;
+
+	const stacks = [...container.children].filter((el) => el.classList.contains("hay-stack"));
+	if (stacks.length < 2) return;
+
+	const regular = stacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
+	const front = stacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
+	if (!front.length) return;
+
+	[...regular, ...front].forEach((stack) => container.appendChild(stack));
+}
+
 export function repairBayLayout(bayStackEl) {
 	const islesRow = bayStackEl.querySelector(".shed__isles");
 	if (!islesRow) return;
@@ -574,6 +587,11 @@ export function repairBayLayout(bayStackEl) {
 			stack.classList.add(`hay-stack--isle-${isleNum}`);
 			isleEl.appendChild(stack);
 		});
+	});
+
+	orderFrontStacksLast(bayStackEl);
+	["1", "2"].forEach((isleNum) => {
+		orderFrontStacksLast(bayStackEl.querySelector(`.shed__isle--${isleNum}`));
 	});
 
 	bayStackEl.classList.remove("shed__bay-stack--isle-front");
