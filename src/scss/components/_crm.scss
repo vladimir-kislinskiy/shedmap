@@ -497,6 +497,7 @@
 }
 
 .theme-crm .page__wrapper {
+	padding: var(--crm-gutter) var(--crm-gutter) 0;
 	padding-left: calc(var(--crm-sidebar-w) + var(--crm-gutter));
 }
 
