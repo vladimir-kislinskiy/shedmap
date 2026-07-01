@@ -677,53 +677,61 @@ export function applyStackGrade(stackEl, gradeId = "") {
 }
 
 export function normalizeStackComment(value = "") {
-	const words = String(value).trim().split(/\s+/).filter(Boolean).slice(0, 2);
+	const words = String(value).trim().split(/\s+/).filter(Boolean).slice(0, 3);
 	return words.join(" ");
 }
 
 export function isBayFrontComment(comment = "") {
-	return normalizeStackComment(comment).toLowerCase() === "bay front";
+	const normalized = normalizeStackComment(comment).toLowerCase();
+	return normalized === "fr" || normalized === "bay front";
 }
 
 export function sanitizeCommentInput(value = "") {
 	let v = String(value).replace(/^\s+/, "").replace(/\s+/g, " ");
 	const parts = v.split(" ");
-	const first = parts[0] || "";
+	const words = parts.filter(Boolean).slice(0, 3);
 
-	if (parts.length === 1) {
-		return v.endsWith(" ") && first ? `${first} ` : first;
+	if (words.length === 0) return "";
+
+	const trailingSpace =
+		v.endsWith(" ") && parts.length > words.length && words.length < 3;
+
+	if (trailingSpace) {
+		return `${words.join(" ")} `.slice(0, 24);
 	}
 
-	const second = parts.slice(1).join("").replace(/\s/g, "").slice(0, 24);
-	return second ? `${first} ${second}`.slice(0, 24) : (v.endsWith(" ") && first ? `${first} ` : first);
+	return words.join(" ").slice(0, 24);
 }
 
 function renderStackCommentElement(commentEl, normalizedComment) {
 	const firstEl = commentEl.querySelector(".hay-stack__comment-word--first");
 	const secondEl = commentEl.querySelector(".hay-stack__comment-word--second");
+	const thirdEl = commentEl.querySelector(".hay-stack__comment-word--third");
+	const wordEls = [firstEl, secondEl, thirdEl];
 
 	if (!normalizedComment) {
 		commentEl.hidden = true;
-		if (firstEl) firstEl.textContent = "";
-		if (secondEl) {
-			secondEl.textContent = "";
-			secondEl.hidden = true;
-		}
+		wordEls.forEach((el) => {
+			if (!el) return;
+			el.textContent = "";
+			el.hidden = true;
+		});
 		return;
 	}
 
-	const [first, second] = normalizedComment.split(" ");
+	const words = normalizedComment.split(" ");
 
-	if (firstEl) firstEl.textContent = first;
-	if (secondEl) {
-		if (second) {
-			secondEl.textContent = second;
-			secondEl.hidden = false;
+	wordEls.forEach((el, index) => {
+		if (!el) return;
+		const word = words[index];
+		if (word) {
+			el.textContent = word;
+			el.hidden = false;
 		} else {
-			secondEl.textContent = "";
-			secondEl.hidden = true;
+			el.textContent = "";
+			el.hidden = true;
 		}
-	}
+	});
 
 	commentEl.hidden = false;
 }
