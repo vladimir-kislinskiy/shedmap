@@ -343,6 +343,10 @@ function ensureStackFitsContent(stackEl) {
 }
 
 function finalizeBayStackLayout(bayStackEl) {
+	getBayStacks(bayStackEl).forEach((stack) => {
+		stack.style.removeProperty("min-height");
+		delete stack.dataset.contentMinHeight;
+	});
 	applyBayStackAreaBudget(bayStackEl);
 	applyAllStackHeights(bayStackEl);
 	getBayStacks(bayStackEl).forEach((stack) => ensureStackFitsContent(stack));

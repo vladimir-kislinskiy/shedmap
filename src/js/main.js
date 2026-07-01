@@ -2339,6 +2339,7 @@ function openCrmSidebar() {
 	if (!document.body.classList.contains("theme-crm")) return;
 	document.body.classList.remove("crm-collapsed");
 	saveCrmCollapsed(false);
+	syncAllShedLayoutsAfterPaint();
 }
 
 const crmOriginalParents = new WeakMap();
@@ -2537,6 +2538,7 @@ function initCrmTheme() {
 	const toggleSidebar = () => {
 		const collapsed = document.body.classList.toggle("crm-collapsed");
 		saveCrmCollapsed(collapsed);
+		syncAllShedLayoutsAfterPaint();
 	};
 	collapseBtn?.addEventListener("click", toggleSidebar);
 	menuToggle?.addEventListener("click", toggleSidebar);
@@ -2546,6 +2548,7 @@ function initCrmTheme() {
 		if (!window.matchMedia("(max-width: 900px)").matches) return;
 		document.body.classList.add("crm-collapsed");
 		saveCrmCollapsed(true);
+		syncAllShedLayoutsAfterPaint();
 	});
 
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {

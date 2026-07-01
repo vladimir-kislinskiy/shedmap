@@ -752,7 +752,7 @@ body.page--dragging .shed__bay-exit {
 	min-height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
 	);
-	overflow: visible;
+	overflow: hidden;
 	margin-bottom: 0;
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
@@ -812,10 +812,11 @@ body.page--dragging .shed__bay-exit {
 .hay-stack__grade,
 .hay-stack__count {
 	display: block;
-	width: max-content;
+	width: 100%;
 	max-width: 100%;
 	white-space: nowrap;
-	overflow: visible;
+	overflow: hidden;
+	text-overflow: ellipsis;
 }
 
 body:not(.page--view-only) .hay-stack {
@@ -989,7 +990,8 @@ body.page--dragging .shed__bay-stack {
 }
 
 .hay-stack__comment-word:first-child:not(:last-child) {
-	white-space: nowrap;
+	white-space: normal;
+	overflow-wrap: anywhere;
 }
 
 .hay-stack__comment-word:last-child:not(:first-child) {
