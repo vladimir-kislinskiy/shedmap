@@ -359,6 +359,44 @@ function findRejectedStackInContainer(container, stackKey, excludeStack = null) 
 		) || null;
 }
 
+function stackIsInContainer(stackEl, container) {
+	if (!stackEl || !container) return false;
+	if (container.classList.contains("shed__isle")) {
+		return stackEl.parentElement === container;
+	}
+	return container.contains(stackEl);
+}
+
+function resolveTargetStack(container, stackKey, locationId, { shed, bay }) {
+	const selectedCandidates = [];
+
+	if (transferSource?.stackEl?.isConnected) {
+		selectedCandidates.push(transferSource.stackEl);
+	}
+
+	document.querySelectorAll(".hay-stack--selected").forEach((stackEl) => {
+		if (!selectedCandidates.includes(stackEl)) {
+			selectedCandidates.push(stackEl);
+		}
+	});
+
+	for (const stackEl of selectedCandidates) {
+		if (stackEl.dataset.stackKey !== stackKey) continue;
+
+		const bayStack = stackEl.closest(".shed__bay-stack");
+		if (!bayStack) continue;
+
+		const stackLocationId = bayStack.dataset.location || getCurrentLocation();
+		if (stackLocationId !== locationId) continue;
+		if (bayStack.dataset.shed !== shed || String(bayStack.dataset.bay) !== String(bay)) continue;
+		if (!stackIsInContainer(stackEl, container)) continue;
+
+		return stackEl;
+	}
+
+	return findStackInContainer(container, stackKey);
+}
+
 function getSelectedIsle(locationId = getCurrentLocation()) {
 	const isle1 = getScopedElement("isle1", locationId)?.checked;
 	const isle2 = getScopedElement("isle2", locationId)?.checked;
@@ -782,11 +820,7 @@ function handleHay() {
 		if (!isle) return;
 
 		const targetContainer = getIsleContainer(bayStackEl, isle);
-		let foundStack = findStackInContainer(targetContainer, stackKey);
-
-		if (!foundStack && transferSource?.stackEl?.isConnected && transferSource.locationId === locationId) {
-			foundStack = transferSource.stackEl;
-		}
+		const foundStack = resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
 
 		if (!foundStack) {
 			alert("No matching stack found in the selected isle. Check product, contract, shed, bay, and isle.");
@@ -1044,7 +1078,7 @@ function handleHay() {
 			return;
 		}
 
-		const existingStack = separateStack ? null : findStackInContainer(targetContainer, stackKey);
+		const existingStack = separateStack ? null : resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
 		const beforeSnap = captureStackSnapshot(existingStack);
 		let createdStack = null;
 
@@ -1088,7 +1122,7 @@ function handleHay() {
 		if (!isle) return;
 
 		const targetContainer = getIsleContainer(bayStackEl, isle);
-		const foundStack = findStackInContainer(targetContainer, stackKey);
+		const foundStack = resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
 
 		if (!foundStack) {
 			alert("No matching stack found in the selected isle. Check contract, hay type, and isle selection.");
