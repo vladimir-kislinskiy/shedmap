@@ -2850,7 +2850,12 @@ function initCrmTheme() {
 	const applyDark = (dark) => {
 		document.body.classList.toggle("theme-dark", dark);
 		document.documentElement.classList.toggle("theme-dark", dark);
-		if (darkSwitch) darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
+		if (darkSwitch) {
+			darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
+			const label = dark ? "Switch to light theme" : "Switch to dark theme";
+			darkSwitch.setAttribute("aria-label", label);
+			darkSwitch.title = label;
+		}
 	};
 	let dark = false;
 	try {
