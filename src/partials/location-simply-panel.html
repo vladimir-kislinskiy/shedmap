@@ -241,22 +241,30 @@
 					<option value="31">31</option>
 				</select>
 			</label>
+			<span class="reports__filter-or" aria-hidden="true">or</span>
+			<label class="log__filter reports__filter--search">
+				<span class="log__filter-label">Contract #</span>
+				<input type="search" id="simply-logContractSearch"
+					class="log__filter-input reports__contract-search"
+					placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
+			</label>
 			<button type="button" id="simply-logFilterReset" class="log__filter-reset">Reset</button>
 		</div>
 		<div class="log-table-wrap">
 			<table class="log-table">
 				<thead class="log-table__head">
 					<tr class="log-table__row">
-						<th class="log-table__cell log-table__cell--head">Date & Time</th>
-						<th class="log-table__cell log-table__cell--head">Changed By</th>
-						<th class="log-table__cell log-table__cell--head">Reported By</th>
-						<th class="log-table__cell log-table__cell--head">Action</th>
-						<th class="log-table__cell log-table__cell--head">Hay Type</th>
-						<th class="log-table__cell log-table__cell--head">Contract #</th>
+						<th class="log-table__cell log-table__cell--head">Shed</th>
 						<th class="log-table__cell log-table__cell--head">Bay</th>
 						<th class="log-table__cell log-table__cell--head">Isle</th>
-						<th class="log-table__cell log-table__cell--head">Shed</th>
+						<th class="log-table__cell log-table__cell--head">PRODUCT</th>
+						<th class="log-table__cell log-table__cell--head">Contract #</th>
 						<th class="log-table__cell log-table__cell--head">Bales</th>
+						<th class="log-table__cell log-table__cell--head">Action</th>
+						<th class="log-table__cell log-table__cell--head">Changed By</th>
+						<th class="log-table__cell log-table__cell--head">Reported By</th>
+						<th class="log-table__cell log-table__cell--head">Date & Time</th>
+						<th class="log-table__cell log-table__cell--head log-table__cell--undo">Undo</th>
 					</tr>
 				</thead>
 				<tbody class="log-table__body" id="simply-logBody"></tbody>

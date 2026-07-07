@@ -83,6 +83,22 @@ export async function loadAllCachedHayShedStates() {
 	return results;
 }
 
+export function sanitizeForFirebase(value) {
+	if (value === undefined) return undefined;
+	if (value === null || typeof value !== "object") return value;
+
+	if (Array.isArray(value)) {
+		return value.map((item) => sanitizeForFirebase(item));
+	}
+
+	const cleaned = {};
+	for (const [key, nested] of Object.entries(value)) {
+		if (nested === undefined) continue;
+		cleaned[key] = sanitizeForFirebase(nested);
+	}
+	return cleaned;
+}
+
 export function normalizeHayShedState(state, locationId = "olds") {
 	const config = getLocationConfig(locationId);
 	const sheds = { ...(state?.sheds && typeof state.sheds === "object" ? state.sheds : {}) };

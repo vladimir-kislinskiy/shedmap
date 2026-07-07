@@ -28,6 +28,31 @@ export function getHayTypeLabel(type) {
 	return HAY_TYPES.find((entry) => entry.id === type)?.label ?? capitalize(type.replace(/-/g, " "));
 }
 
+export function getHayTypeIdFromLabel(label = "") {
+	const normalized = String(label).trim();
+	if (!normalized) return null;
+
+	const exact = HAY_TYPES.find((entry) => entry.label === normalized);
+	if (exact) return exact.id;
+
+	const loose = HAY_TYPES.find((entry) => getHayTypeLabel(entry.id) === normalized);
+	return loose?.id ?? null;
+}
+
+export function captureStackSnapshot(stackEl) {
+	if (!stackEl?.isConnected) return null;
+
+	const { contract } = parseStackKey(stackEl.dataset.stackKey || "");
+	return {
+		type: getStackType(stackEl),
+		contract,
+		bales: parseInt(stackEl.dataset.bales, 10) || 0,
+		rejected: stackEl.dataset.rejected === "true",
+		grade: stackEl.dataset.grade || "",
+		comment: stackEl.dataset.comment || "",
+	};
+}
+
 export function getHayTypeStackLabel(type) {
 	const entry = HAY_TYPES.find((item) => item.id === type);
 	const label = entry?.label ?? capitalize(type.replace(/-/g, " "));
@@ -995,7 +1020,7 @@ export function createReportRow(entry, { showGrade = false, showProduct = false 
 	return row;
 }
 
-export function createLogRow(entry) {
+export function createLogRow(entry, { logIndex = null, canUndo = false } = {}) {
 	const tpl = document.getElementById("logRowTemplate");
 	if (!tpl) return null;
 
@@ -1017,6 +1042,18 @@ export function createLogRow(entry) {
 		const key = cell.dataset.field;
 		if (key in fields) cell.textContent = fields[key];
 	});
+
+	const undoCell = row.querySelector(".log-table__cell--undo");
+	const undoBtn = row.querySelector(".log__undo-btn");
+	if (undoCell && undoBtn) {
+		const showUndo = canUndo && entry.action !== "Undo" && logIndex !== null;
+		undoCell.classList.toggle("log-table__cell--undo-hidden", !showUndo);
+		if (showUndo) {
+			undoBtn.dataset.logIndex = String(logIndex);
+		} else {
+			delete undoBtn.dataset.logIndex;
+		}
+	}
 
 	return row;
 }

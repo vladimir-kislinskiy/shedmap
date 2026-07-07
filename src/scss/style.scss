@@ -635,6 +635,11 @@ body.page--dragging .shed__bay-exit {
 	pointer-events: none;
 }
 
+.shed__bay--disabled .shed__bay-stack:hover {
+	background: var(--color-bay-bg);
+	border-color: var(--color-bay-border);
+}
+
 .shed__isles {
 	display: flex;
 	flex: 1 1 auto;
@@ -1411,6 +1416,37 @@ body.page--offline .inventory__form {
 
 .log-table__body .log-table__row:last-child .log-table__cell {
 	border-bottom: none;
+}
+
+.log-table__cell--undo {
+	display: none;
+	white-space: nowrap;
+}
+
+.log-table__cell--undo.log-table__cell--undo-hidden {
+	display: none;
+}
+
+.page--log-undo .log-table__cell--undo:not(.log-table__cell--undo-hidden) {
+	display: table-cell;
+}
+
+.log__undo-btn {
+	height: 28px;
+	padding: 0 10px;
+	border: 1px solid var(--border-color);
+	border-radius: var(--radius-sm);
+	background: var(--color-surface);
+	color: var(--text-main);
+	font-size: 0.72rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.log__undo-btn:hover {
+	background: var(--color-row-hover);
+	border-color: var(--color-primary);
+	color: var(--color-primary);
 }
 
 .page__footer {

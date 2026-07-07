@@ -23,6 +23,7 @@ export const LOCATIONS = {
 			north: "North Shed",
 			east: "East Shed",
 		},
+		disabledBays: { east: [8, 9, 10, 11] },
 		defaultShed: "west",
 	},
 	[SIKSIKA_LOCATION_ID]: {

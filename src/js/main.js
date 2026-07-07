@@ -15,6 +15,7 @@ import {
 	loadAllCachedHayShedStates,
 	validateHayShedState,
 	normalizeHayShedState,
+	sanitizeForFirebase,
 	isLegacyHayShedRoot,
 } from "./state-cache.js";
 import { LOCATION_IDS, getLocationConfig, getLocationFirebasePath, OLDS_LOCATION_ID, getMaxBalesPerBay, getMaxBalesPerIsle } from "./locations.js";
@@ -45,6 +46,8 @@ import {
 	getBayStacks,
 	getBayFillPercent,
 	getHayTypeLabel,
+	getHayTypeIdFromLabel,
+	captureStackSnapshot,
 	getIsleContainer,
 	getStackType,
 	getStackGradeLabel,
@@ -691,13 +694,35 @@ function makeStackDraggable(stackEl) {
 				const { contract } = parseStackKey(movedStack.dataset.stackKey || "");
 				const bales = parseInt(movedStack.dataset.bales, 10) || 0;
 				const shed = bayStack.dataset.shed;
-				const bay = getBayDisplayNumberForLocation(shed, bayStack.dataset.bay, locationId);
+				const bay = bayStack.dataset.bay;
+				const bayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
 				const typeLabel = getHayTypeLabel(type);
+				const stackKey = movedStack.dataset.stackKey || formatStackKey(type, contract);
+				const snap = captureStackSnapshot(movedStack);
 				const note = fromIsle !== toIsle
 					? `${typeLabel} ${contract} (${bales} bales) moved from ${formatIsleLabel(fromIsle)} to ${formatIsleLabel(toIsle)}`
 					: `${typeLabel} ${contract} (${bales} bales) reordered in ${formatIsleLabel(toIsle)}`;
 
-				logChange(currentPerson, "Move", type, contract, bay, toIsle, shed, bales, note, locationId);
+				logChange(
+					currentPerson,
+					"Move",
+					type,
+					contract,
+					bayLabel,
+					toIsle,
+					shed,
+					bales,
+					note,
+					locationId,
+					fromIsle !== toIsle
+						? {
+								undo: [
+									makeUndoPatch(shed, bay, fromIsle, stackKey, snap, null),
+									makeUndoPatch(shed, bay, toIsle, stackKey, null, snap),
+								],
+							}
+						: undefined,
+				);
 			}
 
 			setCurrentLocationId(locationId);
@@ -771,6 +796,7 @@ function handleHay() {
 		const stackBayEl = foundStack.closest(".shed__bay-stack") || bayStackEl;
 		const foundIsle = foundStack.dataset.isle || "both";
 		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
+		const beforeSnap = captureStackSnapshot(foundStack);
 
 		updateHayStack(foundStack, type, contract, currentBales);
 		applyStackRejected(foundStack, rejected);
@@ -781,6 +807,7 @@ function handleHay() {
 		if (rejected) updateNotes.push("Rejected");
 		if (stackGrade) updateNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) updateNotes.push(stackComment);
+		const afterSnap = captureStackSnapshot(foundStack);
 		logChange(
 			currentPerson,
 			"Update",
@@ -791,6 +818,19 @@ function handleHay() {
 			stackBayEl.dataset.shed,
 			currentBales,
 			updateNotes.join(" — ") || "Stack updated",
+			locationId,
+			{
+				undo: [
+					makeUndoPatch(
+						stackBayEl.dataset.shed,
+						stackBayEl.dataset.bay,
+						foundIsle,
+						formatStackKey(type, contract),
+						beforeSnap,
+						afterSnap,
+					),
+				],
+			},
 		);
 
 		updateBayStats(stackBayEl);
@@ -892,6 +932,17 @@ function handleHay() {
 		const transferGrade = rejected ? "" : stackGrade || sourceGrade;
 		const transferComment = stackComment || sourceComment;
 
+		let destBeforeStack = null;
+		if (!separateStack) {
+			if (isRejectSplitInPlace) {
+				destBeforeStack = findRejectedStackInContainer(destContainer, stackKey, foundSource);
+			} else {
+				destBeforeStack = findStackInContainer(destContainer, stackKey);
+			}
+		}
+		const sourceBeforeSnap = captureStackSnapshot(foundSource);
+		const destBeforeSnap = captureStackSnapshot(destBeforeStack);
+
 		const newSourceCount = currentSourceBales - baleCount;
 		if (newSourceCount === 0) {
 			foundSource.remove();
@@ -900,14 +951,8 @@ function handleHay() {
 		}
 		updateBayStats(sourceBayStackEl);
 
-		let existingDest = null;
-		if (separateStack) {
-			existingDest = null;
-		} else if (isRejectSplitInPlace) {
-			existingDest = findRejectedStackInContainer(destContainer, stackKey, foundSource);
-		} else {
-			existingDest = findStackInContainer(destContainer, stackKey);
-		}
+		let existingDest = destBeforeStack;
+		let createdDestStack = null;
 
 		if (existingDest) {
 			const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
@@ -916,14 +961,17 @@ function handleHay() {
 			if (transferComment) applyStackComment(existingDest, transferComment);
 			applyStackGrade(existingDest, transferGrade);
 		} else {
-			const stack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
+			createdDestStack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
 				rejected,
 				comment: transferComment,
 				grade: transferGrade,
 			});
-			makeStackDraggable(stack);
+			makeStackDraggable(createdDestStack);
 		}
 		updateBayStats(destBayStackEl);
+
+		const sourceAfterSnap = foundSource.isConnected ? captureStackSnapshot(foundSource) : null;
+		const destAfterSnap = captureStackSnapshot(existingDest || createdDestStack);
 
 		const sourceBayLabel = getBayDisplayNumberForLocation(sourceShed, sourceBay, locationId);
 		const destBayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
@@ -945,6 +993,13 @@ function handleHay() {
 			shed,
 			baleCount,
 			transferNotes.join(" — "),
+			locationId,
+			{
+				undo: [
+					makeUndoPatch(sourceShed, sourceBay, sourceIsle, stackKey, sourceBeforeSnap, sourceAfterSnap),
+					makeUndoPatch(shed, bay, destIsle, stackKey, destBeforeSnap, destAfterSnap),
+				],
+			},
 		);
 
 		syncAllShedLayouts();
@@ -990,6 +1045,8 @@ function handleHay() {
 		}
 
 		const existingStack = separateStack ? null : findStackInContainer(targetContainer, stackKey);
+		const beforeSnap = captureStackSnapshot(existingStack);
+		let createdStack = null;
 
 		if (existingStack) {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;
@@ -998,19 +1055,32 @@ function handleHay() {
 			if (stackComment) applyStackComment(existingStack, stackComment);
 			applyStackGrade(existingStack, stackGrade);
 		} else {
-			const stack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
+			createdStack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
 				rejected,
 				comment: stackComment,
 				grade: stackGrade,
 			});
-			makeStackDraggable(stack);
+			makeStackDraggable(createdStack);
 		}
 
+		const afterSnap = captureStackSnapshot(existingStack || createdStack);
 		const addNotes = [];
 		if (rejected) addNotes.push("Rejected");
 		if (stackGrade) addNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) addNotes.push(stackComment);
-		logChange(currentPerson, "Add", type, contract, getBayDisplayNumberForLocation(shed, bay, locationId), isle, shed, baleCount, addNotes.join(" — "));
+		logChange(
+			currentPerson,
+			"Add",
+			type,
+			contract,
+			getBayDisplayNumberForLocation(shed, bay, locationId),
+			isle,
+			shed,
+			baleCount,
+			addNotes.join(" — "),
+			locationId,
+			{ undo: [makeUndoPatch(shed, bay, isle, stackKey, beforeSnap, afterSnap)] },
+		);
 	}
 
 	if (action === "remove") {
@@ -1035,13 +1105,32 @@ function handleHay() {
 			return;
 		}
 
+		if (baleCount === currentBales && !window.confirm(`Remove all ${currentBales} bales from this stack?`)) {
+			return;
+		}
+
+		const beforeSnap = captureStackSnapshot(foundStack);
+
 		if (newCount === 0) {
 			foundStack.remove();
 		} else {
 			updateHayStack(foundStack, foundType, contract, newCount);
 		}
 
-		logChange(currentPerson, "Remove", foundType, contract, getBayDisplayNumberForLocation(shed, bay, locationId), foundIsle, shed, baleCount);
+		const afterSnap = newCount === 0 ? null : captureStackSnapshot(foundStack);
+		logChange(
+			currentPerson,
+			"Remove",
+			foundType,
+			contract,
+			getBayDisplayNumberForLocation(shed, bay, locationId),
+			foundIsle,
+			shed,
+			baleCount,
+			"",
+			locationId,
+			{ undo: [makeUndoPatch(shed, bay, foundIsle, formatStackKey(foundType, contract), beforeSnap, afterSnap)] },
+		);
 	}
 
 	updateBayStats(bayStackEl);
@@ -1051,7 +1140,163 @@ function handleHay() {
 	resetInventoryForm();
 }
 
-function logChange(person, action, type, contract, bay, isle, shed, bales, note = "", locationId = getCurrentLocation()) {
+function canUndoChangeLog() {
+	return isAdminUser(currentUserEmail);
+}
+
+function makeUndoPatch(shedId, bayIndex, isle, stackKey, before, after) {
+	return { shedId, bayIndex: String(bayIndex), isle, stackKey, before, after };
+}
+
+function resolveShedIdFromLabel(label, locationId) {
+	const config = getLocationConfig(locationId);
+	const normalized = String(label || "").trim();
+	if (!normalized) return null;
+
+	const byLabel = config.sheds.find((shedId) => getShedLabel(shedId, locationId) === normalized);
+	if (byLabel) return byLabel;
+
+	return config.sheds.includes(normalized) ? normalized : null;
+}
+
+function resolveBayIndexFromDisplay(shedId, bayDisplay, locationId) {
+	const config = getLocationConfig(locationId);
+	const target = String(bayDisplay ?? "").trim();
+	if (!shedId || !target) return null;
+
+	for (let i = 0; i < config.bayCount; i++) {
+		if (getBayDisplayNumberForLocation(shedId, i, locationId) === target) {
+			return String(i);
+		}
+	}
+
+	return null;
+}
+
+function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, snapshot, locationId) {
+	const bayStackEl = getBayColumnEl(shedId, bayIndex, locationId);
+	if (!bayStackEl) return false;
+
+	const container = getIsleContainer(bayStackEl, isle);
+	const existing = findStackInContainer(container, stackKey);
+
+	if (!snapshot) {
+		existing?.remove();
+		updateBayStats(bayStackEl);
+		return true;
+	}
+
+	const { type, contract, bales, rejected, grade, comment } = snapshot;
+	if (existing) {
+		updateHayStack(existing, type, contract, bales);
+		applyStackRejected(existing, rejected);
+		applyStackComment(existing, comment);
+		applyStackGrade(existing, grade);
+	} else {
+		const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, comment, grade });
+		if (!stack) return false;
+		makeStackDraggable(stack);
+	}
+
+	updateBayStats(bayStackEl);
+	return true;
+}
+
+function applyUndoPatches(patches, locationId) {
+	for (const patch of patches) {
+		if (!applyStackSnapshotAt(patch.shedId, patch.bayIndex, patch.isle, patch.stackKey, patch.before, locationId)) {
+			return false;
+		}
+	}
+	return true;
+}
+
+function buildLegacyUndoPatches(entry, locationId) {
+	const action = String(entry.action || "");
+	const shedId = resolveShedIdFromLabel(entry.shed, locationId);
+	const bayIndex = resolveBayIndexFromDisplay(shedId, entry.bay, locationId);
+	const typeId = getHayTypeIdFromLabel(entry.type);
+	const isle = entry.isle || "both";
+	const bales = parseInt(entry.bales, 10) || 0;
+	const contract = entry.contract || "";
+
+	if (!shedId || bayIndex === null || !typeId || !contract || !bales) return null;
+
+	const stackKey = formatStackKey(typeId, contract);
+	const bayStackEl = getBayColumnEl(shedId, bayIndex, locationId);
+	if (!bayStackEl) return null;
+
+	const container = getIsleContainer(bayStackEl, isle);
+	const current = findStackInContainer(container, stackKey);
+	const afterSnap = captureStackSnapshot(current);
+
+	if (action === "Remove") {
+		const beforeSnap = afterSnap
+			? { ...afterSnap, bales: afterSnap.bales + bales }
+			: { type: typeId, contract, bales, rejected: false, grade: "", comment: "" };
+		return [makeUndoPatch(shedId, bayIndex, isle, stackKey, beforeSnap, afterSnap)];
+	}
+
+	if (action === "Add") {
+		const beforeSnap = afterSnap
+			? { ...afterSnap, bales: Math.max(0, afterSnap.bales - bales) }
+			: null;
+		if (beforeSnap && beforeSnap.bales === 0) {
+			return [makeUndoPatch(shedId, bayIndex, isle, stackKey, null, afterSnap)];
+		}
+		return [makeUndoPatch(shedId, bayIndex, isle, stackKey, beforeSnap?.bales ? beforeSnap : null, afterSnap)];
+	}
+
+	return null;
+}
+
+function undoChangeLogEntry(locationId, logIndex) {
+	if (!canUndoChangeLog()) return;
+
+	const log = getLocationChangeLog(locationId);
+	const entry = log[logIndex];
+	if (!entry || entry.action === "Undo") return;
+
+	const patches = entry.undo?.patches ?? buildLegacyUndoPatches(entry, locationId);
+	if (!patches?.length) {
+		alert("Cannot undo this entry — no restore data is available.");
+		return;
+	}
+
+	const summary = `${entry.action} — ${entry.contract} (${entry.bales} bales)`;
+	if (!window.confirm(`Undo this change?\n\n${summary}\n\nThe shed map will be restored to how it was before this entry.`)) {
+		return;
+	}
+
+	setCurrentLocationId(locationId);
+	if (!applyUndoPatches(patches, locationId)) {
+		alert("Failed to undo this change. The map may be in an inconsistent state.");
+		return;
+	}
+
+	syncAllShedLayouts();
+	log.splice(logIndex, 1);
+
+	const typeId = getHayTypeIdFromLabel(entry.type) || entry.type;
+	logChange(
+		currentPerson,
+		"Undo",
+		typeId,
+		entry.contract,
+		entry.bay,
+		entry.isle,
+		resolveShedIdFromLabel(entry.shed, locationId) || entry.shed,
+		entry.bales,
+		`Reverted ${entry.action} by ${entry.person}`,
+		locationId,
+	);
+
+	saveState(locationId);
+	updateReportsTable(locationId);
+	updateCrmStats();
+}
+
+function logChange(person, action, type, contract, bay, isle, shed, bales, note = "", locationId = getCurrentLocation(), { undo } = {}) {
 	const d = new Date();
 	const date = `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 	const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit", hour12: true });
@@ -1069,6 +1314,7 @@ function logChange(person, action, type, contract, bay, isle, shed, bales, note 
 		shed: getShedLabel(shed, locationId),
 		bales,
 		note,
+		...(undo ? { undo: { patches: undo } } : {}),
 	});
 	updateLogTable(locationId);
 }
@@ -1105,10 +1351,17 @@ function getLogFilterValues(locationId = getCurrentLocation()) {
 		year: Number(getScopedElement("logFilterYear", locationId)?.value) || null,
 		month: monthVal === "all" ? null : Number(monthVal),
 		day: dayVal === "all" ? null : Number(dayVal),
+		contractQuery: getScopedElement("logContractSearch", locationId)?.value.trim().toLowerCase() ?? "",
 	};
 }
 
 function matchesLogFilter(entry, filters) {
+	const contractQuery = filters.contractQuery ?? "";
+	if (contractQuery) {
+		const contract = String(entry.contract || "").toLowerCase();
+		return contract.includes(contractQuery);
+	}
+
 	const parts = getLogEntryDateParts(entry);
 	if (!parts || !filters.year) return false;
 
@@ -1131,7 +1384,7 @@ function updateLogTable(locationId = getCurrentLocation()) {
 		const entry = locationLog[i];
 		if (!matchesLogFilter(entry, filters)) continue;
 
-		const row = createLogRow(entry);
+		const row = createLogRow(entry, { logIndex: i, canUndo: canUndoChangeLog() });
 		if (row) logBody.appendChild(row);
 	}
 }
@@ -1211,6 +1464,7 @@ function resetLogFilters(locationId = getCurrentLocation()) {
 	const yearEl = getScopedElement("logFilterYear", locationId);
 	const monthEl = getScopedElement("logFilterMonth", locationId);
 	const dayEl = getScopedElement("logFilterDay", locationId);
+	const contractEl = getScopedElement("logContractSearch", locationId);
 	if (!yearEl || !monthEl || !dayEl) return;
 
 	populateLogFilterOptions(locationId);
@@ -1220,6 +1474,7 @@ function resetLogFilters(locationId = getCurrentLocation()) {
 	monthEl.value = String(now.getMonth() + 1);
 	updateLogDayOptions(locationId);
 	dayEl.value = "all";
+	if (contractEl) contractEl.value = "";
 }
 
 function getGradeSortIndex(gradeId = "") {
@@ -1520,25 +1775,49 @@ function initLogFilters(locationId = getCurrentLocation()) {
 	const yearEl = getScopedElement("logFilterYear", locationId);
 	const monthEl = getScopedElement("logFilterMonth", locationId);
 	const dayEl = getScopedElement("logFilterDay", locationId);
+	const contractEl = getScopedElement("logContractSearch", locationId);
 	const resetBtn = getScopedElement("logFilterReset", locationId);
 
 	const refresh = () => updateLogTable(locationId);
 
 	yearEl?.addEventListener("change", () => {
+		if (contractEl?.value.trim()) contractEl.value = "";
 		updateLogDayOptions(locationId);
 		refresh();
 	});
 
 	monthEl?.addEventListener("change", () => {
+		if (contractEl?.value.trim()) contractEl.value = "";
 		updateLogDayOptions(locationId);
 		refresh();
 	});
 
-	dayEl?.addEventListener("change", refresh);
+	dayEl?.addEventListener("change", () => {
+		if (contractEl?.value.trim()) contractEl.value = "";
+		refresh();
+	});
+
+	contractEl?.addEventListener("input", () => {
+		const formatted = formatContractSearch(contractEl.value);
+		if (contractEl.value !== formatted) {
+			contractEl.value = formatted;
+			contractEl.setSelectionRange(formatted.length, formatted.length);
+		}
+		refresh();
+	});
 
 	resetBtn?.addEventListener("click", () => {
 		resetLogFilters(locationId);
 		updateLogTable(locationId);
+	});
+
+	const logBody = getScopedElement("logBody", locationId);
+	logBody?.addEventListener("click", (event) => {
+		const btn = event.target.closest(".log__undo-btn");
+		if (!btn || !canUndoChangeLog()) return;
+		const logIndex = Number(btn.dataset.logIndex);
+		if (!Number.isFinite(logIndex)) return;
+		undoChangeLogEntry(locationId, logIndex);
 	});
 
 	updateLogTable(locationId);
@@ -1743,13 +2022,19 @@ async function saveState(locationId = getCurrentLocation()) {
 	if (!canEdit(locationId)) return;
 
 	const state = collectAppState(locationId);
+	const payload = sanitizeForFirebase(stampStateForWrite(state));
 
 	try {
-		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(state));
+		await set(ref(db, getLocationFirebasePath(locationId)), payload);
+		hasRemoteStateByLocation[locationId] = true;
 	} catch (err) {
 		console.error(`Error saving ${locationId} state:`, err);
+		const reason =
+			err?.code === "PERMISSION_DENIED"
+				? "Permission denied. Sign in with an authorized account."
+				: err?.message || "Unknown server error.";
 		alert(
-			"Failed to save changes to the server. Data is cached on this device but may not appear on other devices until sync works.",
+			`Failed to save changes to the server (${reason}). Data is cached on this device but may not appear on other devices until sync works.`,
 		);
 	}
 
@@ -1779,6 +2064,7 @@ function setInventoryControlsOpen(open) {
 function refreshEditAccess() {
 	const editable = canEdit();
 	document.body.classList.toggle("page--view-only", !editable);
+	document.body.classList.toggle("page--log-undo", canUndoChangeLog());
 
 	const toggleBtn = document.getElementById("toggleControls");
 	if (toggleBtn) toggleBtn.hidden = !editable;
@@ -1787,6 +2073,7 @@ function refreshEditAccess() {
 	updateStackInteractionState();
 
 	syncCrmFormVisibility();
+	LOCATION_IDS.forEach((locationId) => updateLogTable(locationId));
 }
 
 function setEditMode(authenticated, person = null, email = null) {
