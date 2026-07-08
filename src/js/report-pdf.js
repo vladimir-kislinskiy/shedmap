@@ -11,6 +11,8 @@ export function openReportPdf({
 	productLabel,
 	rows,
 	showGrade = false,
+	showProduct = false,
+	headingLabel = null,
 	gradeFilter = "all",
 	includeRejected = false,
 	generatedAt = new Date(),
@@ -31,7 +33,7 @@ export function openReportPdf({
 	cursorY += 22;
 	doc.setFont("helvetica", "normal");
 	doc.setFontSize(11);
-	doc.text(`Product: ${productLabel}`, marginX, cursorY);
+	doc.text(headingLabel || `Product: ${productLabel}`, marginX, cursorY);
 
 	cursorY += 16;
 	if (showGrade && gradeFilter !== "all") {
@@ -46,7 +48,7 @@ export function openReportPdf({
 
 	if (rows.length === 0) {
 		cursorY += 24;
-		doc.text(`No ${productLabel} found in any shed.`, marginX, cursorY);
+		doc.text(`No results found.`, marginX, cursorY);
 	} else {
 		const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 		cursorY += 20;
@@ -56,11 +58,20 @@ export function openReportPdf({
 			cursorY,
 		);
 
-		const head = showGrade
-			? [["Contract #", "Grade", "Shed", "Bay", "Bales"]]
-			: [["Contract #", "Shed", "Bay", "Bales"]];
+		let head;
+		if (showProduct) {
+			head = [["Contract #", "Product", "Shed", "Bay", "Bales"]];
+		} else if (showGrade) {
+			head = [["Contract #", "Grade", "Shed", "Bay", "Bales"]];
+		} else {
+			head = [["Contract #", "Shed", "Bay", "Bales"]];
+		}
+
 		const body = rows.map((row) => {
 			const bales = row.rejected ? `${row.bales} - Rej.` : String(row.bales);
+			if (showProduct) {
+				return [row.contract, row.product || "—", row.shed, row.bay, bales];
+			}
 			if (showGrade) {
 				const grade = getStackGradeLabel(row.grade) || "—";
 				return [row.contract, grade, row.shed, row.bay, bales];
@@ -99,15 +110,16 @@ export function openReportPdf({
 					? PDF_REJECTED_ROW
 					: PDF_ROW_FILL;
 			},
-			columnStyles: showGrade
+			columnStyles: showProduct || showGrade
 				? { 4: { halign: "right" } }
 				: { 3: { halign: "right" } },
 		});
 	}
 
-	const slug = productLabel.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+	const slugSource = headingLabel || productLabel;
+	const slug = slugSource.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 	const datePart = generatedAt.toISOString().slice(0, 10);
-	const filename = `${slug || "product"}-inventory-${datePart}.pdf`;
+	const filename = `${slug || "inventory"}-inventory-${datePart}.pdf`;
 	const blobUrl = doc.output("bloburl");
 	const pdfWindow = window.open(blobUrl, "_blank", "noopener,noreferrer");
 

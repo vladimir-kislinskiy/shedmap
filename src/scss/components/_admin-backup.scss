@@ -27,12 +27,16 @@
 
 .adt-btn {
 	box-sizing: border-box;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
 	height: 42px;
 	min-height: 42px;
-	padding: 10px 16px;
+	padding: 0 16px;
 	font-size: 15px;
 	font-family: var(--font-primary);
 	font-weight: 600;
+	line-height: 1;
 	color: var(--text-main);
 	background: var(--color-surface);
 	border: 1px solid var(--border-color-strong);
@@ -46,14 +50,19 @@
 	color: var(--color-primary);
 }
 
-.adt-btn--alt {
-	color: var(--color-primary);
+.theme-dark .adt-btn:hover {
+	border-color: var(--color-primary-light);
+	color: var(--color-primary-light);
 }
 
 .adt-status {
 	margin: 12px 0 0;
 	font-size: 0.9rem;
 	color: var(--color-primary);
+}
+
+.theme-dark .adt-status {
+	color: var(--color-primary-light);
 }
 
 .adt-status[hidden] {

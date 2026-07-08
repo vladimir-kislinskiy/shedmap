@@ -61,7 +61,7 @@ function buildPanel() {
 		<p>Download a JSON snapshot of sheds and the change log, or restore from a file.</p>
 		<div class="adt-actions">
 			<button type="button" id="adt-export" class="adt-btn">Download backup</button>
-			<button type="button" id="adt-import" class="adt-btn adt-btn--alt">Restore from file</button>
+			<button type="button" id="adt-import" class="adt-btn">Restore from file</button>
 			<input type="file" id="adt-file" accept=".json,application/json" hidden>
 		</div>
 		<p class="adt-status" id="adt-status" hidden role="status"></p>

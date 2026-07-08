@@ -1393,7 +1393,7 @@ function matchesLogFilter(entry, filters) {
 	const contractQuery = filters.contractQuery ?? "";
 	if (contractQuery) {
 		const contract = String(entry.contract || "").toLowerCase();
-		return contract.includes(contractQuery);
+		if (!contract.includes(contractQuery)) return false;
 	}
 
 	const parts = getLogEntryDateParts(entry);
@@ -1656,14 +1656,14 @@ function setReportProductColumnVisible(show, locationId = getCurrentLocation()) 
 	});
 }
 
-function syncReportPrintButton(productId, locationId = getCurrentLocation()) {
+function syncReportPrintButton(enabled, locationId = getCurrentLocation()) {
 	const printBtn = getScopedElement("reportPrintPdf", locationId);
 	if (!printBtn) return;
-	printBtn.disabled = !productId;
-	printBtn.setAttribute("aria-disabled", productId ? "false" : "true");
-	printBtn.title = productId
+	printBtn.disabled = !enabled;
+	printBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
+	printBtn.title = enabled
 		? "Open current report as PDF in a new tab"
-		: "Select a product to export a PDF report";
+		: "Select a product or search a contract to export a PDF report";
 }
 
 function updateReportsTable(locationId = getCurrentLocation()) {
@@ -1686,7 +1686,6 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		syncReportGradeFilterVisibility("", locationId);
 		setReportGradeColumnVisible(false, locationId);
 		setReportProductColumnVisible(true, locationId);
-		syncReportPrintButton("", locationId);
 
 		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
 		const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
@@ -1695,6 +1694,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 			reportSummary.hidden = true;
 			reportTableWrap.hidden = true;
 			reportEmpty.hidden = false;
+			syncReportPrintButton(false, locationId);
 			const rejectNote = includeRejected ? "" : " (rejected excluded)";
 			reportEmpty.textContent = `No contracts matching “${contractQuery}”${rejectNote}.`;
 			return;
@@ -1704,6 +1704,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		reportSummary.hidden = false;
 		reportSummary.textContent = `“${contractQuery}”: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
 		reportTableWrap.hidden = false;
+		syncReportPrintButton(true, locationId);
 
 		rows.forEach((entry) => {
 			const row = createReportRow(entry, { showGrade: false, showProduct: true });
@@ -1722,14 +1723,14 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
 		reportEmpty.textContent = "Select a product or search a contract to view inventory locations.";
-		syncReportPrintButton("", locationId);
+		syncReportPrintButton(false, locationId);
 		return;
 	}
 
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 	const productLabel = getHayTypeLabel(productId);
-	syncReportPrintButton(productId, locationId);
+	syncReportPrintButton(true, locationId);
 
 	if (rows.length === 0) {
 		reportSummary.hidden = true;
@@ -1755,17 +1756,38 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 
 async function printCurrentReportPdf(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
+	const searchEl = getScopedElement("reportContractSearch", locationId);
 	const productId = filterEl?.value ?? "";
-	if (!productId) {
-		alert("Select a product to export a PDF report.");
+	const contractQuery = searchEl?.value.trim() ?? "";
+
+	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+	const { openReportPdf } = await import("./report-pdf.js");
+
+	if (contractQuery) {
+		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+		if (rows.length === 0) {
+			alert(`No contracts matching “${contractQuery}” to export.`);
+			return;
+		}
+		openReportPdf({
+			productLabel: contractQuery,
+			headingLabel: `Contract search: ${contractQuery}`,
+			rows,
+			showGrade: false,
+			showProduct: true,
+			includeRejected,
+		});
 		return;
 	}
 
-	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+	if (!productId) {
+		alert("Select a product or search a contract to export a PDF report.");
+		return;
+	}
+
 	const productLabel = getHayTypeLabel(productId);
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 
-	const { openReportPdf } = await import("./report-pdf.js");
 	openReportPdf({
 		productLabel,
 		rows,
@@ -1815,19 +1837,16 @@ function initLogFilters(locationId = getCurrentLocation()) {
 	const refresh = () => updateLogTable(locationId);
 
 	yearEl?.addEventListener("change", () => {
-		if (contractEl?.value.trim()) contractEl.value = "";
 		updateLogDayOptions(locationId);
 		refresh();
 	});
 
 	monthEl?.addEventListener("change", () => {
-		if (contractEl?.value.trim()) contractEl.value = "";
 		updateLogDayOptions(locationId);
 		refresh();
 	});
 
 	dayEl?.addEventListener("change", () => {
-		if (contractEl?.value.trim()) contractEl.value = "";
 		refresh();
 	});
 
