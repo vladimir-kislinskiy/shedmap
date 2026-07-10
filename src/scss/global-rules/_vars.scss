@@ -2,6 +2,10 @@
 	--font-primary: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 	--font-heading: 'Saira Semi Condensed', 'DMSans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 
+	--font-size-max: 14px;
+	--font-size-min: 11px;
+	--font-size-base: clamp(var(--font-size-min), 0.75rem + 0.3vw, var(--font-size-max));
+
 	--bg-page: #eef1f5;
 	--bg-gradient: linear-gradient(135deg, #f4f6f9 0%, #eef1f5 100%);
 	--color-surface: #ffffff;
@@ -64,7 +68,7 @@
 
 	--tabs-gutter: clamp(18px, 2.5vw, 22px);
 
-	--ctrl-font-size: clamp(0.8125rem, 0.75rem + 0.32vw, 0.9375rem);
+	--ctrl-font-size: clamp(12px, 0.72rem + 0.28vw, var(--font-size-max));
 	--ctrl-font-weight: 600;
 	--ctrl-line-height: 1.2;
 	--ctrl-pad-y: clamp(0.4375rem, 0.35rem + 0.28vw, 0.625rem);
@@ -93,6 +97,12 @@
 	--scrollbar-track: transparent;
 	--scrollbar-thumb: var(--border-color-strong);
 	--scrollbar-thumb-hover: var(--text-muted);
+
+	--bs-font-size: var(--font-size-base);
+	--bs-font-family: var(--font-primary);
+	--bs-font-weight: 400;
+	--bs-font-color: var(--text-main);
+	--bs-line-height: 1.4;
 }
 
 :root.theme-dark {

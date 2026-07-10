@@ -8,7 +8,7 @@
 
 #adt-root h3 {
 	margin: 0 0 8px;
-	font-size: 1rem;
+	font-size: var(--font-size-max);
 }
 
 #adt-root p {
@@ -33,7 +33,7 @@
 	height: 42px;
 	min-height: 42px;
 	padding: 0 16px;
-	font-size: 15px;
+	font-size: var(--font-size-max);
 	font-family: var(--font-primary);
 	font-weight: 600;
 	line-height: 1;

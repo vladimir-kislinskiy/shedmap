@@ -70,7 +70,7 @@
 	padding-left: 12px;
 	border-left: 1px solid var(--border-color);
 	font-family: var(--font-heading);
-	font-size: calc(1rem + 2px);
+	font-size: var(--font-size-max);
 	font-weight: 600;
 	line-height: 1.2;
 	color: var(--text-heading);
@@ -159,7 +159,7 @@
 	width: var(--crm-sidebar-w);
 	padding: 16px 14px;
 	gap: 14px;
-	font-size: 14px;
+	font-size: var(--font-size-max);
 	background: var(--color-surface);
 	border-right: 1px solid var(--border-color);
 	box-shadow: 2px 0 12px rgba(15, 23, 42, 0.06);
@@ -349,12 +349,12 @@
 .theme-crm .crm-sidebar .inventory__isle-option,
 .theme-crm .crm-sidebar .inventory__reject-option,
 .theme-crm .crm-sidebar .crm-sidebar__collapse {
-	font-size: 14px;
+	font-size: var(--font-size-max);
 }
 
 .theme-crm .crm-sidebar .inventory__field,
 .theme-crm .crm-sidebar .inventory__submit {
-	font-size: 14px;
+	font-size: var(--font-size-max);
 	transition: none;
 }
 
@@ -403,11 +403,7 @@
 		padding-left: 8px;
 		max-width: min(140px, 32vw);
 		font-family: inherit;
-		font-size: clamp(
-			calc(0.75rem + 2px),
-			calc(2vw + 2px),
-			calc(0.95rem + 2px)
-		);
+		font-size: clamp(var(--font-size-min), 2vw + 0.35rem, var(--font-size-max));
 		font-weight: 600;
 		line-height: 1.2;
 	}
@@ -424,13 +420,13 @@
 	}
 
 	.theme-crm .crm-sidebar input.inventory__field {
-		font-size: 16px;
+		font-size: var(--font-size-max);
 		-webkit-text-size-adjust: 100%;
 	}
 
 	.theme-crm .crm-sidebar input.inventory__field:focus,
 	.theme-crm .crm-sidebar input.inventory__field:focus-visible {
-		font-size: 16px;
+		font-size: var(--font-size-max);
 		box-shadow: none;
 		border-color: var(--color-primary);
 	}
@@ -513,6 +509,11 @@
 	.theme-crm .shed__bay {
 		flex: 1 0 130px;
 	}
+
+	.theme-crm #location-simply .shed__bay {
+		flex: 1 1 0;
+		min-width: 0;
+	}
 }
 
 .theme-crm .page__footer {
@@ -578,7 +579,7 @@
 
 .crm-card__value {
 	font-family: var(--font-heading);
-	font-size: 1.5rem;
+	font-size: var(--font-size-max);
 	font-weight: 700;
 	line-height: 1.1;
 	color: var(--text-heading);
@@ -676,7 +677,7 @@
 
 .crm-donut__value {
 	font-family: var(--font-heading);
-	font-size: 26px;
+	font-size: var(--font-size-max);
 	font-weight: 700;
 	line-height: 1;
 	color: var(--text-heading);
