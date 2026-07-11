@@ -358,6 +358,12 @@
 	transition: none;
 }
 
+.theme-crm .crm-sidebar .inventory__submit:hover,
+.theme-crm .crm-sidebar .inventory__submit:active {
+	transform: none;
+	box-shadow: 0 4px 6px var(--color-primary-shadow);
+}
+
 .theme-crm .crm-sidebar .inventory__field:focus,
 .theme-crm .crm-sidebar .inventory__field:focus-visible {
 	border-color: var(--color-primary);

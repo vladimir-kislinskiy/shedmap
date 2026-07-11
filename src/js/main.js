@@ -397,6 +397,53 @@ function resolveTargetStack(container, stackKey, locationId, { shed, bay }) {
 	return findStackInContainer(container, stackKey);
 }
 
+function resolveSelectedStack(locationId, { shed, bay, container } = {}) {
+	const selectedCandidates = [];
+
+	if (transferSource?.stackEl?.isConnected) {
+		selectedCandidates.push(transferSource.stackEl);
+	}
+
+	document.querySelectorAll(".hay-stack--selected").forEach((stackEl) => {
+		if (!selectedCandidates.includes(stackEl)) {
+			selectedCandidates.push(stackEl);
+		}
+	});
+
+	for (const stackEl of selectedCandidates) {
+		const bayStack = stackEl.closest(".shed__bay-stack");
+		if (!bayStack) continue;
+
+		const stackLocationId = bayStack.dataset.location || getCurrentLocation();
+		if (stackLocationId !== locationId) continue;
+		if (shed !== undefined && bayStack.dataset.shed !== shed) continue;
+		if (bay !== undefined && String(bayStack.dataset.bay) !== String(bay)) continue;
+		if (container && !stackIsInContainer(stackEl, container)) continue;
+
+		return stackEl;
+	}
+
+	return null;
+}
+
+function validateContractProductBinding(type, contract, locationId, excludeStack = null) {
+	if (!contract || contract === NO_TAGS_CONTRACT) return true;
+
+	for (const stack of locQueryAll(".hay-stack", locationId)) {
+		if (stack === excludeStack) continue;
+
+		const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
+		if (stackContract === contract && stackType !== type) {
+			alert(
+				`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot use it as ${getHayTypeLabel(type)}.`,
+			);
+			return false;
+		}
+	}
+
+	return true;
+}
+
 function getSelectedIsle(locationId = getCurrentLocation()) {
 	const isle1 = getScopedElement("isle1", locationId)?.checked;
 	const isle2 = getScopedElement("isle2", locationId)?.checked;
@@ -816,19 +863,45 @@ function handleHay() {
 	const stackKey = formatStackKey(type, contract);
 
 	if (action === "update") {
-		const isle = getSelectedIsle();
-		if (!isle) return;
-
-		const targetContainer = getIsleContainer(bayStackEl, isle);
-		const foundStack = resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
-
+		const foundStack = resolveSelectedStack(locationId, { shed, bay });
 		if (!foundStack) {
-			alert("No matching stack found in the selected isle. Check product, contract, shed, bay, and isle.");
+			alert("Select a stack on the map to update.");
 			return;
 		}
 
 		const stackBayEl = foundStack.closest(".shed__bay-stack") || bayStackEl;
+		const foundShed = stackBayEl.dataset.shed;
+		const foundBay = stackBayEl.dataset.bay;
 		const foundIsle = foundStack.dataset.isle || "both";
+		const targetContainer = getIsleContainer(stackBayEl, foundIsle);
+		const oldType = getStackType(foundStack);
+		const { contract: oldContract } = parseStackKey(foundStack.dataset.stackKey || "");
+		const newStackKey = formatStackKey(type, contract);
+		const identityChanged = oldType !== type || oldContract !== contract;
+
+		if (!validateContractProductBinding(type, contract, locationId, foundStack)) {
+			return;
+		}
+
+		const duplicateStack = findStackInContainer(targetContainer, newStackKey);
+		if (duplicateStack && duplicateStack !== foundStack) {
+			alert("A stack with this product and contract already exists in this isle.");
+			return;
+		}
+
+		if (identityChanged) {
+			const changeLines = [];
+			if (oldType !== type) {
+				changeLines.push(`Product: ${getHayTypeLabel(oldType)} → ${getHayTypeLabel(type)}`);
+			}
+			if (oldContract !== contract) {
+				changeLines.push(`Contract: ${oldContract} → ${contract}`);
+			}
+			if (!window.confirm(`Update this stack?\n\n${changeLines.join("\n")}`)) {
+				return;
+			}
+		}
+
 		const currentBales = parseInt(foundStack.dataset.bales, 10) || 0;
 		const beforeSnap = captureStackSnapshot(foundStack);
 
@@ -838,6 +911,14 @@ function handleHay() {
 		applyStackGrade(foundStack, stackGrade);
 
 		const updateNotes = [];
+		if (identityChanged) {
+			if (oldType !== type) {
+				updateNotes.push(`${getHayTypeLabel(oldType)} → ${getHayTypeLabel(type)}`);
+			}
+			if (oldContract !== contract) {
+				updateNotes.push(`${oldContract} → ${contract}`);
+			}
+		}
 		if (rejected) updateNotes.push("Rejected");
 		if (stackGrade) updateNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) updateNotes.push(stackComment);
@@ -847,19 +928,19 @@ function handleHay() {
 			"Update",
 			type,
 			contract,
-			getBayDisplayNumberForLocation(stackBayEl.dataset.shed, stackBayEl.dataset.bay, locationId),
+			getBayDisplayNumberForLocation(foundShed, foundBay, locationId),
 			foundIsle,
-			stackBayEl.dataset.shed,
+			foundShed,
 			currentBales,
 			updateNotes.join(" — ") || "Stack updated",
 			locationId,
 			{
 				undo: [
 					makeUndoPatch(
-						stackBayEl.dataset.shed,
-						stackBayEl.dataset.bay,
+						foundShed,
+						foundBay,
 						foundIsle,
-						formatStackKey(type, contract),
+						newStackKey,
 						beforeSnap,
 						afterSnap,
 					),
@@ -1052,14 +1133,8 @@ function handleHay() {
 		const isle = getSelectedIsle();
 		if (!isle) return;
 
-		if (!noTags) {
-			for (const stack of locQueryAll(".hay-stack", locationId)) {
-				const { type: stackType, contract: stackContract } = parseStackKey(stack.dataset.stackKey);
-				if (stackContract === contract && stackType !== type) {
-					alert(`Contract #${contract} is already registered as ${getHayTypeLabel(stackType)}. You cannot add it as ${getHayTypeLabel(type)}.`);
-					return;
-				}
-			}
+		if (!noTags && !validateContractProductBinding(type, contract, locationId)) {
+			return;
 		}
 
 		const targetContainer = getIsleContainer(bayStackEl, isle);
@@ -2863,6 +2938,44 @@ function scheduleCrmStats() {
 	});
 }
 
+function initMobileInputScrollFix() {
+	const isFormControl = (el) =>
+		el instanceof HTMLInputElement
+		|| el instanceof HTMLTextAreaElement
+		|| el instanceof HTMLSelectElement;
+
+	const mobileQuery = window.matchMedia("(max-width: 768px)");
+	let savedScrollX = 0;
+	let savedScrollY = 0;
+
+	const restoreScroll = () => {
+		window.scrollTo(savedScrollX, savedScrollY);
+	};
+
+	document.addEventListener(
+		"focusin",
+		(e) => {
+			if (!mobileQuery.matches) return;
+
+			const target = e.target;
+			if (!isFormControl(target) || !target.closest(".crm-sidebar")) return;
+
+			savedScrollX = window.scrollX;
+			savedScrollY = window.scrollY;
+
+			requestAnimationFrame(restoreScroll);
+		},
+		true,
+	);
+
+	window.visualViewport?.addEventListener("resize", () => {
+		if (!mobileQuery.matches) return;
+		const active = document.activeElement;
+		if (!isFormControl(active) || !active.closest(".crm-sidebar")) return;
+		requestAnimationFrame(restoreScroll);
+	});
+}
+
 function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
@@ -2944,6 +3057,7 @@ window.addEventListener("load", async () => {
 	updateReportsTable(getCurrentLocation());
 	updateSyncBanner();
 	initCrmTheme();
+	initMobileInputScrollFix();
 });
 
 let resizeTimer;

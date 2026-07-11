@@ -3,6 +3,7 @@ import {
 	getMaxBalesPerBay,
 	getMaxBalesPerIsle,
 	OLDS_LOCATION_ID,
+	SIMPLY_LOCATION_ID,
 } from "./locations.js";
 
 export function capitalize(word) {
@@ -53,7 +54,11 @@ export function captureStackSnapshot(stackEl) {
 	};
 }
 
-export function getHayTypeStackLabel(type) {
+export function getHayTypeStackLabel(type, locationId = OLDS_LOCATION_ID) {
+	if (type === "mixed-hay" && locationId === SIMPLY_LOCATION_ID) {
+		return "Mixed";
+	}
+
 	const entry = HAY_TYPES.find((item) => item.id === type);
 	const label = entry?.label ?? capitalize(type.replace(/-/g, " "));
 
@@ -917,13 +922,13 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl, { re
 	stack.classList.add(`hay-stack--${type}`);
 	stack.dataset.stackKey = formatStackKey(type, contract);
 	stack.dataset.bales = String(baleCount);
-	stack.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
+	const locationId = getBayStackLocationId(bayStackEl);
+	stack.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type, locationId);
 	stack.querySelector(".hay-stack__contract").textContent = contract;
 	applyStackRejected(stack, rejected);
 	applyStackGrade(stack, grade);
 	applyStackComment(stack, comment);
 	updateStackCountDisplay(stack, baleCount);
-	const locationId = getBayStackLocationId(bayStackEl);
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle, locationId));
 	applyIsleLayout(stack, isle, bayStackEl);
 	return stack;
@@ -935,11 +940,11 @@ export function updateHayStack(stackEl, type, contract, baleCount) {
 	stackEl.classList.add(`hay-stack--${type}`);
 	stackEl.dataset.stackKey = formatStackKey(type, contract);
 	stackEl.dataset.bales = String(baleCount);
-	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type);
-	stackEl.querySelector(".hay-stack__contract").textContent = contract;
-	updateStackCountDisplay(stackEl, baleCount);
 	const bayStack = stackEl.closest(".shed__bay-stack");
 	const locationId = getBayStackLocationId(bayStack);
+	stackEl.querySelector(".hay-stack__type").textContent = getHayTypeStackLabel(type, locationId);
+	stackEl.querySelector(".hay-stack__contract").textContent = contract;
+	updateStackCountDisplay(stackEl, baleCount);
 	setStackHeight(stackEl, baleCount, getIsleMaxBales(isle, locationId));
 }
 
