@@ -276,7 +276,7 @@
 					<section id="Reports" class="tabs__panel">
 						<h2 class="log__title">Inventory Reports</h2>
 						<div class="log__filters reports__filters">
-							<label class="log__filter">
+							<label class="log__filter reports__filter--product">
 								<span class="log__filter-label">Product</span>
 								<select id="reportProductFilter" class="log__filter-input log__filter-input--select">
 									<option value="" selected disabled>Product</option>
@@ -292,8 +292,8 @@
 									<option value="tmr">TMR</option>
 									<option value="wheat-straw">Wheat Straw</option>
 								</select>
+								<span class="reports__filter-or" aria-hidden="true">or</span>
 							</label>
-							<span class="reports__filter-or" aria-hidden="true">or</span>
 							<label class="log__filter reports__filter--search">
 								<span class="log__filter-label">Contract #</span>
 								<input type="search" id="reportContractSearch"

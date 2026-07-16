@@ -178,15 +178,21 @@
 		flex-shrink: 0;
 	}
 
-	.log__filters .reports__filter--search {
-		flex: 1 1 7rem;
-		min-width: 0;
+	.log__filters.reports__filters {
+		--reports-gap: 25px;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-areas:
+			"product contract"
+			"reject print";
+		gap: var(--reports-gap);
 	}
 
-	.log__filters .reports__contract-search {
-		width: 100%;
-		min-width: 0;
-		max-width: 100%;
+	.log__filters.reports__filters:has(.reports__filter--grade:not([hidden])) {
+		grid-template-areas:
+			"product contract"
+			"grade grade"
+			"reject print";
 	}
 
 	.log__filters .log__filter-reset {
@@ -249,7 +255,7 @@
 
 	.reports__filter-or {
 		height: 32px;
-		font-size: 0.7rem;
+		font-size: 0.65rem;
 	}
 
 	.reports__include-reject {
@@ -268,10 +274,6 @@
 	.reports__include-reject-check {
 		width: 14px;
 		height: 14px;
-	}
-
-	.reports__filters {
-		flex-wrap: wrap;
 	}
 
 	.reports__print-btn {
@@ -310,8 +312,11 @@
 		gap: 5px 6px;
 	}
 
-	.log__filters .reports__filter--search {
-		flex: 1 1 calc(100% - 4.5rem);
+	.log__filters.reports__filters {
+		--reports-gap: 25px;
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		gap: var(--reports-gap);
 	}
 
 	.log__filters .log__filter-reset {
