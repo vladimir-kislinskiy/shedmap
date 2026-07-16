@@ -198,14 +198,14 @@
 .crm-sidebar__nav {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
-	padding-top: 4px;
+	gap: clamp(2px, 0.35vw, 4px);
+	padding-top: clamp(2px, 0.4vw, 4px);
 }
 
 .theme-crm .crm-sidebar__nav .tabs__group {
 	display: flex;
 	flex-direction: column;
-	gap: 4px;
+	gap: clamp(2px, 0.35vw, 4px);
 	width: 100%;
 	padding: 0;
 	background: none;
@@ -219,8 +219,8 @@
 	justify-content: flex-start;
 	gap: 4px;
 	width: 100%;
-	min-height: 42px;
-	padding: 10px 14px;
+	min-height: clamp(32px, 4.2vw, 42px);
+	padding: clamp(6px, 0.9vw, 10px) clamp(10px, 1.2vw, 14px);
 	font-weight: 600;
 	line-height: 1;
 	text-align: left;
