@@ -149,6 +149,7 @@
 }
 
 .theme-crm .crm-sidebar {
+	--crm-sidebar-font-size: 12px;
 	display: flex;
 	flex-direction: column;
 	position: fixed;
@@ -159,7 +160,7 @@
 	width: var(--crm-sidebar-w);
 	padding: 16px 14px;
 	gap: 14px;
-	font-size: var(--font-size-max);
+	font-size: var(--crm-sidebar-font-size);
 	background: var(--color-surface);
 	border-right: 1px solid var(--border-color);
 	box-shadow: 2px 0 12px rgba(15, 23, 42, 0.06);
@@ -349,12 +350,12 @@
 .theme-crm .crm-sidebar .inventory__isle-option,
 .theme-crm .crm-sidebar .inventory__reject-option,
 .theme-crm .crm-sidebar .crm-sidebar__collapse {
-	font-size: var(--font-size-max);
+	font-size: var(--crm-sidebar-font-size);
 }
 
 .theme-crm .crm-sidebar .inventory__field,
 .theme-crm .crm-sidebar .inventory__submit {
-	font-size: var(--font-size-max);
+	font-size: var(--crm-sidebar-font-size);
 	transition: none;
 }
 
@@ -426,13 +427,13 @@
 	}
 
 	.theme-crm .crm-sidebar input.inventory__field {
-		font-size: var(--font-size-max);
+		font-size: var(--crm-sidebar-font-size);
 		-webkit-text-size-adjust: 100%;
 	}
 
 	.theme-crm .crm-sidebar input.inventory__field:focus,
 	.theme-crm .crm-sidebar input.inventory__field:focus-visible {
-		font-size: var(--font-size-max);
+		font-size: var(--crm-sidebar-font-size);
 		box-shadow: none;
 		border-color: var(--color-primary);
 	}
