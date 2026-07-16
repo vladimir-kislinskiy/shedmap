@@ -205,7 +205,7 @@
 .theme-crm .crm-sidebar__nav .tabs__group {
 	display: flex;
 	flex-direction: column;
-	gap: clamp(2px, 0.35vw, 4px);
+	gap: clamp(3px, 0.35vw, 4px);
 	width: 100%;
 	padding: 0;
 	background: none;
@@ -430,7 +430,11 @@
 		padding-left: 8px;
 		max-width: min(140px, 32vw);
 		font-family: inherit;
-		font-size: clamp(var(--font-size-min), 2vw + 0.35rem, var(--font-size-max));
+		font-size: clamp(
+			var(--font-size-min),
+			2vw + 0.35rem,
+			var(--font-size-max)
+		);
 		font-weight: 600;
 		line-height: 1.2;
 	}
@@ -530,9 +534,14 @@
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__thumb,
 .theme-crm.theme-dark .theme-switch__thumb {
 	transform: translate(
-			calc(var(--theme-switch-w) - var(--theme-switch-thumb) - var(--theme-switch-pad) * 2 - 2px),
-			-50%
-		);
+		calc(
+			var(--theme-switch-w) - var(--theme-switch-thumb) - var(
+					--theme-switch-pad
+				) *
+				2 - 2px
+		),
+		-50%
+	);
 	background: #e6eaf0;
 	border-color: #c5ced9;
 	box-shadow: none;
