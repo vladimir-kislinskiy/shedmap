@@ -206,6 +206,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
+	gap: 8px;
 	width: 100%;
 	min-height: 42px;
 	padding: 10px 14px;
@@ -220,10 +221,11 @@
 
 .theme-crm .crm-sidebar__nav .tabs__btn::before {
 	content: "";
-	flex: 0 0 auto;
-	width: 18px;
-	height: 18px;
-	margin-right: 10px;
+	flex: 0 0 1em;
+	width: 1em;
+	height: 1em;
+	margin: 0;
+	align-self: center;
 	background-color: currentColor;
 	-webkit-mask: var(--crm-nav-icon) center / contain no-repeat;
 	mask: var(--crm-nav-icon) center / contain no-repeat;
