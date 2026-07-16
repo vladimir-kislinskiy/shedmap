@@ -39,6 +39,7 @@ import {
 	createHayStack,
 	createLogRow,
 	createReportRow,
+	findMatchingStackInContainer,
 	findStackInContainer,
 	formatIsleLabel,
 	formatStackCountLabel,
@@ -883,13 +884,13 @@ function handleHay() {
 			return;
 		}
 
-		const duplicateStack = findStackInContainer(targetContainer, newStackKey);
-		if (duplicateStack && duplicateStack !== foundStack) {
-			alert("A stack with this product and contract already exists in this isle.");
-			return;
-		}
-
 		if (identityChanged) {
+			const duplicateStack = findStackInContainer(targetContainer, newStackKey);
+			if (duplicateStack && duplicateStack !== foundStack) {
+				alert("A stack with this product and contract already exists in this isle.");
+				return;
+			}
+
 			const changeLines = [];
 			if (oldType !== type) {
 				changeLines.push(`Product: ${getHayTypeLabel(oldType)} → ${getHayTypeLabel(type)}`);
@@ -1282,20 +1283,36 @@ function resolveBayIndexFromDisplay(shedId, bayDisplay, locationId) {
 	return null;
 }
 
-function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, snapshot, locationId) {
+function resolveUndoTargetStack(container, stackKey, before, after) {
+	if (after) {
+		const afterKey = formatStackKey(after.type, after.contract);
+		const matchAfter = findMatchingStackInContainer(container, afterKey, after);
+		if (matchAfter) return matchAfter;
+	}
+
+	if (before) {
+		const beforeKey = formatStackKey(before.type, before.contract);
+		const matchBefore = findMatchingStackInContainer(container, beforeKey, before);
+		if (matchBefore) return matchBefore;
+	}
+
+	return findStackInContainer(container, stackKey);
+}
+
+function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, locationId, after = null) {
 	const bayStackEl = getBayColumnEl(shedId, bayIndex, locationId);
 	if (!bayStackEl) return false;
 
 	const container = getIsleContainer(bayStackEl, isle);
-	const existing = findStackInContainer(container, stackKey);
+	const existing = resolveUndoTargetStack(container, stackKey, before, after);
 
-	if (!snapshot) {
+	if (!before) {
 		existing?.remove();
 		updateBayStats(bayStackEl);
 		return true;
 	}
 
-	const { type, contract, bales, rejected, grade, comment } = snapshot;
+	const { type, contract, bales, rejected, grade, comment } = before;
 	if (existing) {
 		updateHayStack(existing, type, contract, bales);
 		applyStackRejected(existing, rejected);
@@ -1313,7 +1330,15 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, snapshot, locati
 
 function applyUndoPatches(patches, locationId) {
 	for (const patch of patches) {
-		if (!applyStackSnapshotAt(patch.shedId, patch.bayIndex, patch.isle, patch.stackKey, patch.before, locationId)) {
+		if (!applyStackSnapshotAt(
+			patch.shedId,
+			patch.bayIndex,
+			patch.isle,
+			patch.stackKey,
+			patch.before,
+			locationId,
+			patch.after,
+		)) {
 			return false;
 		}
 	}

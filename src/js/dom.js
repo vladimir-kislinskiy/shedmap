@@ -961,10 +961,42 @@ export function getIsleContainer(bayStackEl, isle) {
 	return bayStackEl.querySelector(`.shed__isle--${isle}`);
 }
 
+export function listStacksInContainer(container) {
+	if (!container) return [];
+
+	if (container.classList.contains("shed__bay-stack")) {
+		return [...container.querySelectorAll(".hay-stack")];
+	}
+
+	return [...container.children].filter((el) => el.classList.contains("hay-stack"));
+}
+
 export function findStackInContainer(container, stackKey) {
 	if (!container) return null;
-	const stacks = [...container.children].filter((el) => el.classList.contains("hay-stack"));
-	return stacks.find((s) => s.dataset.stackKey === stackKey) || null;
+	return listStacksInContainer(container).find((s) => s.dataset.stackKey === stackKey) || null;
+}
+
+export function findMatchingStackInContainer(container, stackKey, snap = null) {
+	if (!container) return null;
+
+	const stacks = listStacksInContainer(container).filter((s) => s.dataset.stackKey === stackKey);
+	if (!stacks.length) return null;
+	if (!snap) return stacks[0];
+
+	const score = (stackEl) => {
+		const current = captureStackSnapshot(stackEl);
+		if (!current) return -1;
+
+		let points = 0;
+		if (current.bales === (parseInt(snap.bales, 10) || 0)) points += 8;
+		if ((current.comment || "") === (snap.comment || "")) points += 4;
+		if ((current.grade || "") === (snap.grade || "")) points += 2;
+		if (!!current.rejected === !!snap.rejected) points += 1;
+		if (current.type === snap.type) points += 1;
+		return points;
+	};
+
+	return [...stacks].sort((a, b) => score(b) - score(a))[0];
 }
 
 export function sumBalesInContainer(container) {
