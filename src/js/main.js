@@ -3005,14 +3005,21 @@ function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
 	const applyDark = (dark) => {
+		const root = document.documentElement;
+		root.classList.add("theme-switching");
 		document.body.classList.toggle("theme-dark", dark);
-		document.documentElement.classList.toggle("theme-dark", dark);
+		root.classList.toggle("theme-dark", dark);
 		if (darkSwitch) {
 			darkSwitch.setAttribute("aria-checked", dark ? "true" : "false");
 			const label = dark ? "Switch to light theme" : "Switch to dark theme";
 			darkSwitch.setAttribute("aria-label", label);
 			darkSwitch.title = label;
 		}
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => {
+				root.classList.remove("theme-switching");
+			});
+		});
 	};
 	let dark = false;
 	try {

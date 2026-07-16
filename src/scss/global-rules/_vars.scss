@@ -91,7 +91,7 @@
 	--radius-md: 10px;
 	--radius-sm: 6px;
 
-	--transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	--transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
 
 	--scrollbar-size: 10px;
 	--scrollbar-track: transparent;

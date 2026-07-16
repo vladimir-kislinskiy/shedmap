@@ -501,9 +501,6 @@
 	border: 1px solid #d1d5db;
 	box-shadow: none;
 	overflow: hidden;
-	transition:
-		background 0.45s ease,
-		border-color 0.45s ease;
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__track,
@@ -527,10 +524,7 @@
 	border: 1px solid #d1d5db;
 	box-shadow: none;
 	transform: translate(0, -50%);
-	transition:
-		transform 0.5s cubic-bezier(0.34, 1.4, 0.64, 1),
-		background-color 0.35s ease,
-		border-color 0.35s ease;
+	transition: none;
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__thumb,
@@ -549,9 +543,7 @@
 	width: 9px;
 	height: 9px;
 	pointer-events: none;
-	transition:
-		opacity 0.35s ease,
-		transform 0.5s cubic-bezier(0.34, 1.25, 0.64, 1);
+	transition: none;
 }
 
 .theme-switch__icon--sun {
@@ -592,7 +584,9 @@
 	.theme-crm .shed__bay {
 		flex: 1 0 130px;
 	}
+}
 
+@media (min-width: 1280px) {
 	.theme-crm #location-simply .shed__bay {
 		flex: 1 1 0;
 		min-width: 0;

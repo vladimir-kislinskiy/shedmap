@@ -13,6 +13,14 @@ html {
 	font-size: var(--font-size-base);
 }
 
+html.theme-switching,
+html.theme-switching *,
+html.theme-switching *::before,
+html.theme-switching *::after {
+	transition: none !important;
+	animation: none !important;
+}
+
 body {
 	font-family: var(--font-primary);
 	background-color: var(--bg-page);
@@ -771,7 +779,7 @@ body.page--dragging .shed__bay-exit {
 	color: var(--text-muted);
 }
 
-@media (min-width: 769px) {
+@media (min-width: 1280px) {
 	#location-simply .shed__columns {
 		gap: clamp(4px, 0.7vw, 8px);
 	}
