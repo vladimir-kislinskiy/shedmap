@@ -120,7 +120,14 @@ async function resetAllBays({ confirm = true, locationId = getCurrentLocationId(
 
 	try {
 		const emptyState = buildEmptyShedState(locationId);
-		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(emptyState));
+		const payload = sanitizeForFirebase(stampStateForWrite(emptyState));
+		rememberPendingWrite(locationId, payload);
+		try {
+			await set(ref(db, getLocationFirebasePath(locationId)), payload);
+		} catch (err) {
+			forgetPendingWrite(locationId, payload);
+			throw err;
+		}
 		await cacheHayShedState(locationId, emptyState);
 		if (location.search.includes("reset=")) {
 			history.replaceState(null, "", location.pathname);
@@ -154,7 +161,60 @@ let offlineBannerTimer = null;
 const OFFLINE_BANNER_DELAY_MS = 4000;
 let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
 let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
+/** Fingerprints of payloads we just wrote; used to skip Firebase echo re-applies (fail-open). */
+const pendingWriteFingerprintsByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
+const MAX_PENDING_WRITE_FINGERPRINTS = 20;
 let adminBackupModule = null;
+
+function getStateFingerprint(state) {
+	try {
+		return JSON.stringify(sanitizeForFirebase(state), (_, value) => {
+			if (value && typeof value === "object" && !Array.isArray(value)) {
+				return Object.keys(value)
+					.sort()
+					.reduce((sorted, key) => {
+						sorted[key] = value[key];
+						return sorted;
+					}, {});
+			}
+			return value;
+		});
+	} catch {
+		return null;
+	}
+}
+
+function rememberPendingWrite(locationId, payload) {
+	const fingerprint = getStateFingerprint(payload);
+	if (!fingerprint || !pendingWriteFingerprintsByLocation[locationId]) return;
+
+	const pending = pendingWriteFingerprintsByLocation[locationId];
+	pending.push(fingerprint);
+	while (pending.length > MAX_PENDING_WRITE_FINGERPRINTS) {
+		pending.shift();
+	}
+}
+
+function forgetPendingWrite(locationId, payload) {
+	const fingerprint = getStateFingerprint(payload);
+	if (!fingerprint || !pendingWriteFingerprintsByLocation[locationId]) return;
+
+	const pending = pendingWriteFingerprintsByLocation[locationId];
+	const index = pending.lastIndexOf(fingerprint);
+	if (index !== -1) pending.splice(index, 1);
+}
+
+function consumePendingWriteEcho(locationId, state) {
+	const fingerprint = getStateFingerprint(state);
+	if (!fingerprint || !pendingWriteFingerprintsByLocation[locationId]) return false;
+
+	const pending = pendingWriteFingerprintsByLocation[locationId];
+	const index = pending.indexOf(fingerprint);
+	if (index === -1) return false;
+
+	pending.splice(index, 1);
+	return true;
+}
 
 function getCurrentLocation() {
 	return getCurrentLocationId();
@@ -2115,6 +2175,16 @@ function applyRemoteState(locationId, state) {
 	}
 
 	hasRemoteStateByLocation[locationId] = true;
+
+	// Own write echo: DOM/log already updated locally — skip full rebuild (fail-open on mismatch).
+	if (consumePendingWriteEcho(locationId, state)) {
+		cacheHayShedState(locationId, state).then(() => {
+			cacheSavedAtByLocation[locationId] = Date.now();
+			updateSyncBanner();
+		});
+		return;
+	}
+
 	applyAppState(locationId, state);
 	cacheHayShedState(locationId, state).then(() => {
 		cacheSavedAtByLocation[locationId] = Date.now();
@@ -2182,11 +2252,13 @@ async function saveState(locationId = getCurrentLocation()) {
 
 	const state = collectAppState(locationId);
 	const payload = sanitizeForFirebase(stampStateForWrite(state));
+	rememberPendingWrite(locationId, payload);
 
 	try {
 		await set(ref(db, getLocationFirebasePath(locationId)), payload);
 		hasRemoteStateByLocation[locationId] = true;
 	} catch (err) {
+		forgetPendingWrite(locationId, payload);
 		console.error(`Error saving ${locationId} state:`, err);
 		const reason =
 			err?.code === "PERMISSION_DENIED"
@@ -2249,7 +2321,14 @@ async function restoreAppStateToFirebase(state) {
 	const targets = LOCATION_IDS.filter((locationId) => rootState?.[locationId]);
 	for (const locationId of targets) {
 		const locationState = normalizeHayShedState(rootState[locationId], locationId);
-		await set(ref(db, getLocationFirebasePath(locationId)), stampStateForWrite(locationState));
+		const payload = sanitizeForFirebase(stampStateForWrite(locationState));
+		rememberPendingWrite(locationId, payload);
+		try {
+			await set(ref(db, getLocationFirebasePath(locationId)), payload);
+		} catch (err) {
+			forgetPendingWrite(locationId, payload);
+			throw err;
+		}
 		await cacheHayShedState(locationId, locationState);
 		hasRemoteStateByLocation[locationId] = true;
 		cacheSavedAtByLocation[locationId] = Date.now();
