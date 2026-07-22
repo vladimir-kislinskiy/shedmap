@@ -191,7 +191,7 @@ h3 {
 
 .tabs__panel {
 	display: none;
-	padding: clamp(12px, 2.5vw, 25px);
+	padding: 20px;
 	background: var(--card-bg);
 	backdrop-filter: blur(20px);
 	border-radius: var(--radius-lg);
@@ -528,6 +528,7 @@ body.page--view-only .inventory__form {
 	flex: 1 1 0;
 	min-width: 0;
 	text-align: center;
+	font-size: calc(var(--ctrl-font-size) - 1px);
 }
 
 .shed-tabs__btn:not(.shed-tabs__btn--active):hover {
@@ -546,7 +547,7 @@ body.page--view-only .inventory__form {
 	background: var(--color-surface);
 	border-radius: var(--radius-lg);
 	padding: clamp(12px, 2.5vw, 24px);
-	margin: 10px 0 0;
+	margin: 0;
 	width: 100%;
 	max-width: 100%;
 	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
