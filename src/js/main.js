@@ -1987,15 +1987,21 @@ function collectAppState(locationId = getCurrentLocation()) {
 			const colEl = getBayColumnEl(shed, i, locationId);
 			if (!colEl) continue;
 
-			colsData[colId] = Array.from(getBayStacks(colEl)).map((stack) => ({
-				type: getStackType(stack),
-				stackKey: stack.dataset.stackKey,
-				bales: stack.dataset.bales,
-				isle: stack.dataset.isle || "both",
-				rejected: stack.dataset.rejected === "true",
-				comment: stack.dataset.comment || "",
-				grade: stack.dataset.grade || "",
-			}));
+			colsData[colId] = Array.from(getBayStacks(colEl)).map((stack) => {
+				const data = {
+					type: getStackType(stack),
+					stackKey: stack.dataset.stackKey,
+					bales: stack.dataset.bales,
+					isle: stack.dataset.isle || "both",
+					rejected: stack.dataset.rejected === "true",
+					comment: stack.dataset.comment || "",
+					grade: stack.dataset.grade || "",
+				};
+				if (stack.classList.contains("hay-stack--bay-front") && stack.dataset.frontRank) {
+					data.frontRank = Number(stack.dataset.frontRank) || 1;
+				}
+				return data;
+			});
 		}
 		state.sheds[shed] = colsData;
 	});

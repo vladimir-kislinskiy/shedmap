@@ -1,4 +1,4 @@
-import { applyIsleLayout, placeStackInContainer } from "./dom.js";
+import { applyIsleLayout, placeStackInContainer, reorderFrontAgainst, placeFullFrontBehindIsles } from "./dom.js";
 
 const DRAG_THRESHOLD = 6;
 const LONG_PRESS_MS = 400;
@@ -41,13 +41,26 @@ function moveGhost(ghost, clientX, clientY, offsetX, offsetY) {
 	ghost.style.setProperty("--ghost-top", `${clientY - offsetY}px`);
 }
 
-function getDropTarget(clientX, clientY, dragContext) {
+function getDropTarget(clientX, clientY, dragContext, stackEl) {
 	const el = document.elementFromPoint(clientX, clientY);
 	if (!el || !dragContext) return null;
 
 	const { mode, bayStack } = dragContext;
+	const isFrontDrag = stackEl?.classList.contains("hay-stack--bay-front");
 
 	if (mode === "isle") {
+		if (isFrontDrag) {
+			const frontTarget = el.closest(".hay-stack--bay-front");
+			if (
+				frontTarget
+				&& frontTarget !== stackEl
+				&& !frontTarget.classList.contains("hay-stack--dragging")
+				&& bayStack.contains(frontTarget)
+			) {
+				return { type: "front-order", el: frontTarget, container: bayStack };
+			}
+		}
+
 		const targetIsle = el.closest(".shed__isle");
 		if (!targetIsle || !bayStack.contains(targetIsle)) return null;
 
@@ -57,6 +70,23 @@ function getDropTarget(clientX, clientY, dragContext) {
 		}
 
 		return { type: "column", el: targetIsle, container: targetIsle };
+	}
+
+	if (isFrontDrag) {
+		const frontTarget = el.closest(".hay-stack--bay-front");
+		if (
+			frontTarget
+			&& frontTarget !== stackEl
+			&& !frontTarget.classList.contains("hay-stack--dragging")
+			&& bayStack.contains(frontTarget)
+		) {
+			return { type: "front-order", el: frontTarget, container: bayStack };
+		}
+
+		const targetIsle = el.closest(".shed__isle");
+		if (targetIsle && bayStack.contains(targetIsle)) {
+			return { type: "front-behind-isles", el: targetIsle, container: bayStack };
+		}
 	}
 
 	const stack = el.closest(".hay-stack");
@@ -73,6 +103,19 @@ function getDropTarget(clientX, clientY, dragContext) {
 }
 
 function performDrop(stackEl, target, clientY, dragContext) {
+	if (target.type === "front-order") {
+		const targetIsle = target.el.closest(".shed__isle");
+		const targetIsleId = targetIsle?.dataset?.isle;
+		if (dragContext.mode === "isle" && targetIsleId) {
+			applyIsleLayout(stackEl, targetIsleId, dragContext.bayStack);
+		}
+		return reorderFrontAgainst(stackEl, target.el, clientY);
+	}
+
+	if (target.type === "front-behind-isles") {
+		return placeFullFrontBehindIsles(stackEl, dragContext.bayStack);
+	}
+
 	const targetContainer = target.container;
 	const isleId = targetContainer.dataset?.isle;
 
@@ -180,10 +223,12 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 
 		moveGhost(session.ghost, clientX, clientY, session.offsetX, session.offsetY);
 		clearDropHighlights();
-		const target = getDropTarget(clientX, clientY, session.dragContext);
+		const target = getDropTarget(clientX, clientY, session.dragContext, stackEl);
 		if (!target?.el) return;
 		target.el.classList.add(
-			target.type === "stack" ? "hay-stack--drop-target" : "shed__isle--drop-target",
+			target.type === "stack" || target.type === "front-order"
+				? "hay-stack--drop-target"
+				: "shed__isle--drop-target",
 		);
 	};
 
@@ -191,7 +236,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!session) return;
 
 		if (session.dragging) {
-			const target = getDropTarget(clientX, clientY, session.dragContext);
+			const target = getDropTarget(clientX, clientY, session.dragContext, stackEl);
 			if (target && performDrop(stackEl, target, clientY, session.dragContext)) {
 				markDragged(stackEl);
 				onReorder({

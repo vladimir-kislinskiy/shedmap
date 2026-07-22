@@ -44,7 +44,7 @@ export function captureStackSnapshot(stackEl) {
 	if (!stackEl?.isConnected) return null;
 
 	const { contract } = parseStackKey(stackEl.dataset.stackKey || "");
-	return {
+	const snap = {
 		type: getStackType(stackEl),
 		contract,
 		bales: parseInt(stackEl.dataset.bales, 10) || 0,
@@ -52,6 +52,10 @@ export function captureStackSnapshot(stackEl) {
 		grade: stackEl.dataset.grade || "",
 		comment: stackEl.dataset.comment || "",
 	};
+	if (stackEl.classList.contains("hay-stack--bay-front") && stackEl.dataset.frontRank) {
+		snap.frontRank = Number(stackEl.dataset.frontRank) || 1;
+	}
+	return snap;
 }
 
 export function getHayTypeStackLabel(type, locationId = OLDS_LOCATION_ID) {
@@ -610,10 +614,72 @@ function getStackIsle(stackEl) {
 	return "both";
 }
 
+function getFrontRank(stackEl) {
+	const rank = parseInt(stackEl?.dataset.frontRank, 10);
+	return Number.isFinite(rank) ? rank : 0;
+}
+
+function setFrontRank(stackEl, rank) {
+	if (!stackEl) return;
+	stackEl.dataset.frontRank = String(rank);
+}
+
+function clearFrontRank(stackEl) {
+	if (!stackEl) return;
+	delete stackEl.dataset.frontRank;
+}
+
+function listBayFrontStacks(bayStackEl) {
+	if (!bayStackEl) return [];
+	return [...bayStackEl.querySelectorAll(".hay-stack--bay-front")];
+}
+
+function nextFrontRank(bayStackEl) {
+	const ranks = listBayFrontStacks(bayStackEl).map(getFrontRank);
+	return ranks.length ? Math.max(...ranks) + 1 : 1;
+}
+
+function normalizeFrontRanks(bayStackEl) {
+	const stacks = listBayFrontStacks(bayStackEl).sort((a, b) => getFrontRank(a) - getFrontRank(b));
+	stacks.forEach((stack, index) => setFrontRank(stack, index + 1));
+}
+
+export function reorderFrontAgainst(movedEl, targetEl, clientY) {
+	const bayStack = movedEl?.closest(".shed__bay-stack");
+	if (!bayStack || !targetEl?.classList.contains("hay-stack--bay-front")) return false;
+	if (movedEl === targetEl) return false;
+	if (!movedEl.classList.contains("hay-stack--bay-front")) return false;
+	if (!bayStack.contains(targetEl)) return false;
+
+	const rect = targetEl.getBoundingClientRect();
+	const placeBehind = clientY < rect.top + rect.height / 2;
+	const targetRank = getFrontRank(targetEl);
+	setFrontRank(movedEl, placeBehind ? targetRank - 0.5 : targetRank + 0.5);
+	normalizeFrontRanks(bayStack);
+	repairBayLayout(bayStack);
+	return true;
+}
+
+export function placeFullFrontBehindIsles(stackEl, bayStackEl) {
+	if (!stackEl || !bayStackEl) return false;
+	if (getStackIsle(stackEl) !== "both") return false;
+	if (!stackEl.classList.contains("hay-stack--bay-front")) return false;
+
+	const isleFronts = [...bayStackEl.querySelectorAll(".shed__isle .hay-stack--bay-front")];
+	if (!isleFronts.length) return false;
+
+	const minIsleRank = Math.min(...isleFronts.map(getFrontRank));
+	setFrontRank(stackEl, minIsleRank - 0.5);
+	normalizeFrontRanks(bayStackEl);
+	repairBayLayout(bayStackEl);
+	return true;
+}
+
 function orderFrontStacksLast(container) {
 	if (!container) return;
 
 	container.querySelector(":scope > .shed__stack-spacer")?.remove();
+	container.classList.remove("shed__bay-stack--front-behind-isles");
 
 	const isBayStack = container.classList.contains("shed__bay-stack");
 	const stacks = isBayStack
@@ -623,14 +689,39 @@ function orderFrontStacksLast(container) {
 	if (!stacks.length) return;
 
 	const regular = stacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
-	const front = stacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
+	const front = stacks
+		.filter((stack) => stack.classList.contains("hay-stack--bay-front"))
+		.sort((a, b) => getFrontRank(a) - getFrontRank(b));
 
 	if (isBayStack) {
 		const islesRow = container.querySelector(".shed__isles");
+		const isleFrontRanks = [...container.querySelectorAll(".shed__isle .hay-stack--bay-front")].map(
+			getFrontRank,
+		);
+		const maxIsleFrontRank = isleFrontRanks.length ? Math.max(...isleFrontRanks) : Number.NEGATIVE_INFINITY;
+		const frontBehindIsles = isleFrontRanks.length
+			? front.filter((stack) => getFrontRank(stack) <= maxIsleFrontRank)
+			: [];
+		const frontAfterIsles = isleFrontRanks.length
+			? front.filter((stack) => getFrontRank(stack) > maxIsleFrontRank)
+			: front;
+
 		regular.forEach((stack) => {
 			container.insertBefore(stack, islesRow ?? container.firstChild);
 		});
-		front.forEach((stack) => {
+
+		if (frontBehindIsles.length && islesRow) {
+			const spacer = document.createElement("div");
+			spacer.className = "shed__stack-spacer";
+			spacer.setAttribute("aria-hidden", "true");
+			container.insertBefore(spacer, islesRow);
+			frontBehindIsles.forEach((stack) => {
+				container.insertBefore(stack, islesRow);
+			});
+			container.classList.add("shed__bay-stack--front-behind-isles");
+		}
+
+		frontAfterIsles.forEach((stack) => {
 			container.appendChild(stack);
 		});
 		return;
@@ -673,8 +764,12 @@ function ensureBayStackFrontLayout(bayStackEl) {
 	const directStacks = getDirectStacks(bayStackEl);
 	const regular = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
 	const front = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
+	const packBehind = bayStackEl.classList.contains("shed__bay-stack--front-behind-isles");
 
-	bayStackEl.querySelector(":scope > .shed__stack-spacer")?.remove();
+	if (!packBehind) {
+		bayStackEl.querySelector(":scope > .shed__stack-spacer")?.remove();
+	}
+
 	bayStackEl.classList.toggle("shed__bay-stack--has-front-split", regular.length > 0 && front.length > 0);
 }
 
@@ -905,9 +1000,31 @@ export function applyStackRejected(stackEl, rejected) {
 export function applyStackComment(stackEl, comment = "") {
 	if (!stackEl) return;
 
+	const wasFront = stackEl.classList.contains("hay-stack--bay-front");
 	const normalizedComment = normalizeStackComment(comment);
 	stackEl.dataset.comment = normalizedComment;
-	stackEl.classList.toggle("hay-stack--bay-front", isBayFrontComment(normalizedComment));
+	const isFront = isBayFrontComment(normalizedComment);
+	stackEl.classList.toggle("hay-stack--bay-front", isFront);
+
+	if (isFront) {
+		const bayStack = stackEl.closest(".shed__bay-stack");
+		if (bayStack && (!wasFront || !stackEl.dataset.frontRank)) {
+			const isle = getStackIsle(stackEl);
+			if (isle === "both") {
+				const isleFronts = [...bayStack.querySelectorAll(".shed__isle .hay-stack--bay-front")];
+				if (isleFronts.length) {
+					setFrontRank(stackEl, Math.min(...isleFronts.map(getFrontRank)) - 0.5);
+					normalizeFrontRanks(bayStack);
+				} else {
+					setFrontRank(stackEl, nextFrontRank(bayStack));
+				}
+			} else {
+				setFrontRank(stackEl, nextFrontRank(bayStack));
+			}
+		}
+	} else {
+		clearFrontRank(stackEl);
+	}
 
 	const commentEl = stackEl.querySelector(".hay-stack__comment");
 	if (commentEl) {
@@ -1114,6 +1231,15 @@ export function restoreHayStack(stackData, bayStackEl) {
 
 	const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, comment, grade });
 	if (!stack) return null;
+
+	if (
+		stack.classList.contains("hay-stack--bay-front")
+		&& stackData.frontRank != null
+		&& stackData.frontRank !== ""
+	) {
+		setFrontRank(stack, Number(stackData.frontRank) || 1);
+		repairBayLayout(bayStackEl);
+	}
 
 	if (stackData.desc && !contract) {
 		const match = stackData.desc.match(/^([A-Za-z]+)\s*\((.+)\)$/);
