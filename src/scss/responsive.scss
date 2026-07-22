@@ -181,18 +181,18 @@
 	.log__filters.reports__filters {
 		--reports-gap: 25px;
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		grid-template-areas:
-			"product contract"
-			"reject print";
+			"product or contract"
+			"reject . print";
 		gap: var(--reports-gap);
 	}
 
 	.log__filters.reports__filters:has(.reports__filter--grade:not([hidden])) {
 		grid-template-areas:
-			"product contract"
-			"grade grade"
-			"reject print";
+			"product or contract"
+			"grade grade grade"
+			"reject . print";
 	}
 
 	.log__filters .log__filter-reset {
@@ -247,7 +247,7 @@
 		max-width: 100%;
 	}
 
-	.reports__contract-search {
+	.reports__filters .reports__contract-search {
 		min-width: 0;
 		width: 100%;
 		max-width: 100%;
@@ -315,7 +315,7 @@
 	.log__filters.reports__filters {
 		--reports-gap: 25px;
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
 		gap: var(--reports-gap);
 	}
 

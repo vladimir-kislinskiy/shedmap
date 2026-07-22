@@ -219,8 +219,9 @@
 	justify-content: flex-start;
 	gap: 4px;
 	width: 100%;
-	min-height: clamp(32px, 4.2vw, 42px);
-	padding: clamp(6px, 0.9vw, 10px) clamp(10px, 1.2vw, 14px);
+	min-height: clamp(28px, 3.8vw, 36px);
+	padding: clamp(4px, 0.7vw, 8px) clamp(10px, 1.2vw, 14px);
+	font-size: calc(var(--crm-sidebar-font-size) + 1px);
 	font-weight: 600;
 	line-height: 1;
 	text-align: left;
@@ -366,11 +367,14 @@
 }
 
 .theme-crm .crm-sidebar .location-tabs__btn,
-.theme-crm .crm-sidebar .tabs__btn,
 .theme-crm .crm-sidebar .inventory__isle-option,
 .theme-crm .crm-sidebar .inventory__reject-option,
 .theme-crm .crm-sidebar .crm-sidebar__collapse {
 	font-size: var(--crm-sidebar-font-size);
+}
+
+.theme-crm .crm-sidebar__nav .tabs__btn {
+	font-size: calc(var(--crm-sidebar-font-size) + 1px);
 }
 
 .theme-crm .crm-sidebar .inventory__field,
@@ -595,6 +599,13 @@
 @media (min-width: 769px) {
 	.theme-crm .shed__bay {
 		flex: 1 0 130px;
+	}
+}
+
+@media (min-width: 1280px) {
+	.theme-crm.crm-collapsed #location-simply .shed__bay {
+		flex: 1 1 0;
+		min-width: 0;
 	}
 }
 

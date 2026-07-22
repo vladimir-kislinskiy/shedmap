@@ -105,7 +105,8 @@ const LAYOUT = {
 	stackAreaMobileBreakpoint: 768,
 	bayChrome: 64,
 	minStack: 48,
-	baleStep: 10,
+	baleStep: 50,
+	minScaleBales: 100,
 	baleSegmentMax: MAX_BALES_PER_ISLE,
 };
 
@@ -159,32 +160,38 @@ function getMinStackPercent(areaBudget) {
 	return (LAYOUT.minStack / areaBudget) * 100;
 }
 
-function getTierInSegment(baleCount, segmentStart, segmentMax = LAYOUT.baleSegmentMax) {
-	const offset = Math.max(0, baleCount - segmentStart);
-	if (offset <= 0) return 0;
-	return Math.min(Math.ceil(offset / LAYOUT.baleStep), segmentMax / LAYOUT.baleStep);
+function getScaleTiers(baleCount) {
+	if (baleCount < LAYOUT.minScaleBales) return 0;
+	return Math.floor((baleCount - LAYOUT.minScaleBales) / LAYOUT.baleStep) + 1;
 }
 
-function percentForTiers(tier, maxTier, maxPercent, areaBudget) {
-	if (tier <= 0) return 0;
-	const pct = (tier / maxTier) * maxPercent;
-	return Math.max(getMinStackPercent(areaBudget), Math.round(pct * 100) / 100);
+function getMaxScaleTiersForSegment(segmentMax) {
+	if (segmentMax < LAYOUT.minScaleBales) return 1;
+	return Math.floor((segmentMax - LAYOUT.minScaleBales) / LAYOUT.baleStep) + 1;
+}
+
+function percentForScaleTiers(tier, maxTiers, maxPercent, areaBudget) {
+	const minPct = getMinStackPercent(areaBudget);
+	if (tier <= 0) return minPct;
+	const pct = minPct + (tier / Math.max(1, maxTiers)) * (maxPercent - minPct);
+	return Math.round(pct * 100) / 100;
 }
 
 export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
 	if (baleCount <= 0) return 0;
 
 	const segmentMax = maxBales >= bayMax ? bayMax / 2 : maxBales;
-	const tiersPerSegment = segmentMax / LAYOUT.baleStep;
 	const halfPercent = 50;
+	const maxTiers = getMaxScaleTiersForSegment(segmentMax);
 
 	if (maxBales <= segmentMax || baleCount <= segmentMax) {
-		const tier = getTierInSegment(baleCount, 0, segmentMax);
-		return percentForTiers(tier, tiersPerSegment, halfPercent, areaBudget);
+		return percentForScaleTiers(getScaleTiers(baleCount), maxTiers, halfPercent, areaBudget);
 	}
 
-	const tier = getTierInSegment(baleCount, segmentMax, segmentMax);
-	return Math.round((halfPercent + (tier / tiersPerSegment) * halfPercent) * 100) / 100;
+	const secondOffset = baleCount - segmentMax;
+	const secondMaxTiers = Math.max(1, Math.ceil(segmentMax / LAYOUT.baleStep));
+	const secondTier = Math.min(Math.ceil(secondOffset / LAYOUT.baleStep), secondMaxTiers);
+	return Math.round((halfPercent + (secondTier / secondMaxTiers) * halfPercent) * 100) / 100;
 }
 
 export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
