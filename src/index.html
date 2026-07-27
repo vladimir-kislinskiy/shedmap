@@ -36,6 +36,11 @@
 				</button>
 				<span class="auth-bar__location" id="crmLocBadgeName" aria-label="Current location: Olds">Olds</span>
 			</div>
+			<div class="auth-bar__center">
+				<button type="button" class="auth-bar__install" id="pwaInstallBtn" hidden
+					aria-label="Install this site as an app on your device"
+					title="Install this site as an app on your device">Install as app</button>
+			</div>
 			<div class="auth-bar__actions">
 				<div class="auth-bar__status">
 					<button type="button" class="theme-switch" id="crmThemeSwitch" role="switch" aria-checked="false"
@@ -93,6 +98,19 @@
 				<p class="auth-modal__error" id="authError" hidden></p>
 				<button type="submit" class="auth-modal__submit">Sign In</button>
 			</form>
+		</div>
+	</div>
+
+	<div class="auth-modal" id="pwaInstallModal" aria-hidden="true" inert>
+		<div class="auth-modal__overlay" id="pwaInstallOverlay"></div>
+		<div class="auth-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="pwaInstallTitle">
+			<button type="button" class="auth-modal__close" id="pwaInstallClose" aria-label="Close"></button>
+			<h2 class="auth-modal__title" id="pwaInstallTitle">Install as an app</h2>
+			<p class="auth-modal__hint">For your convenience and a better full-screen view, install this site as an app on your device.</p>
+			<div class="auth-modal__actions">
+				<button type="button" class="auth-modal__secondary" id="pwaInstallDismiss">Not now</button>
+				<button type="button" class="auth-modal__submit" id="pwaInstallConfirm">Install</button>
+			</div>
 		</div>
 	</div>
 

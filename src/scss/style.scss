@@ -1994,6 +1994,36 @@ body.page--offline .inventory__form {
 	color: var(--color-error);
 }
 
+.auth-modal__actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	justify-content: flex-end;
+	gap: 10px;
+}
+
+.auth-modal__secondary {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0 18px;
+	min-height: 44px;
+	line-height: 1;
+	font-family: var(--font-primary);
+	font-size: var(--ctrl-font-size);
+	font-weight: 600;
+	color: var(--text-main);
+	background: var(--color-surface);
+	border: 1px solid var(--border-color-strong);
+	border-radius: var(--radius-sm);
+	cursor: pointer;
+	transition: var(--transition);
+}
+
+.auth-modal__secondary:hover {
+	background: var(--color-surface-hover);
+}
+
 .auth-modal__submit {
 	display: inline-flex;
 	align-items: center;

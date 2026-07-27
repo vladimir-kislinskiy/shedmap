@@ -8,6 +8,7 @@ import {
 	canEditLocation,
 } from "./auth.js";
 import { bindStackDrag } from "./drag-drop.js";
+import { initPwa } from "./pwa.js";
 import { getFirebaseConfig } from "./firebase-config.js";
 import {
 	cacheHayShedState,
@@ -3175,6 +3176,7 @@ window.addEventListener("load", async () => {
 	updateSyncBanner();
 	initCrmTheme();
 	initMobileInputScrollFix();
+	initPwa();
 });
 
 let resizeTimer;

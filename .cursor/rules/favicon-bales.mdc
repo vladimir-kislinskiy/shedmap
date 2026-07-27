@@ -1,0 +1,22 @@
+---
+description: Favicon hay-bales design sample and iteration rules
+globs: src/img/favicon-options/**
+alwaysApply: false
+---
+
+# Favicon bales
+
+## Approved samples
+- Composition/camera/stack (PNG reference): `src/img/favicon-options/favicon-bales-reference-approved.png`
+- Green Timothy/Alfalfa color (PNG reference): `src/img/favicon-options/favicon-bales-color-approved.png`
+
+## Working files
+- `src/img/favicon-options/favicon-bales.svg` — working icon (SVG wrapper)
+- `src/img/favicon-options/favicon-bales.png` — realistic 3D raster source embedded in the SVG
+- Do **not** install into `src/resources/favicon/` or the live site until the user explicitly approves.
+
+## Current direction
+- Exactly **three** equal photorealistic 3D bales stacked flush.
+- Timothy/Alfalfa **green** (not yellow straw).
+- **No twine/ropes** at all.
+- Pure geometric SVG rectangles are **not** acceptable — keep realistic 3D look (raster inside SVG is OK).
