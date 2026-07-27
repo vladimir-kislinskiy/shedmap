@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="SM hexagon monogram">
+	<title>SM hexagon on navy</title>
+	<rect width="512" height="512" fill="#1F3A5F"/>
+	<g fill="none" stroke="#FFFFFF" stroke-width="24" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="2">
+		<polygon points="256.0,46.0 437.9,151.0 437.9,361.0 256.0,466.0 74.1,361.0 74.1,151.0"/>
+		<line x1="256" y1="118" x2="256" y2="390"/>
+		<!-- S -->
+		<path d="M242,120 L112,170 L112,222"/>
+		<line x1="112" y1="254" x2="242" y2="254"/>
+		<path d="M112,288 L112,338 L242,388"/>
+		<!-- M -->
+		<path d="M270,120 L402,170"/>
+		<path d="M402,170 L402,350 L330,390"/>
+		<path d="M256,118 L329,242 L402,118"/>
+	</g>
+</svg>

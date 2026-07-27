@@ -1,0 +1,33 @@
+---
+description: Keep website and PWA icons/assets/updates in sync — never leave PWA on stale assets
+alwaysApply: true
+---
+
+# Site + PWA stay in sync
+
+Whenever changing branding, icons, shell UI, caching, or deploy headers, apply the change to **both** the website and the PWA surface. Do not leave the installed app on old icons or an old shell.
+
+## Icons (single source of truth)
+- Site tab icon, Apple touch icon, and PWA manifest icons must show the **same** artwork.
+- Source files live in `src/resources/favicon/`.
+- After changing any master icon, regenerate **all** sizes used by:
+  - `src/partials/connected/favicon.html` (site)
+  - `src/resources/favicon/manifest.json` (PWA)
+  - apple / android / ms / favicon variants in that folder
+- Never update only `favicon-32x32.png` or only `android-icon-512x512.png`.
+
+## Manifest + install
+- Keep `src/resources/favicon/manifest.json` icon paths pointing at the synced favicon files.
+- Keep `apple-touch-icon` and manifest 192/512 in agreement with the site favicon art.
+
+## Updates (do not freeze PWA)
+- `src/resources/sw.js` must stay network-first / no offline shell cache that pins old HTML/CSS/JS/icons.
+- Bump the `SW_VERSION` string in `sw.js` when changing SW behavior or when a forced client refresh is needed.
+- Cache headers for `/sw.js`, `/favicon/manifest.json`, and `/favicon/*` must **revalidate** (never year-long `immutable`). Keep `src/resources/_headers` and `netlify.toml` aligned.
+- `src/js/pwa.js` registers the SW with `updateViaCache: "none"` and periodic `registration.update()`.
+
+## Checklist before finishing icon/PWA work
+1. Site favicon and PWA icons are the same art.
+2. Manifest references those files.
+3. SW + cache headers still allow updates.
+4. Dist/`resources` copy will pick up favicon + `sw.js` via the existing gulp `resources` task.

@@ -37,14 +37,17 @@
 }
 
 .theme-crm .auth-bar {
-	display: grid;
-	grid-template-columns: 1fr auto 1fr;
+	position: relative;
+	display: flex;
 	align-items: center;
-	column-gap: clamp(8px, 1.5vw, 16px);
+	justify-content: space-between;
+	gap: clamp(8px, 1.5vw, 16px);
 	min-height: var(--page-header-h);
 	padding: 0 clamp(12px, 2vw, 20px);
 	background: var(--color-surface);
 	backdrop-filter: none;
+	grid-template-columns: none;
+	grid-template-areas: none;
 }
 
 .theme-crm .tabs__panel {
@@ -58,20 +61,15 @@
 	align-items: center;
 	gap: 12px;
 	min-width: 0;
-	justify-self: start;
-}
-
-.theme-crm .auth-bar__center {
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	justify-self: center;
-	min-width: 0;
+	flex: 1 1 auto;
+	justify-content: flex-start;
 }
 
 .theme-crm .auth-bar > .auth-bar__actions {
-	margin-left: 0;
-	justify-self: end;
+	margin-left: auto;
+	grid-area: auto;
+	flex: 0 1 auto;
+	justify-content: flex-end;
 }
 
 .theme-crm .auth-bar__location {
@@ -87,31 +85,6 @@
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
-}
-
-.theme-crm .auth-bar__install {
-	flex: 0 0 auto;
-	box-sizing: border-box;
-	height: var(--auth-bar-control-size);
-	padding: 0 10px;
-	border: 1px solid var(--border-color-strong);
-	border-radius: var(--radius-sm);
-	background: var(--color-surface);
-	color: var(--text-main);
-	font-family: var(--font-primary);
-	font-size: calc(var(--ctrl-font-size) - 1px);
-	font-weight: 600;
-	line-height: 1;
-	cursor: pointer;
-	white-space: nowrap;
-}
-
-.theme-crm .auth-bar__install:hover {
-	background: var(--color-surface-hover);
-}
-
-.theme-crm .auth-bar__install[hidden] {
-	display: none !important;
 }
 
 .theme-crm .inventory-settings {
@@ -437,9 +410,14 @@
 	}
 
 	.theme-crm .auth-bar {
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: center;
 		min-height: var(--page-header-h);
-		padding: 0 12px;
-		gap: 8px;
+		padding: 0 10px;
+		gap: 6px;
+		grid-template-columns: none;
+		grid-template-areas: none;
 	}
 
 	.theme-crm .auth-bar__start {
@@ -467,7 +445,7 @@
 
 	.theme-crm .auth-bar__location {
 		padding-left: 8px;
-		max-width: min(140px, 32vw);
+		max-width: min(100px, 28vw);
 		font-family: inherit;
 		font-size: clamp(
 			var(--font-size-min),
@@ -476,6 +454,10 @@
 		);
 		font-weight: 600;
 		line-height: 1.2;
+	}
+
+	.theme-crm .auth-bar__user {
+		max-width: clamp(48px, 16vw, 96px);
 	}
 
 	.theme-crm .theme-switch {

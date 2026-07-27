@@ -36,11 +36,6 @@
 				</button>
 				<span class="auth-bar__location" id="crmLocBadgeName" aria-label="Current location: Olds">Olds</span>
 			</div>
-			<div class="auth-bar__center">
-				<button type="button" class="auth-bar__install" id="pwaInstallBtn" hidden
-					aria-label="Install this site as an app on your device"
-					title="Install this site as an app on your device">Install as app</button>
-			</div>
 			<div class="auth-bar__actions">
 				<div class="auth-bar__status">
 					<button type="button" class="theme-switch" id="crmThemeSwitch" role="switch" aria-checked="false"
@@ -471,6 +466,12 @@
 	</div>
 
 	<footer class="page__footer">
+		<a href="#install-app" class="page__footer-install" id="pwaInstallBtn" hidden
+			aria-label="Install this site as an app on your device"
+			title="Install this site as an app on your device">
+			<span class="page__footer-install-icon" aria-hidden="true"></span>
+			<span class="page__footer-install-text">Install as app</span>
+		</a>
 		<span class="page__footer-copy">&copy; 2026 <a href="https://vkys.ca" target="_blank" rel="noopener noreferrer"
 				class="page__footer-link">Volodymyr Kyslynskyi</a></span>
 	</footer>

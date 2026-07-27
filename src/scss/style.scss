@@ -1599,7 +1599,7 @@ body.page--offline .inventory__form {
 .page__footer {
 	display: flex;
 	align-items: center;
-	justify-content: flex-end;
+	justify-content: space-between;
 	gap: 12px;
 	flex-wrap: wrap;
 	text-align: right;
@@ -1630,6 +1630,53 @@ body.page--offline .inventory__form {
 			color: var(--color-primary-hover);
 		}
 	}
+}
+
+.page__footer-copy {
+	margin-left: auto;
+	text-align: right;
+}
+
+.page__footer-install {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	margin: 0;
+	padding: 0;
+	border: none;
+	background: none;
+	font-family: inherit;
+	font-size: inherit;
+	font-weight: 600;
+	line-height: 1.4;
+	color: var(--text-muted);
+	text-decoration: none;
+	cursor: pointer;
+	transition: color 0.3s ease;
+}
+
+.page__footer-install:hover,
+.page__footer-install:focus-visible {
+	color: var(--color-primary-hover);
+	outline: none;
+}
+
+.page__footer-install[hidden] {
+	display: none !important;
+}
+
+.page__footer-install-icon {
+	display: block;
+	width: 12px;
+	height: 12px;
+	flex-shrink: 0;
+	background-color: currentColor;
+	-webkit-mask: url("../img/icons/install.svg") center / contain no-repeat;
+	mask: url("../img/icons/install.svg") center / contain no-repeat;
+}
+
+.page__footer-install-text {
+	white-space: nowrap;
 }
 
 .auth-bar {

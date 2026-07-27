@@ -3,9 +3,9 @@ const INSTALL_HINT =
 	"Browser menu → Install app / Add to Home Screen.\n\n" +
 	"iPhone/iPad: Share → Add to Home Screen.";
 
-const DISMISS_KEY = "hayshed.pwaInstallDismissedAt";
-const DISMISS_MS = 14 * 24 * 60 * 60 * 1000;
+const PROMPT_SEEN_KEY = "hayshed.pwaInstallPromptSeen";
 const PROMPT_DELAY_MS = 1200;
+const SW_UPDATE_MS = 60 * 60 * 1000;
 
 function isStandaloneDisplay() {
 	return (
@@ -29,21 +29,17 @@ function setInstallButtonVisible(visible) {
 	btn.hidden = !visible;
 }
 
-function wasInstallDismissedRecently() {
+function hasSeenInstallPrompt() {
 	try {
-		const raw = window.localStorage.getItem(DISMISS_KEY);
-		if (!raw) return false;
-		const at = Number(raw);
-		if (!Number.isFinite(at)) return false;
-		return Date.now() - at < DISMISS_MS;
+		return window.localStorage.getItem(PROMPT_SEEN_KEY) === "1";
 	} catch {
 		return false;
 	}
 }
 
-function rememberInstallDismissed() {
+function rememberInstallPromptSeen() {
 	try {
-		window.localStorage.setItem(DISMISS_KEY, String(Date.now()));
+		window.localStorage.setItem(PROMPT_SEEN_KEY, "1");
 	} catch {
 		/* ignore */
 	}
@@ -53,20 +49,62 @@ function openInstallModal() {
 	const modal = getInstallModal();
 	if (!modal || modal.classList.contains("auth-modal--open")) return;
 
+	rememberInstallPromptSeen();
 	modal.classList.add("auth-modal--open");
 	modal.removeAttribute("inert");
 	modal.setAttribute("aria-hidden", "false");
 }
 
-function closeInstallModal({ remember = false } = {}) {
+function closeInstallModal() {
 	const modal = getInstallModal();
 	if (!modal) return;
 
-	if (remember) rememberInstallDismissed();
-
+	rememberInstallPromptSeen();
 	modal.classList.remove("auth-modal--open");
 	modal.setAttribute("inert", "");
 	modal.setAttribute("aria-hidden", "true");
+}
+
+function registerServiceWorker() {
+	if (!("serviceWorker" in navigator)) return;
+
+	navigator.serviceWorker
+		.register("./sw.js", { updateViaCache: "none" })
+		.then((registration) => {
+			registration.update().catch(() => {});
+
+			window.setInterval(() => {
+				registration.update().catch(() => {});
+			}, SW_UPDATE_MS);
+
+			registration.addEventListener("updatefound", () => {
+				const worker = registration.installing;
+				if (!worker) return;
+				worker.addEventListener("statechange", () => {
+					if (
+						worker.state === "installed"
+						&& navigator.serviceWorker.controller
+					) {
+						/* New SW ready — activate immediately via skipWaiting in sw.js */
+					}
+				});
+			});
+		})
+		.catch((err) => {
+			console.warn("Service worker registration failed:", err);
+		});
+
+	let refreshing = false;
+	let hadController = Boolean(navigator.serviceWorker.controller);
+	navigator.serviceWorker.addEventListener("controllerchange", () => {
+		if (refreshing) return;
+		if (!hadController) {
+			hadController = true;
+			return;
+		}
+		refreshing = true;
+		window.location.reload();
+	});
 }
 
 export function initPwa() {
@@ -76,10 +114,9 @@ export function initPwa() {
 
 	if (isStandaloneDisplay()) {
 		setInstallButtonVisible(false);
-		return;
+	} else {
+		setInstallButtonVisible(true);
 	}
-
-	setInstallButtonVisible(true);
 
 	let deferredPrompt = null;
 
@@ -108,34 +145,30 @@ export function initPwa() {
 		deferredPrompt = null;
 		setInstallButtonVisible(false);
 		closeInstallModal();
-		rememberInstallDismissed();
 	});
 
-	btn.addEventListener("click", () => {
+	btn.addEventListener("click", (event) => {
+		event.preventDefault();
 		promptInstall();
 	});
 
-	if (modal) {
-		const dismiss = () => closeInstallModal({ remember: true });
+	if (modal && !isStandaloneDisplay()) {
+		const dismiss = () => closeInstallModal();
 		modal.querySelector("#pwaInstallOverlay")?.addEventListener("click", dismiss);
 		modal.querySelector("#pwaInstallClose")?.addEventListener("click", dismiss);
 		modal.querySelector("#pwaInstallDismiss")?.addEventListener("click", dismiss);
 		modal.querySelector("#pwaInstallConfirm")?.addEventListener("click", async () => {
-			closeInstallModal({ remember: true });
+			closeInstallModal();
 			await promptInstall();
 		});
 
-		if (!wasInstallDismissedRecently()) {
+		if (!hasSeenInstallPrompt()) {
 			window.setTimeout(() => {
-				if (isStandaloneDisplay()) return;
+				if (isStandaloneDisplay() || hasSeenInstallPrompt()) return;
 				openInstallModal();
 			}, PROMPT_DELAY_MS);
 		}
 	}
 
-	if (!("serviceWorker" in navigator)) return;
-
-	navigator.serviceWorker.register("./sw.js").catch((err) => {
-		console.warn("Service worker registration failed:", err);
-	});
+	registerServiceWorker();
 }
