@@ -74,11 +74,18 @@ function registerServiceWorker() {
 				/* ignore */
 			}
 
-			registration.update().catch(() => {});
-
-			window.setInterval(() => {
+			const pokeUpdate = () => {
 				registration.update().catch(() => {});
-			}, SW_UPDATE_MS);
+				/* Bust HTTP cache so Chromium re-reads manifest icon URLs. */
+				fetch(`/favicon/manifest.json?v=${Date.now()}`, { cache: "no-store" }).catch(() => {});
+			};
+
+			pokeUpdate();
+
+			window.setInterval(pokeUpdate, SW_UPDATE_MS);
+			document.addEventListener("visibilitychange", () => {
+				if (document.visibilityState === "visible") pokeUpdate();
+			});
 
 			return registration;
 		})

@@ -1,5 +1,5 @@
 /* Network-first SW required for Chromium/Edge installability (Windows included). */
-const SW_VERSION = "hayshed-pwa-2026-07-28-shed-favicon-v5";
+const SW_VERSION = "hayshed-pwa-2026-07-28-shed-favicon-v6";
 
 self.addEventListener("install", (event) => {
 	event.waitUntil(self.skipWaiting());
