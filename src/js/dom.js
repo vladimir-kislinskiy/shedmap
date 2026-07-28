@@ -665,21 +665,61 @@ export function placeFullFrontBehindIsles(stackEl, bayStackEl) {
 	if (getStackIsle(stackEl) !== "both") return false;
 	if (!stackEl.classList.contains("hay-stack--bay-front")) return false;
 
-	const isleFronts = [...bayStackEl.querySelectorAll(".shed__isle .hay-stack--bay-front")];
-	if (!isleFronts.length) return false;
-
-	const minIsleRank = Math.min(...isleFronts.map(getFrontRank));
-	setFrontRank(stackEl, minIsleRank - 0.5);
+	const isleFronts = listBayFrontStacks(bayStackEl).filter(
+		(el) => el !== stackEl && getStackIsle(el) !== "both",
+	);
+	if (isleFronts.length) {
+		const minIsleRank = Math.min(...isleFronts.map(getFrontRank));
+		setFrontRank(stackEl, minIsleRank - 0.5);
+	} else {
+		const fullFronts = [...bayStackEl.querySelectorAll(":scope > .hay-stack--bay-front")].filter(
+			(el) => el !== stackEl,
+		);
+		if (fullFronts.length) {
+			const minRank = Math.min(...fullFronts.map(getFrontRank));
+			setFrontRank(stackEl, minRank - 0.5);
+		} else {
+			setFrontRank(stackEl, 1);
+		}
+	}
 	normalizeFrontRanks(bayStackEl);
 	repairBayLayout(bayStackEl);
 	return true;
+}
+
+function splitFullFrontsAroundIsles(fullFronts, isleFronts) {
+	if (!isleFronts.length) {
+		return { behind: [], ahead: [...fullFronts] };
+	}
+
+	const minIsleRank = Math.min(...isleFronts.map(getFrontRank));
+	const maxIsleRank = Math.max(...isleFronts.map(getFrontRank));
+	const isleMid = (minIsleRank + maxIsleRank) / 2;
+	const behind = [];
+	const ahead = [];
+
+	fullFronts.forEach((stack) => {
+		const rank = getFrontRank(stack);
+		if (rank < minIsleRank || (rank <= maxIsleRank && rank <= isleMid)) {
+			behind.push(stack);
+		} else {
+			ahead.push(stack);
+		}
+	});
+
+	behind.sort((a, b) => getFrontRank(a) - getFrontRank(b));
+	ahead.sort((a, b) => getFrontRank(a) - getFrontRank(b));
+	return { behind, ahead };
 }
 
 function orderFrontStacksLast(container) {
 	if (!container) return;
 
 	container.querySelector(":scope > .shed__stack-spacer")?.remove();
-	container.classList.remove("shed__bay-stack--front-behind-isles");
+	container.classList.remove(
+		"shed__bay-stack--front-behind-isles",
+		"shed__bay-stack--has-isle-regulars",
+	);
 
 	const isBayStack = container.classList.contains("shed__bay-stack");
 	const stacks = isBayStack
@@ -695,35 +735,36 @@ function orderFrontStacksLast(container) {
 
 	if (isBayStack) {
 		const islesRow = container.querySelector(".shed__isles");
-		const isleFrontRanks = [...container.querySelectorAll(".shed__isle .hay-stack--bay-front")].map(
-			getFrontRank,
-		);
-		const maxIsleFrontRank = isleFrontRanks.length ? Math.max(...isleFrontRanks) : Number.NEGATIVE_INFINITY;
-		const frontBehindIsles = isleFrontRanks.length
-			? front.filter((stack) => getFrontRank(stack) <= maxIsleFrontRank)
-			: [];
-		const frontAfterIsles = isleFrontRanks.length
-			? front.filter((stack) => getFrontRank(stack) > maxIsleFrontRank)
-			: front;
 
+		/* Tracks stay independent for non-fr, but all fr share one frontRank order:
+		   full-bay fr with lower rank sits behind isle fr (before .shed__isles),
+		   higher rank sits ahead (after isles). */
 		regular.forEach((stack) => {
 			container.insertBefore(stack, islesRow ?? container.firstChild);
 		});
 
-		if (frontBehindIsles.length && islesRow) {
+		const isleFronts = islesRow
+			? [...islesRow.querySelectorAll(".hay-stack--bay-front")]
+			: [];
+		const { behind, ahead } = splitFullFrontsAroundIsles(front, isleFronts);
+
+		behind.forEach((stack) => {
+			container.insertBefore(stack, islesRow);
+		});
+
+		const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
+		if (ahead.length && regular.length && !isleHasStacks) {
 			const spacer = document.createElement("div");
 			spacer.className = "shed__stack-spacer";
 			spacer.setAttribute("aria-hidden", "true");
-			container.insertBefore(spacer, islesRow);
-			frontBehindIsles.forEach((stack) => {
-				container.insertBefore(stack, islesRow);
-			});
-			container.classList.add("shed__bay-stack--front-behind-isles");
+			container.appendChild(spacer);
 		}
 
-		frontAfterIsles.forEach((stack) => {
+		ahead.forEach((stack) => {
 			container.appendChild(stack);
 		});
+
+		container.classList.toggle("shed__bay-stack--front-behind-isles", behind.length > 0);
 		return;
 	}
 
@@ -764,13 +805,22 @@ function ensureBayStackFrontLayout(bayStackEl) {
 	const directStacks = getDirectStacks(bayStackEl);
 	const regular = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
 	const front = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
-	const packBehind = bayStackEl.classList.contains("shed__bay-stack--front-behind-isles");
+	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
+	const isleFronts = islesRow
+		? [...islesRow.querySelectorAll(".hay-stack--bay-front")]
+		: [];
+	const { behind, ahead } = splitFullFrontsAroundIsles(front, isleFronts);
+	const needsSplit =
+		(ahead.length > 0 && (regular.length > 0 || isleHasStacks))
+		|| (behind.length > 0 && isleHasStacks);
 
-	if (!packBehind) {
+	bayStackEl.classList.toggle("shed__bay-stack--has-front-split", needsSplit);
+	bayStackEl.classList.toggle("shed__bay-stack--front-behind-isles", behind.length > 0);
+
+	if (!needsSplit || isleHasStacks || behind.length) {
 		bayStackEl.querySelector(":scope > .shed__stack-spacer")?.remove();
 	}
-
-	bayStackEl.classList.toggle("shed__bay-stack--has-front-split", regular.length > 0 && front.length > 0);
 }
 
 export function repairBayLayout(bayStackEl) {
@@ -1009,18 +1059,7 @@ export function applyStackComment(stackEl, comment = "") {
 	if (isFront) {
 		const bayStack = stackEl.closest(".shed__bay-stack");
 		if (bayStack && (!wasFront || !stackEl.dataset.frontRank)) {
-			const isle = getStackIsle(stackEl);
-			if (isle === "both") {
-				const isleFronts = [...bayStack.querySelectorAll(".shed__isle .hay-stack--bay-front")];
-				if (isleFronts.length) {
-					setFrontRank(stackEl, Math.min(...isleFronts.map(getFrontRank)) - 0.5);
-					normalizeFrontRanks(bayStack);
-				} else {
-					setFrontRank(stackEl, nextFrontRank(bayStack));
-				}
-			} else {
-				setFrontRank(stackEl, nextFrontRank(bayStack));
-			}
+			setFrontRank(stackEl, nextFrontRank(bayStack));
 		}
 	} else {
 		clearFrontRank(stackEl);
