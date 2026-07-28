@@ -8,26 +8,30 @@
 	"start_url": "/?utm_source=pwa",
 	"scope": "/",
 	"display": "standalone",
-	"display_override": ["standalone", "minimal-ui", "browser"],
+	"display_override": [
+		"standalone",
+		"minimal-ui",
+		"browser"
+	],
 	"orientation": "any",
-	"background_color": "#1f3a5f",
+	"background_color": "#eef1f5",
 	"theme_color": "#1f3a5f",
 	"prefer_related_applications": false,
 	"icons": [
 		{
-			"src": "/favicon/android-icon-192x192.v-sm-20260728g.png",
+			"src": "/favicon/android-icon-192x192.v-classic-20260728.png",
 			"sizes": "192x192",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "/favicon/android-icon-512x512.v-sm-20260728g.png",
+			"src": "/favicon/android-icon-512x512.v-classic-20260728.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "/favicon/android-icon-512x512-maskable.v-sm-20260728g.png",
+			"src": "/favicon/android-icon-512x512-maskable.v-classic-20260728.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"

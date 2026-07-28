@@ -10,12 +10,11 @@
     ]]></style>
   </defs>
   <rect width="100" height="100" rx="14" ry="14" fill="#1f3a5f"/>
-  <!-- Half-frame: open on the right with short inward stubs -->
   <path
-    d="M 79 28 L 79 20 L 28 20 Q 20 20 20 28 L 20 72 Q 20 80 28 80 L 79 80 L 79 72"
+    d="M 88 22 L 88 12 L 22 12 Q 12 12 12 22 L 12 78 Q 12 88 22 88 L 88 88 L 88 78"
     fill="none"
     stroke="#ffffff"
-    stroke-width="3.2"
+    stroke-width="3"
     stroke-linecap="square"
     stroke-linejoin="round"
   />
@@ -25,9 +24,9 @@
     text-anchor="middle"
     dominant-baseline="middle"
     fill="#ffffff"
-    font-family="Michroma, Eurostile, Arial Narrow, sans-serif"
-    font-size="28"
-    letter-spacing="3"
-    transform="translate(50 50) scale(1.18 1.05) translate(-50 -50)"
+    font-family="Michroma, Eurostile, sans-serif"
+    font-size="22"
+    letter-spacing="2"
+    transform="translate(50 50) scale(1.12 1.04) translate(-50 -50)"
   >SM</text>
 </svg>
