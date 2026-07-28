@@ -179,6 +179,8 @@ const cache = () => {
 			"dist/img/**/*.png",
 			"!dist/favicon/**",
 			"!dist/js/chunks/**",
+			/* SW must stay at /sw.js — pwa.js registers that exact path. */
+			"!dist/sw.js",
 		],
 		{
 			base: "dist",

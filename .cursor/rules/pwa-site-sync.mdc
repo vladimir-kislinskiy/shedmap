@@ -27,6 +27,7 @@ Whenever changing branding, icons, shell UI, caching, or deploy headers, apply t
 
 ## Updates (do not freeze PWA)
 - `src/resources/sw.js` must stay network-first / no offline shell cache that pins old HTML/CSS/JS/icons.
+- **Never fingerprint/hash `sw.js` in the production `cache`/rev step** — clients register `/sw.js` by that exact path. Excluding it is required (`!dist/sw.js` in `gulpfile.js`).
 - Bump the `SW_VERSION` string in `sw.js` when changing SW behavior or when a forced client refresh is needed.
 - Cache headers for `/sw.js`, `/favicon/manifest.json`, and `/favicon/*` must be `max-age=0, must-revalidate` (never day-long or `immutable`). Keep `src/resources/_headers` and `netlify.toml` aligned.
 - `src/js/pwa.js` registers the SW with `updateViaCache: "none"` and periodic `registration.update()`.
