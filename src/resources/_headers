@@ -18,9 +18,11 @@
 
 /favicon/manifest.json
   Cache-Control: public, max-age=0, must-revalidate
+  Content-Type: application/manifest+json
 
 /sw.js
   Cache-Control: public, max-age=0, must-revalidate
+  Content-Type: application/javascript; charset=utf-8
 
 /favicon/*
   Cache-Control: public, max-age=86400, must-revalidate

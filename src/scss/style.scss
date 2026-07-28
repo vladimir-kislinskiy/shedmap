@@ -882,9 +882,8 @@ body.page--dragging .shed__bay-exit {
 	margin-top: 0;
 }
 
-.shed__bay-stack--front-behind-isles .shed__isle--front-only > .hay-stack--bay-front:first-child {
-	margin-top: 0;
-}
+/* Keep isle fronts free to use margin-top:auto so a lone fr can sit
+   at the true front instead of locking beside a shorter-rank neighbor. */
 
 .hay-stack--full {
 	width: 100%;

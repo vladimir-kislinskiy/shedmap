@@ -1,13 +1,18 @@
 {
+	"id": "/",
 	"name": "Hay Shed Map",
 	"short_name": "Shed Map",
 	"description": "Inventory management and mapping for hay sheds.",
-	"start_url": "/",
+	"lang": "en",
+	"dir": "ltr",
+	"start_url": "/?utm_source=pwa",
 	"scope": "/",
 	"display": "standalone",
+	"display_override": ["standalone", "minimal-ui", "browser"],
 	"orientation": "any",
 	"background_color": "#eef1f5",
-	"theme_color": "#eef1f5",
+	"theme_color": "#1f3a5f",
+	"prefer_related_applications": false,
 	"icons": [
 		{
 			"src": "/favicon/android-icon-192x192.png",
@@ -26,12 +31,6 @@
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"
-		},
-		{
-			"src": "/favicon/apple-icon-180x180.png",
-			"sizes": "180x180",
-			"type": "image/png",
-			"purpose": "any"
 		}
 	]
 }

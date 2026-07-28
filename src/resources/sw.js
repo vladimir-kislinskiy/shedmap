@@ -1,5 +1,5 @@
-/* Network-first SW: installable PWA without freezing on old cached shells. */
-const SW_VERSION = "hayshed-pwa-2026-07-27";
+/* Network-first SW required for Chromium/Edge installability (Windows included). */
+const SW_VERSION = "hayshed-pwa-2026-07-28-install";
 
 self.addEventListener("install", (event) => {
 	event.waitUntil(self.skipWaiting());
@@ -15,25 +15,12 @@ self.addEventListener("activate", (event) => {
 	);
 });
 
+/* A fetch handler is required for installability. Always prefer network. */
 self.addEventListener("fetch", (event) => {
-	const request = event.request;
-	if (request.method !== "GET") return;
-
-	const isNavigate = request.mode === "navigate";
-	const url = new URL(request.url);
-	const isAppShell =
-		isNavigate
-		|| url.pathname.endsWith(".html")
-		|| url.pathname.endsWith("/sw.js")
-		|| url.pathname.endsWith("/manifest.json")
-		|| url.pathname.startsWith("/favicon/");
-
+	if (event.request.method !== "GET") return;
 	event.respondWith(
-		fetch(request, isAppShell ? { cache: "no-store" } : undefined).catch(
-			() => fetch(request),
-		),
+		fetch(event.request).catch(() => caches.match(event.request)),
 	);
 });
 
-// Touch version string so deploys replace the SW file.
 void SW_VERSION;

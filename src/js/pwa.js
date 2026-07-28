@@ -1,11 +1,8 @@
-const INSTALL_HINT =
-	"Install this site as an app on your device.\n\n" +
-	"Browser menu → Install app / Add to Home Screen.\n\n" +
-	"iPhone/iPad: Share → Add to Home Screen.";
-
 const PROMPT_SEEN_KEY = "hayshed.pwaInstallPromptSeen";
 const PROMPT_DELAY_MS = 1200;
 const SW_UPDATE_MS = 60 * 60 * 1000;
+const PROMPT_WAIT_MS = 8000;
+const PROMPT_POLL_MS = 200;
 
 function isStandaloneDisplay() {
 	return (
@@ -66,47 +63,35 @@ function closeInstallModal() {
 }
 
 function registerServiceWorker() {
-	if (!("serviceWorker" in navigator)) return;
+	if (!("serviceWorker" in navigator)) return Promise.resolve(null);
 
-	navigator.serviceWorker
-		.register("./sw.js", { updateViaCache: "none" })
-		.then((registration) => {
+	return navigator.serviceWorker
+		.register("/sw.js", { scope: "/", updateViaCache: "none" })
+		.then(async (registration) => {
+			try {
+				await navigator.serviceWorker.ready;
+			} catch {
+				/* ignore */
+			}
+
 			registration.update().catch(() => {});
 
 			window.setInterval(() => {
 				registration.update().catch(() => {});
 			}, SW_UPDATE_MS);
 
-			registration.addEventListener("updatefound", () => {
-				const worker = registration.installing;
-				if (!worker) return;
-				worker.addEventListener("statechange", () => {
-					if (
-						worker.state === "installed"
-						&& navigator.serviceWorker.controller
-					) {
-						/* New SW ready — activate immediately via skipWaiting in sw.js */
-					}
-				});
-			});
+			return registration;
 		})
 		.catch((err) => {
 			console.warn("Service worker registration failed:", err);
+			return null;
 		});
-
-	let refreshing = false;
-	let hadController = Boolean(navigator.serviceWorker.controller);
-	navigator.serviceWorker.addEventListener("controllerchange", () => {
-		if (refreshing) return;
-		if (!hadController) {
-			hadController = true;
-			return;
-		}
-		refreshing = true;
-		window.location.reload();
-	});
 }
 
+/**
+ * Chromium/Edge (Windows, Android, desktop): native install dialog via beforeinstallprompt.
+ * No alert / instruction fallbacks — only the browser install UI.
+ */
 export function initPwa() {
 	const btn = getInstallButton();
 	const modal = getInstallModal();
@@ -114,31 +99,73 @@ export function initPwa() {
 
 	if (isStandaloneDisplay()) {
 		setInstallButtonVisible(false);
-	} else {
-		setInstallButtonVisible(true);
+		registerServiceWorker();
+		return;
 	}
 
-	let deferredPrompt = null;
+	setInstallButtonVisible(true);
 
-	async function promptInstall() {
-		if (deferredPrompt) {
-			deferredPrompt.prompt();
-			try {
-				await deferredPrompt.userChoice;
-			} catch {
-				/* ignore */
-			}
-			deferredPrompt = null;
-			return;
+	let deferredPrompt = null;
+	let promptWaiters = [];
+
+	function notifyPromptReady() {
+		const waiters = promptWaiters;
+		promptWaiters = [];
+		for (const resolve of waiters) resolve(deferredPrompt);
+	}
+
+	function waitForDeferredPrompt(timeoutMs) {
+		if (deferredPrompt) return Promise.resolve(deferredPrompt);
+
+		return new Promise((resolve) => {
+			let settled = false;
+			const finish = (value) => {
+				if (settled) return;
+				settled = true;
+				resolve(value);
+			};
+
+			promptWaiters.push(finish);
+
+			const started = Date.now();
+			const poll = window.setInterval(() => {
+				if (deferredPrompt) {
+					window.clearInterval(poll);
+					finish(deferredPrompt);
+					return;
+				}
+				if (Date.now() - started >= timeoutMs) {
+					window.clearInterval(poll);
+					finish(null);
+				}
+			}, PROMPT_POLL_MS);
+		});
+	}
+
+	async function runNativeInstall() {
+		let promptEvent = deferredPrompt;
+		if (!promptEvent) {
+			promptEvent = await waitForDeferredPrompt(PROMPT_WAIT_MS);
+		}
+		if (!promptEvent) return false;
+
+		deferredPrompt = null;
+		promptEvent.prompt();
+
+		try {
+			await promptEvent.userChoice;
+		} catch {
+			/* ignore */
 		}
 
-		window.alert(INSTALL_HINT);
+		return true;
 	}
 
 	window.addEventListener("beforeinstallprompt", (event) => {
 		event.preventDefault();
 		deferredPrompt = event;
 		setInstallButtonVisible(true);
+		notifyPromptReady();
 	});
 
 	window.addEventListener("appinstalled", () => {
@@ -147,9 +174,9 @@ export function initPwa() {
 		closeInstallModal();
 	});
 
-	btn.addEventListener("click", (event) => {
+	btn.addEventListener("click", async (event) => {
 		event.preventDefault();
-		promptInstall();
+		await runNativeInstall();
 	});
 
 	if (modal && !isStandaloneDisplay()) {
@@ -159,7 +186,7 @@ export function initPwa() {
 		modal.querySelector("#pwaInstallDismiss")?.addEventListener("click", dismiss);
 		modal.querySelector("#pwaInstallConfirm")?.addEventListener("click", async () => {
 			closeInstallModal();
-			await promptInstall();
+			await runNativeInstall();
 		});
 
 		if (!hasSeenInstallPrompt()) {
@@ -170,5 +197,7 @@ export function initPwa() {
 		}
 	}
 
-	registerServiceWorker();
+	registerServiceWorker().then(() => {
+		/* SW ready — Chromium may fire beforeinstallprompt shortly after */
+	});
 }
