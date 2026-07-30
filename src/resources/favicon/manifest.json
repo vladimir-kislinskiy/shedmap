@@ -19,19 +19,19 @@
 	"prefer_related_applications": false,
 	"icons": [
 		{
-			"src": "/favicon/android-icon-192x192.v-sm-20260730c.png",
+			"src": "/favicon/android-icon-192x192.v-sm-20260730d.png",
 			"sizes": "192x192",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "/favicon/android-icon-512x512.v-sm-20260730c.png",
+			"src": "/favicon/android-icon-512x512.v-sm-20260730d.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "any"
 		},
 		{
-			"src": "/favicon/android-icon-512x512-maskable.v-sm-20260730c.png",
+			"src": "/favicon/android-icon-512x512-maskable.v-sm-20260730d.png",
 			"sizes": "512x512",
 			"type": "image/png",
 			"purpose": "maskable"
