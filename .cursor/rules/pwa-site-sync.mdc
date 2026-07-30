@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Site + PWA stay in sync
 
-Whenever changing branding, icons, shell UI, caching, or deploy headers, apply the change to **both** the website and the PWA surface. Do not leave the installed app on old icons or an old shell. Updates must be picked up after a Netlify deploy without requiring reinstall.
+Whenever changing branding, icons, shell UI, caching, or deploy headers, apply the change to **both** the website and the PWA surface. Do not leave the installed app on old icons or an old shell.
 
 ## Icons (single source of truth)
 - Site tab icon, Apple touch icon, and PWA manifest icons must show the **same** artwork.
@@ -15,25 +15,32 @@ Whenever changing branding, icons, shell UI, caching, or deploy headers, apply t
   - `src/resources/favicon/manifest.json` (PWA)
   - apple / android / ms / favicon variants in that folder
 - Never update only `favicon-32x32.png` or only `android-icon-512x512.png`.
+- Keep root aliases in sync (`netlify.toml` redirects + `src/resources/_redirects`) for `/apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, and `/favicon.ico` → current versioned apple/ICO assets. Safari probes the site root.
 
 ## Icon URL must change (Chrome immutable icons)
 - Chromium treats PWA icon URLs as **immutable**: replacing file bytes at the same path does **not** update an installed PWA.
-- On every icon art change you MUST publish **new icon URLs** in `manifest.json` and `favicon.html` (versioned filenames, e.g. `android-icon-192x192.v-….png`). Keep `ICON_VERSION` in `src/resources/favicon/ICON_VERSION` in sync.
-- Do not tell users to reinstall to get a new icon — fix URLs + headers so the next launch/navigation applies the update (Chrome may show an in-app confirm for icon/name changes; that is fine).
+- On every icon art change you MUST publish **new icon URLs** in `manifest.json` and `favicon.html` (versioned filenames, e.g. `android-icon-192x192.v-….png`). Keep `ICON_VERSION` in `src/resources/favicon/ICON_VERSION` and `<meta name="hayshed-icon-version">` in sync.
+- Bump `SW_VERSION` when shipping a new icon set so clients pick up a new SW activate cycle.
+
+## Platform reality (do not over-promise)
+- **Chromium / Edge (Android + desktop):** New versioned icon URLs in the manifest trigger an identity update. Desktop Chrome may **not** silently swap the Dock/taskbar icon — the user may need app menu → **Review app update**. Fully quit the installed app after deploy, reopen once, then apply the review if shown. Do not ask for reinstall on Chromium if URLs + headers are correct.
+- **Safari iPhone / iPad / macOS “Add to Home Screen” / Add to Dock:** Apple stores the home-screen icon in a separate shadow cache at add time. **There is no web API to rewrite that icon for existing installs.** Versioned `apple-touch-icon` + root aliases fix **new** adds and tab icons; for already-added icons the only reliable OS path is remove + Add to Home Screen once. Be honest about this — do not claim we can force SpringBoard/Dock Safari icons without that step.
 
 ## Manifest + install
 - Keep `src/resources/favicon/manifest.json` icon paths pointing at the **versioned** synced favicon files.
+- Prefer a stable manifest link href (`/favicon/manifest.json`) without a rotating query — version the **icon file names** inside the JSON instead.
 - Keep `apple-touch-icon` and manifest 192/512 in agreement with the site favicon art.
 
 ## Updates (do not freeze PWA)
 - `src/resources/sw.js` must stay network-first / no offline shell cache that pins old HTML/CSS/JS/icons.
 - **Never fingerprint/hash `sw.js` in the production `cache`/rev step** — clients register `/sw.js` by that exact path. Excluding it is required (`!dist/sw.js` in `gulpfile.js`).
 - Bump the `SW_VERSION` string in `sw.js` when changing SW behavior or when a forced client refresh is needed.
-- Cache headers for `/sw.js`, `/favicon/manifest.json`, and `/favicon/*` must be `max-age=0, must-revalidate` (never day-long or `immutable`). Keep `src/resources/_headers` and `netlify.toml` aligned.
-- `src/js/pwa.js` registers the SW with `updateViaCache: "none"` and periodic `registration.update()`.
+- Cache headers for `/sw.js`, `/favicon/manifest.json`, `/favicon/*`, and root apple-touch aliases must be `max-age=0, must-revalidate` (never day-long or `immutable`). Keep `src/resources/_headers` and `netlify.toml` aligned.
+- `src/js/pwa.js` registers the SW with `updateViaCache: "none"`, periodically calls `registration.update()`, and on standalone + new `hayshed-icon-version` forces one reload so Chromium re-parses `<link rel="manifest">`.
 
 ## Checklist before finishing icon/PWA work
 1. Site favicon and PWA icons are the same art.
-2. Manifest + `favicon.html` reference **new versioned** icon URLs (not the previous deploy’s paths).
-3. SW + cache headers still allow updates (`max-age=0` on favicon/manifest/sw).
-4. Dist/`resources` copy will pick up favicon + `sw.js` via the existing gulp `resources` task.
+2. Manifest + `favicon.html` reference **new versioned** icon URLs (not the previous deploy’s paths); meta `hayshed-icon-version` matches `ICON_VERSION`.
+3. Root apple-touch / favicon.ico aliases point at the new apple/ICO files.
+4. SW + cache headers still allow updates (`max-age=0` on favicon/manifest/sw).
+5. Dist/`resources` copy will pick up favicon + `sw.js` + `_redirects` via the existing gulp `resources` task.

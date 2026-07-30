@@ -1,4 +1,5 @@
 const PROMPT_SEEN_KEY = "hayshed.pwaInstallPromptSeen";
+const ICON_VERSION_KEY = "hayshed.iconVersion";
 const PROMPT_DELAY_MS = 1200;
 const SW_UPDATE_MS = 60 * 60 * 1000;
 const PROMPT_WAIT_MS = 8000;
@@ -10,6 +11,10 @@ function isStandaloneDisplay() {
 		|| window.matchMedia("(display-mode: fullscreen)").matches
 		|| window.navigator.standalone === true
 	);
+}
+
+function getIconVersion() {
+	return document.querySelector('meta[name="hayshed-icon-version"]')?.content?.trim() || "";
 }
 
 function getInstallButton() {
@@ -62,8 +67,56 @@ function closeInstallModal() {
 	modal.setAttribute("aria-hidden", "true");
 }
 
+/**
+ * Chromium discovers icon/name updates from the document's <link rel="manifest">.
+ * A bare fetch() of manifest.json is not enough — force one full reload when
+ * ICON_VERSION changes so the installed app re-parses the latest HTML + manifest.
+ */
+function refreshManifestDiscovery() {
+	const version = getIconVersion();
+	if (!version) return;
+
+	const manifestLink = document.querySelector('link[rel="manifest"]');
+	const manifestHref = manifestLink?.href || "/favicon/manifest.json";
+
+	fetch(manifestHref, { cache: "reload" }).catch(() => {});
+	document.querySelectorAll('link[rel="apple-touch-icon"], link[rel="icon"]').forEach((link) => {
+		if (!link.href) return;
+		fetch(link.href, { cache: "reload" }).catch(() => {});
+	});
+
+	let seen = "";
+	try {
+		seen = window.localStorage.getItem(ICON_VERSION_KEY) || "";
+	} catch {
+		/* ignore */
+	}
+
+	if (!isStandaloneDisplay() || seen === version) return;
+
+	const reloadKey = `hayshed.iconReload.${version}`;
+	try {
+		if (!window.sessionStorage.getItem(reloadKey)) {
+			window.sessionStorage.setItem(reloadKey, "1");
+			window.location.reload();
+			return;
+		}
+	} catch {
+		/* ignore */
+	}
+
+	try {
+		window.localStorage.setItem(ICON_VERSION_KEY, version);
+	} catch {
+		/* ignore */
+	}
+}
+
 function registerServiceWorker() {
-	if (!("serviceWorker" in navigator)) return Promise.resolve(null);
+	if (!("serviceWorker" in navigator)) {
+		refreshManifestDiscovery();
+		return Promise.resolve(null);
+	}
 
 	return navigator.serviceWorker
 		.register("/sw.js", { scope: "/", updateViaCache: "none" })
@@ -76,8 +129,7 @@ function registerServiceWorker() {
 
 			const pokeUpdate = () => {
 				registration.update().catch(() => {});
-				/* Bust HTTP cache so Chromium re-reads manifest icon URLs. */
-				fetch(`/favicon/manifest.json?v=${Date.now()}`, { cache: "no-store" }).catch(() => {});
+				refreshManifestDiscovery();
 			};
 
 			pokeUpdate();
@@ -91,6 +143,7 @@ function registerServiceWorker() {
 		})
 		.catch((err) => {
 			console.warn("Service worker registration failed:", err);
+			refreshManifestDiscovery();
 			return null;
 		});
 }

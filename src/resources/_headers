@@ -29,3 +29,15 @@
 
 /*.html
   Cache-Control: public, max-age=0, must-revalidate
+
+/apple-touch-icon.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/apple-touch-icon-precomposed.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/apple-touch-icon-180x180.png
+  Cache-Control: public, max-age=0, must-revalidate
+
+/favicon.ico
+  Cache-Control: public, max-age=0, must-revalidate

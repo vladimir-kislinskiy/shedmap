@@ -52,3 +52,44 @@
   for = "/*.html"
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
+
+# Apple/Safari probe these at the site root when adding/refreshing home-screen icons.
+[[redirects]]
+  from = "/apple-touch-icon.png"
+  to = "/favicon/apple-icon-180x180.v-sm-20260730c.png"
+  status = 200
+
+[[redirects]]
+  from = "/apple-touch-icon-precomposed.png"
+  to = "/favicon/apple-icon-180x180.v-sm-20260730c.png"
+  status = 200
+
+[[redirects]]
+  from = "/apple-touch-icon-180x180.png"
+  to = "/favicon/apple-icon-180x180.v-sm-20260730c.png"
+  status = 200
+
+[[redirects]]
+  from = "/favicon.ico"
+  to = "/favicon/favicon.ico"
+  status = 200
+
+[[headers]]
+  for = "/apple-touch-icon.png"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/apple-touch-icon-precomposed.png"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/apple-touch-icon-180x180.png"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/favicon.ico"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"

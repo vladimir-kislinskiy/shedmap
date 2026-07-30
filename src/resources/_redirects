@@ -1,0 +1,5 @@
+# Apple/Safari probe these at the site root when adding/refreshing home-screen icons.
+/apple-touch-icon.png               /favicon/apple-icon-180x180.v-sm-20260730c.png  200
+/apple-touch-icon-precomposed.png   /favicon/apple-icon-180x180.v-sm-20260730c.png  200
+/apple-touch-icon-180x180.png       /favicon/apple-icon-180x180.v-sm-20260730c.png  200
+/favicon.ico                        /favicon/favicon.ico                            200
