@@ -13,7 +13,7 @@ import { getFirebaseConfig } from "./firebase-config.js";
 import {
 	cacheHayShedState,
 	formatCacheTimestamp,
-	loadAllCachedHayShedStates,
+	loadCachedHayShedState,
 	validateHayShedState,
 	normalizeHayShedState,
 	sanitizeForFirebase,
@@ -2176,16 +2176,30 @@ function updateSyncBanner() {
 	}, OFFLINE_BANNER_DELAY_MS);
 }
 
-async function initLocalCache() {
-	const cachedByLocation = await loadAllCachedHayShedStates();
-	LOCATION_IDS.forEach((locationId) => {
-		if (hasRemoteStateByLocation[locationId]) return;
+function applyCachedStateIfSafe(locationId, cached) {
+	if (hasRemoteStateByLocation[locationId]) return false;
+	if (!cached?.state || !validateHayShedState(cached.state, locationId)) return false;
+	cacheSavedAtByLocation[locationId] = cached.savedAt;
+	applyAppState(locationId, cached.state);
+	return true;
+}
 
-		const cached = cachedByLocation[locationId];
-		if (!cached?.state || !validateHayShedState(cached.state, locationId)) return;
-		cacheSavedAtByLocation[locationId] = cached.savedAt;
-		applyAppState(locationId, cached.state);
-	});
+/**
+ * Paint from IndexedDB before Firebase snapshots arrive.
+ * Remote still wins via hasRemoteStateByLocation / applyRemoteState.
+ * Active location first so the visible map fills ASAP.
+ */
+async function initLocalCache() {
+	const activeLocationId = getCurrentLocation();
+	applyCachedStateIfSafe(
+		activeLocationId,
+		await loadCachedHayShedState(activeLocationId),
+	);
+
+	for (const locationId of LOCATION_IDS) {
+		if (locationId === activeLocationId) continue;
+		applyCachedStateIfSafe(locationId, await loadCachedHayShedState(locationId));
+	}
 }
 
 function applyRemoteState(locationId, state) {
@@ -3172,7 +3186,7 @@ window.resetAllBays = resetAllBays;
 window.resetOlds = () => resetAllBays({ locationId: "olds" });
 window.resetSiksika = () => resetAllBays({ locationId: "siksika" });
 
-window.addEventListener("load", async () => {
+async function startApp() {
 	initGrabToScroll();
 	initAuthUI();
 	initToggleControls();
@@ -3184,9 +3198,12 @@ window.addEventListener("load", async () => {
 		initInventoryForm(locationId);
 		initLogFilters(locationId);
 	});
+
+	/* Cache first (fast paint), then RTDB — remote overwrites if newer/different. */
+	await initLocalCache();
 	initSyncStatus();
 	initFirebaseSync();
-	await initLocalCache();
+
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	updateStackInteractionState();
 	syncAllShedLayoutsAfterPaint();
@@ -3196,7 +3213,16 @@ window.addEventListener("load", async () => {
 	initCrmTheme();
 	initMobileInputScrollFix();
 	initPwa();
-});
+}
+
+/* DOMContentLoaded is enough — waiting for window "load" delayed data for fonts/images. */
+if (document.readyState === "loading") {
+	document.addEventListener("DOMContentLoaded", () => {
+		void startApp();
+	});
+} else {
+	void startApp();
+}
 
 let resizeTimer;
 window.addEventListener("resize", () => {
