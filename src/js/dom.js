@@ -49,6 +49,7 @@ export function captureStackSnapshot(stackEl) {
 		contract,
 		bales: parseInt(stackEl.dataset.bales, 10) || 0,
 		rejected: stackEl.dataset.rejected === "true",
+		fill: stackEl.dataset.fill === "true",
 		grade: stackEl.dataset.grade || "",
 		comment: stackEl.dataset.comment || "",
 	};
@@ -391,6 +392,7 @@ function finalizeBayStackLayout(bayStackEl) {
 		stack.style.removeProperty("height");
 		delete stack.dataset.contentMinHeight;
 	});
+	syncFillLayoutClasses(bayStackEl);
 	applyBayStackAreaBudget(bayStackEl);
 	applyAllStackHeights(bayStackEl);
 	getBayStacks(bayStackEl).forEach((stack) => ensureStackFitsContent(stack));
@@ -753,7 +755,8 @@ function orderFrontStacksLast(container) {
 		});
 
 		const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
-		if (ahead.length && regular.length && !isleHasStacks) {
+		const hasFill = stacks.some(isStackFill);
+		if (ahead.length && regular.length && !isleHasStacks && !hasFill) {
 			const spacer = document.createElement("div");
 			spacer.className = "shed__stack-spacer";
 			spacer.setAttribute("aria-hidden", "true");
@@ -783,11 +786,12 @@ function ensureIsleFrontLayout(isleEl) {
 
 	const hasSplit = regular.length > 0 && front.length > 0;
 	const frontOnly = front.length > 0 && regular.length === 0;
+	const hasFill = stacks.some(isStackFill);
 
 	isleEl.classList.toggle("shed__isle--has-front-split", hasSplit);
 	isleEl.classList.toggle("shed__isle--front-only", frontOnly);
 
-	if (!hasSplit) {
+	if (!hasSplit || hasFill) {
 		spacer?.remove();
 		return;
 	}
@@ -873,6 +877,8 @@ export function repairBayLayout(bayStackEl) {
 	bayStackEl
 		.querySelectorAll(":scope > .hay-stack--bay-front")
 		.forEach((el) => el.classList.add("shed__front-anchor"));
+
+	syncFillLayoutClasses(bayStackEl);
 }
 
 export function repairAllBayLayouts() {
@@ -1047,6 +1053,43 @@ export function applyStackRejected(stackEl, rejected) {
 	updateStackCountDisplay(stackEl);
 }
 
+export function applyStackFill(stackEl, fill) {
+	if (!stackEl) return;
+
+	const on = !!fill;
+	stackEl.classList.toggle("hay-stack--fill", on);
+	stackEl.dataset.fill = on ? "true" : "false";
+
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	if (!bayStack) return;
+
+	syncFillLayoutClasses(bayStack);
+	repairBayLayout(bayStack);
+	finalizeBayStackLayout(bayStack);
+}
+
+function isStackFill(stackEl) {
+	return stackEl?.dataset.fill === "true" || stackEl?.classList.contains("hay-stack--fill");
+}
+
+function syncFillLayoutClasses(bayStackEl) {
+	if (!bayStackEl) return;
+
+	const directFill = getDirectStacks(bayStackEl).some(isStackFill);
+	let isleHasFill = false;
+
+	["1", "2"].forEach((isleNum) => {
+		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
+		if (!isleEl) return;
+		const hasFill = getDirectStacks(isleEl).some(isStackFill);
+		isleEl.classList.toggle("shed__isle--has-fill", hasFill);
+		if (hasFill) isleHasFill = true;
+	});
+
+	bayStackEl.classList.toggle("shed__bay-stack--has-fill", directFill);
+	bayStackEl.classList.toggle("shed__bay-stack--isle-has-fill", isleHasFill);
+}
+
 export function applyStackComment(stackEl, comment = "") {
 	if (!stackEl) return;
 
@@ -1077,7 +1120,7 @@ export function applyStackComment(stackEl, comment = "") {
 	}
 }
 
-export function createHayStack(type, contract, baleCount, isle, bayStackEl, { rejected = false, comment = "", grade = "" } = {}) {
+export function createHayStack(type, contract, baleCount, isle, bayStackEl, { rejected = false, fill = false, comment = "", grade = "" } = {}) {
 	const tpl = document.getElementById("hayStackTemplate");
 	if (!tpl || !bayStackEl) return null;
 
@@ -1090,10 +1133,12 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl, { re
 	stack.querySelector(".hay-stack__contract").textContent = contract;
 	applyStackRejected(stack, rejected);
 	applyStackGrade(stack, grade);
-	applyStackComment(stack, comment);
+	stack.classList.toggle("hay-stack--fill", !!fill);
+	stack.dataset.fill = fill ? "true" : "false";
 	updateStackCountDisplay(stack, baleCount);
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle, locationId));
 	applyIsleLayout(stack, isle, bayStackEl);
+	applyStackComment(stack, comment);
 	return stack;
 }
 
@@ -1155,6 +1200,7 @@ export function findMatchingStackInContainer(container, stackKey, snap = null) {
 		if ((current.comment || "") === (snap.comment || "")) points += 4;
 		if ((current.grade || "") === (snap.grade || "")) points += 2;
 		if (!!current.rejected === !!snap.rejected) points += 1;
+		if (!!current.fill === !!snap.fill) points += 1;
 		if (current.type === snap.type) points += 1;
 		return points;
 	};
@@ -1265,10 +1311,11 @@ export function restoreHayStack(stackData, bayStackEl) {
 	const bales = parseInt(stackData.bales, 10) || 0;
 	const isle = stackData.isle || "both";
 	const rejected = stackData.rejected === true || stackData.rejected === "true";
+	const fill = stackData.fill === true || stackData.fill === "true";
 	const comment = stackData.comment || "";
 	const grade = stackData.grade || "";
 
-	const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, comment, grade });
+	const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, fill, comment, grade });
 	if (!stack) return null;
 
 	if (

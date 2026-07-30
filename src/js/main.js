@@ -37,6 +37,7 @@ import {
 	applyStackComment,
 	applyStackGrade,
 	applyStackRejected,
+	applyStackFill,
 	createHayStack,
 	createLogRow,
 	createReportRow,
@@ -635,6 +636,9 @@ function resetInventoryFormFields() {
 	const separateStackCheck = getScopedElement("separateStackCheck", locationId);
 	if (separateStackCheck) separateStackCheck.checked = false;
 
+	const fullStackCheck = getScopedElement("fullStackCheck", locationId);
+	if (fullStackCheck) fullStackCheck.checked = false;
+
 	const stackComment = getScopedElement("stackComment", locationId);
 	if (stackComment) stackComment.value = "";
 
@@ -725,6 +729,10 @@ function fillFormFromStack(stackEl) {
 	const rejected = stackEl.dataset.rejected === "true";
 	const rejectCheck = getScopedElement("rejectCheck", locationId);
 	if (rejectCheck) rejectCheck.checked = rejected;
+
+	const fill = stackEl.dataset.fill === "true";
+	const fullStackCheck = getScopedElement("fullStackCheck", locationId);
+	if (fullStackCheck) fullStackCheck.checked = fill;
 
 	const stackCommentEl = getScopedElement("stackComment", locationId);
 	if (stackCommentEl) stackCommentEl.value = stackEl.dataset.comment || "";
@@ -894,6 +902,7 @@ function handleHay() {
 	const reportedBy = getReportedByValue(locationId);
 	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
 	const separateStack = getScopedElement("separateStackCheck", locationId)?.checked ?? false;
+	const fill = getScopedElement("fullStackCheck", locationId)?.checked ?? false;
 	const stackComment = normalizeStackComment(getScopedElement("stackComment", locationId)?.value || "");
 	const stackGrade = rejected
 		? ""
@@ -969,6 +978,7 @@ function handleHay() {
 
 		updateHayStack(foundStack, type, contract, currentBales);
 		applyStackRejected(foundStack, rejected);
+		applyStackFill(foundStack, fill);
 		applyStackComment(foundStack, stackComment);
 		applyStackGrade(foundStack, stackGrade);
 
@@ -982,6 +992,7 @@ function handleHay() {
 			}
 		}
 		if (rejected) updateNotes.push("Rejected");
+		if (fill) updateNotes.push("Full");
 		if (stackGrade) updateNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) updateNotes.push(stackComment);
 		const afterSnap = captureStackSnapshot(foundStack);
@@ -1135,11 +1146,13 @@ function handleHay() {
 			const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
 			updateHayStack(existingDest, type, contract, newDestCount);
 			if (rejected) applyStackRejected(existingDest, true);
+			applyStackFill(existingDest, fill);
 			if (transferComment) applyStackComment(existingDest, transferComment);
 			applyStackGrade(existingDest, transferGrade);
 		} else {
 			createdDestStack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
 				rejected,
+				fill,
 				comment: transferComment,
 				grade: transferGrade,
 			});
@@ -1158,6 +1171,7 @@ function handleHay() {
 				: `From ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`,
 		];
 		if (rejected) transferNotes.push("Rejected");
+		if (fill) transferNotes.push("Full");
 		if (transferGrade) transferNotes.push(getStackGradeLabel(transferGrade));
 		if (transferComment) transferNotes.push(transferComment);
 		logChange(
@@ -1223,11 +1237,13 @@ function handleHay() {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;
 			updateHayStack(existingStack, type, contract, newCount);
 			if (rejected) applyStackRejected(existingStack, true);
+			applyStackFill(existingStack, fill);
 			if (stackComment) applyStackComment(existingStack, stackComment);
 			applyStackGrade(existingStack, stackGrade);
 		} else {
 			createdStack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
 				rejected,
+				fill,
 				comment: stackComment,
 				grade: stackGrade,
 			});
@@ -1237,6 +1253,7 @@ function handleHay() {
 		const afterSnap = captureStackSnapshot(existingStack || createdStack);
 		const addNotes = [];
 		if (rejected) addNotes.push("Rejected");
+		if (fill) addNotes.push("Full");
 		if (stackGrade) addNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) addNotes.push(stackComment);
 		logChange(
@@ -1373,14 +1390,15 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 		return true;
 	}
 
-	const { type, contract, bales, rejected, grade, comment } = before;
+	const { type, contract, bales, rejected, fill = false, grade, comment } = before;
 	if (existing) {
 		updateHayStack(existing, type, contract, bales);
 		applyStackRejected(existing, rejected);
+		applyStackFill(existing, fill);
 		applyStackComment(existing, comment);
 		applyStackGrade(existing, grade);
 	} else {
-		const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, comment, grade });
+		const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, fill, comment, grade });
 		if (!stack) return false;
 		makeStackDraggable(stack);
 	}
@@ -1428,7 +1446,7 @@ function buildLegacyUndoPatches(entry, locationId) {
 	if (action === "Remove") {
 		const beforeSnap = afterSnap
 			? { ...afterSnap, bales: afterSnap.bales + bales }
-			: { type: typeId, contract, bales, rejected: false, grade: "", comment: "" };
+			: { type: typeId, contract, bales, rejected: false, fill: false, grade: "", comment: "" };
 		return [makeUndoPatch(shedId, bayIndex, isle, stackKey, beforeSnap, afterSnap)];
 	}
 
@@ -2055,6 +2073,7 @@ function collectAppState(locationId = getCurrentLocation()) {
 					bales: stack.dataset.bales,
 					isle: stack.dataset.isle || "both",
 					rejected: stack.dataset.rejected === "true",
+					fill: stack.dataset.fill === "true",
 					comment: stack.dataset.comment || "",
 					grade: stack.dataset.grade || "",
 				};

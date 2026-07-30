@@ -495,7 +495,8 @@ body.page--view-only .inventory__form {
 }
 
 .inventory__reject-check--no-tags,
-.inventory__reject-check--separate {
+.inventory__reject-check--separate,
+.inventory__reject-check--fill {
 	accent-color: var(--color-primary);
 }
 
@@ -904,6 +905,39 @@ body.page--dragging .shed__bay-exit {
 	flex-shrink: 0;
 	align-self: stretch;
 	font-size: calc(var(--stack-font-size) * 1.2);
+}
+
+/* Full checkbox: stretch into leftover height in own track (equal share). */
+.hay-stack--fill,
+.shed__bay-stack--has-front-split > .hay-stack--fill,
+.shed__isle--has-front-split > .hay-stack--fill,
+.shed__isle--front-only > .hay-stack--fill {
+	flex: 1 1 0;
+	align-self: stretch;
+	margin-top: 0;
+}
+
+.shed__isle--has-fill > .shed__stack-spacer,
+.shed__bay-stack--has-fill > .shed__stack-spacer {
+	display: none;
+	flex: 0 0 0;
+	min-height: 0;
+}
+
+.shed__isle--has-fill > .hay-stack--bay-front,
+.shed__bay-stack--has-fill > .hay-stack--bay-front {
+	margin-top: 0;
+}
+
+/* Bay-level Full takes leftover; isles size to content unless they also have Full. */
+.shed__bay-stack--has-fill:not(.shed__bay-stack--isle-has-fill) > .shed__isles {
+	flex: 0 1 auto;
+	min-height: 0;
+}
+
+.shed__bay-stack--has-fill.shed__bay-stack--isle-has-fill > .shed__isles {
+	flex: 1 1 0;
+	min-height: 0;
 }
 
 .hay-stack--full .hay-stack__type,
