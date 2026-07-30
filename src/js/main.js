@@ -163,7 +163,6 @@ let offlineBannerTimer = null;
 const OFFLINE_BANNER_DELAY_MS = 4000;
 let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
 let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
-/** Fingerprints of payloads we just wrote; used to skip Firebase echo re-applies (fail-open). */
 const pendingWriteFingerprintsByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
 const MAX_PENDING_WRITE_FINGERPRINTS = 20;
 let adminBackupModule = null;
@@ -2184,11 +2183,6 @@ function applyCachedStateIfSafe(locationId, cached) {
 	return true;
 }
 
-/**
- * Paint from IndexedDB before Firebase snapshots arrive.
- * Remote still wins via hasRemoteStateByLocation / applyRemoteState.
- * Active location first so the visible map fills ASAP.
- */
 async function initLocalCache() {
 	const activeLocationId = getCurrentLocation();
 	applyCachedStateIfSafe(
@@ -2210,7 +2204,6 @@ function applyRemoteState(locationId, state) {
 
 	hasRemoteStateByLocation[locationId] = true;
 
-	// Own write echo: DOM/log already updated locally — skip full rebuild (fail-open on mismatch).
 	if (consumePendingWriteEcho(locationId, state)) {
 		cacheHayShedState(locationId, state).then(() => {
 			cacheSavedAtByLocation[locationId] = Date.now();
@@ -3044,8 +3037,8 @@ function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
 			title="Free: ${freeVal.toLocaleString()} (${freePct}%) — Used: ${usedVal.toLocaleString()} (${usedPct}%)">
 			<div class="crm-donut__pie"></div>
 			<div class="crm-donut__slice${gt50 ? " is-gt50" : ""}">
-				<div class="crm-donut__bar" style="transform:rotate(${targetDeg}deg)"></div>
-				<div class="crm-donut__fill" style="transform:rotate(${gt50 ? 180 : 0}deg)"></div>
+				<div class="crm-donut__bar"></div>
+				<div class="crm-donut__fill"></div>
 			</div>
 			<div class="crm-donut__hole"></div>
 			<div class="crm-donut__center">
@@ -3053,6 +3046,9 @@ function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
 				<span class="crm-donut__caption">free</span>
 			</div>
 		</div>`;
+
+	el.querySelector(".crm-donut__bar")?.style.setProperty("transform", `rotate(${targetDeg}deg)`);
+	el.querySelector(".crm-donut__fill")?.style.setProperty("transform", `rotate(${gt50 ? 180 : 0}deg)`);
 }
 
 function renderCrmShedBars(shedEntries) {
@@ -3066,11 +3062,17 @@ function renderCrmShedBars(shedEntries) {
 			<span class="crm-bar__name">${shed.name} Shed</span>
 			<span class="crm-bar__pct">${shed.freePct}% free</span>
 			<div class="crm-bar__track">
-				<div class="crm-bar__fill" style="transform:scaleX(${shed.freePct / 100})"></div>
+				<div class="crm-bar__fill"></div>
 			</div>
 		</div>`,
 		)
 		.join("");
+
+	el.querySelectorAll(".crm-bar__fill").forEach((fill, index) => {
+		const shed = shedEntries[index];
+		if (!shed) return;
+		fill.style.setProperty("transform", `scaleX(${shed.freePct / 100})`);
+	});
 }
 
 function scheduleCrmStats() {
@@ -3199,7 +3201,6 @@ async function startApp() {
 		initLogFilters(locationId);
 	});
 
-	/* Cache first (fast paint), then RTDB — remote overwrites if newer/different. */
 	await initLocalCache();
 	initSyncStatus();
 	initFirebaseSync();
@@ -3215,7 +3216,6 @@ async function startApp() {
 	initPwa();
 }
 
-/* DOMContentLoaded is enough — waiting for window "load" delayed data for fonts/images. */
 if (document.readyState === "loading") {
 	document.addEventListener("DOMContentLoaded", () => {
 		void startApp();

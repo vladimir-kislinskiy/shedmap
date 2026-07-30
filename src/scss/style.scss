@@ -863,22 +863,17 @@ body.page--dragging .shed__bay-exit {
 	width: 100%;
 }
 
-/* Isles take free height above full-bay fr so each isle can
-   independently park its own fr at the front of its column. */
 .shed__bay-stack--has-front-split > .shed__isles {
 	flex: 1 1 0;
 	min-height: 0;
 }
 
-/* When full-bay fr is behind isle fr, pack them together at the bay
-   front — do not stretch isles (that left a huge gap under the full stack). */
 .shed__bay-stack--front-behind-isles > .shed__isles,
 .shed__bay-stack--has-front-split.shed__bay-stack--front-behind-isles > .shed__isles {
 	flex: 0 1 auto;
 	min-height: 0;
 }
 
-/* Bay spacer only used when there are no isle stacks (full regulars → full fr). */
 .shed__bay-stack--has-front-split > .shed__stack-spacer {
 	flex: 1 1 auto;
 	min-height: 0;

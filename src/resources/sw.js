@@ -1,4 +1,3 @@
-/* Network-first SW required for Chromium/Edge installability (Windows included). */
 const SW_VERSION = "hayshed-pwa-2026-07-30-sm-icon-f";
 
 self.addEventListener("install", (event) => {
@@ -15,7 +14,6 @@ self.addEventListener("activate", (event) => {
 	);
 });
 
-/* A fetch handler is required for installability. Always prefer network. */
 self.addEventListener("fetch", (event) => {
 	if (event.request.method !== "GET") return;
 	event.respondWith(

@@ -53,7 +53,7 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Real file is shipped as dist/apple-touch-icon.png (opaque). Aliases only.
+# Root icon aliases.
 [[redirects]]
   from = "/apple-touch-icon-precomposed.png"
   to = "/apple-touch-icon.png"

@@ -43,7 +43,7 @@ function rememberInstallPromptSeen() {
 	try {
 		window.localStorage.setItem(PROMPT_SEEN_KEY, "1");
 	} catch {
-		/* ignore */
+		return;
 	}
 }
 
@@ -67,11 +67,6 @@ function closeInstallModal() {
 	modal.setAttribute("aria-hidden", "true");
 }
 
-/**
- * Chromium discovers icon/name updates from the document's <link rel="manifest">.
- * A bare fetch() of manifest.json is not enough — force one full reload when
- * ICON_VERSION changes so the installed app re-parses the latest HTML + manifest.
- */
 function refreshManifestDiscovery() {
 	const version = getIconVersion();
 	if (!version) return;
@@ -89,7 +84,7 @@ function refreshManifestDiscovery() {
 	try {
 		seen = window.localStorage.getItem(ICON_VERSION_KEY) || "";
 	} catch {
-		/* ignore */
+		seen = "";
 	}
 
 	if (!isStandaloneDisplay() || seen === version) return;
@@ -102,13 +97,13 @@ function refreshManifestDiscovery() {
 			return;
 		}
 	} catch {
-		/* ignore */
+		return;
 	}
 
 	try {
 		window.localStorage.setItem(ICON_VERSION_KEY, version);
 	} catch {
-		/* ignore */
+		return;
 	}
 }
 
@@ -124,7 +119,7 @@ function registerServiceWorker() {
 			try {
 				await navigator.serviceWorker.ready;
 			} catch {
-				/* ignore */
+				return registration;
 			}
 
 			const pokeUpdate = () => {
@@ -148,10 +143,6 @@ function registerServiceWorker() {
 		});
 }
 
-/**
- * Chromium/Edge (Windows, Android, desktop): native install dialog via beforeinstallprompt.
- * No alert / instruction fallbacks — only the browser install UI.
- */
 export function initPwa() {
 	const btn = getInstallButton();
 	const modal = getInstallModal();
@@ -215,7 +206,7 @@ export function initPwa() {
 		try {
 			await promptEvent.userChoice;
 		} catch {
-			/* ignore */
+			return true;
 		}
 
 		return true;
@@ -257,7 +248,5 @@ export function initPwa() {
 		}
 	}
 
-	registerServiceWorker().then(() => {
-		/* SW ready — Chromium may fire beforeinstallprompt shortly after */
-	});
+	registerServiceWorker();
 }
