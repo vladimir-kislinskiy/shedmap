@@ -1,5 +1,5 @@
 /* Network-first SW required for Chromium/Edge installability (Windows included). */
-const SW_VERSION = "hayshed-pwa-2026-07-30-sm-icon";
+const SW_VERSION = "hayshed-pwa-2026-07-30-sm-icon-b";
 
 self.addEventListener("install", (event) => {
 	event.waitUntil(self.skipWaiting());
