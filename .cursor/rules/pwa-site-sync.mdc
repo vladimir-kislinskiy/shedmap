@@ -15,7 +15,9 @@ Whenever changing branding, icons, shell UI, caching, or deploy headers, apply t
   - `src/resources/favicon/manifest.json` (PWA)
   - apple / android / ms / favicon variants in that folder
 - Never update only `favicon-32x32.png` or only `android-icon-512x512.png`.
-- Keep root aliases in sync (`netlify.toml` redirects + `src/resources/_redirects`) for `/apple-touch-icon.png`, `/apple-touch-icon-precomposed.png`, and `/favicon.ico` → current versioned apple/ICO assets. Safari probes the site root.
+- Ship a real opaque `/apple-touch-icon.png` at the site root (`src/resources/apple-touch-icon.png`). iOS rejects or ignores transparent / pre-rounded icons and falls back to a monogram (theme-color + first letter of the title — e.g. blue + “S”).
+- Apple-touch / home-screen PNGs must be **fully opaque** (no alpha) and full-bleed square; keep logo + white border inside the ~80% safe zone. Do not rely only on `/favicon/apple-icon-*.png` with transparent corners.
+- Keep root aliases for `/apple-touch-icon-precomposed.png` and `/favicon.ico`. Do **not** rewrite `/apple-touch-icon.png` away from the real opaque file.
 
 ## Icon URL must change (Chrome immutable icons)
 - Chromium treats PWA icon URLs as **immutable**: replacing file bytes at the same path does **not** update an installed PWA.
