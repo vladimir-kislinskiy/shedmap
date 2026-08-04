@@ -1179,10 +1179,13 @@ export function listStacksInContainer(container) {
 	return [...container.children].filter((el) => el.classList.contains("hay-stack"));
 }
 
-export function findStackInContainer(container, stackKey, { rejected = null } = {}) {
+export function findStackInContainer(container, stackKey, { rejected = null, excludeStack = null } = {}) {
 	if (!container) return null;
+	const bayLevel = container.classList.contains("shed__bay-stack");
 	return listStacksInContainer(container).find((s) => {
+		if (excludeStack && s === excludeStack) return false;
 		if (s.dataset.stackKey !== stackKey) return false;
+		if (bayLevel && (s.dataset.isle || "both") !== "both") return false;
 		if (rejected === null) return true;
 		return (s.dataset.rejected === "true") === !!rejected;
 	}) || null;

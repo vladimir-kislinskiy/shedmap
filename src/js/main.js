@@ -38,6 +38,7 @@ import {
 	applyStackGrade,
 	applyStackRejected,
 	applyStackFill,
+	applyIsleLayout,
 	createHayStack,
 	createLogRow,
 	createReportRow,
@@ -59,6 +60,7 @@ import {
 	parseStackKey,
 	restoreHayStack,
 	restoreStackPosition,
+	setStackHeight,
 	STACK_GRADES,
 	sumBalesInContainer,
 	syncAllShedLayouts,
@@ -410,15 +412,10 @@ function getBayColumn(shed, bay) {
 }
 
 function findRejectedStackInContainer(container, stackKey, excludeStack = null) {
-	if (!container) return null;
-
-	return [...container.children]
-		.filter((el) => el.classList.contains("hay-stack"))
-		.find(
-			(stack) => stack.dataset.stackKey === stackKey
-				&& stack.dataset.rejected === "true"
-				&& stack !== excludeStack,
-		) || null;
+	return findStackInContainer(container, stackKey, {
+		rejected: true,
+		excludeStack,
+	});
 }
 
 function stackIsInContainer(stackEl, container) {
@@ -1097,14 +1094,20 @@ function handleHay() {
 			const destBayMax = getMaxBalesPerBay(locationId);
 			const destIsleMax = getMaxBalesPerIsle(destIsle, locationId);
 
-			if (destBayTotal + baleCount > destBayMax) {
-				alert(`Cannot add more than ${destBayMax} bales in the destination bay.`);
-				return;
-			}
-
-			if (destIsleTotal + baleCount > destIsleMax) {
-				alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
-				return;
+			if (!isSameBay) {
+				if (destBayTotal + baleCount > destBayMax) {
+					alert(`Cannot add more than ${destBayMax} bales in the destination bay.`);
+					return;
+				}
+				if (destIsleTotal + baleCount > destIsleMax) {
+					alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
+					return;
+				}
+			} else if (destIsle !== "both" && destIsle !== sourceIsle) {
+				if (destIsleTotal + baleCount > destIsleMax) {
+					alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
+					return;
+				}
 			}
 		} else if (isSameBay && !isSameIsle) {
 			const destIsleTotal = destIsle === "both"
@@ -1112,7 +1115,7 @@ function handleHay() {
 				: sumBalesInContainer(destContainer);
 			const destIsleMax = getMaxBalesPerIsle(destIsle, locationId);
 
-			if (destIsleTotal + baleCount > destIsleMax) {
+			if (destIsle !== "both" && destIsleTotal + baleCount > destIsleMax) {
 				alert(`Cannot add more than ${destIsleMax} bales in the destination isle.`);
 				return;
 			}
@@ -1128,38 +1131,66 @@ function handleHay() {
 			if (isRejectSplitInPlace) {
 				destBeforeStack = findRejectedStackInContainer(destContainer, stackKey, foundSource);
 			} else {
-				destBeforeStack = findStackInContainer(destContainer, stackKey, { rejected });
+				destBeforeStack = findStackInContainer(destContainer, stackKey, {
+					rejected,
+					excludeStack: foundSource,
+				});
 			}
 		}
 		const sourceBeforeSnap = captureStackSnapshot(foundSource);
 		const destBeforeSnap = captureStackSnapshot(destBeforeStack);
 
 		const newSourceCount = currentSourceBales - baleCount;
-		if (newSourceCount === 0) {
-			foundSource.remove();
-		} else {
-			updateHayStack(foundSource, sourceType, contract, newSourceCount);
-		}
-		updateBayStats(sourceBayStackEl);
+		const promoteSourceToDest =
+			isSameBay
+			&& !destBeforeStack
+			&& !separateStack
+			&& newSourceCount === 0
+			&& sourceIsle !== destIsle
+			&& foundSource.isConnected;
 
 		let existingDest = destBeforeStack;
 		let createdDestStack = null;
 
-		if (existingDest) {
-			const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
-			updateHayStack(existingDest, type, contract, newDestCount);
-			applyStackRejected(existingDest, rejected);
-			applyStackFill(existingDest, fill);
-			if (transferComment) applyStackComment(existingDest, transferComment);
-			applyStackGrade(existingDest, transferGrade);
+		if (promoteSourceToDest) {
+			applyIsleLayout(foundSource, destIsle, destBayStackEl);
+			applyStackRejected(foundSource, rejected);
+			applyStackFill(foundSource, fill);
+			if (transferComment) applyStackComment(foundSource, transferComment);
+			applyStackGrade(foundSource, transferGrade);
+			setStackHeight(
+				foundSource,
+				currentSourceBales,
+				getMaxBalesPerIsle(destIsle, locationId),
+			);
+			existingDest = foundSource;
 		} else {
-			createdDestStack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
-				rejected,
-				fill,
-				comment: transferComment,
-				grade: transferGrade,
-			});
-			makeStackDraggable(createdDestStack);
+			if (newSourceCount === 0) {
+				foundSource.remove();
+			} else {
+				updateHayStack(foundSource, sourceType, contract, newSourceCount);
+			}
+
+			if (existingDest) {
+				const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
+				updateHayStack(existingDest, type, contract, newDestCount);
+				applyStackRejected(existingDest, rejected);
+				applyStackFill(existingDest, fill);
+				if (transferComment) applyStackComment(existingDest, transferComment);
+				applyStackGrade(existingDest, transferGrade);
+			} else {
+				createdDestStack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
+					rejected,
+					fill,
+					comment: transferComment,
+					grade: transferGrade,
+				});
+				makeStackDraggable(createdDestStack);
+			}
+		}
+
+		if (sourceBayStackEl !== destBayStackEl) {
+			updateBayStats(sourceBayStackEl);
 		}
 		updateBayStats(destBayStackEl);
 
