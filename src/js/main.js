@@ -429,7 +429,7 @@ function stackIsInContainer(stackEl, container) {
 	return container.contains(stackEl);
 }
 
-function resolveTargetStack(container, stackKey, locationId, { shed, bay }) {
+function resolveTargetStack(container, stackKey, locationId, { shed, bay, rejected = null } = {}) {
 	const selectedCandidates = [];
 
 	if (transferSource?.stackEl?.isConnected) {
@@ -444,6 +444,7 @@ function resolveTargetStack(container, stackKey, locationId, { shed, bay }) {
 
 	for (const stackEl of selectedCandidates) {
 		if (stackEl.dataset.stackKey !== stackKey) continue;
+		if (rejected !== null && (stackEl.dataset.rejected === "true") !== !!rejected) continue;
 
 		const bayStack = stackEl.closest(".shed__bay-stack");
 		if (!bayStack) continue;
@@ -456,7 +457,7 @@ function resolveTargetStack(container, stackKey, locationId, { shed, bay }) {
 		return stackEl;
 	}
 
-	return findStackInContainer(container, stackKey);
+	return findStackInContainer(container, stackKey, { rejected });
 }
 
 function resolveSelectedStack(locationId, { shed, bay, container } = {}) {
@@ -954,7 +955,10 @@ function handleHay() {
 		}
 
 		if (identityChanged) {
-			const duplicateStack = findStackInContainer(targetContainer, newStackKey);
+			const foundRejected = foundStack.dataset.rejected === "true";
+			const duplicateStack = findStackInContainer(targetContainer, newStackKey, {
+				rejected: foundRejected,
+			});
 			if (duplicateStack && duplicateStack !== foundStack) {
 				alert("A stack with this product and contract already exists in this isle.");
 				return;
@@ -1124,7 +1128,7 @@ function handleHay() {
 			if (isRejectSplitInPlace) {
 				destBeforeStack = findRejectedStackInContainer(destContainer, stackKey, foundSource);
 			} else {
-				destBeforeStack = findStackInContainer(destContainer, stackKey);
+				destBeforeStack = findStackInContainer(destContainer, stackKey, { rejected });
 			}
 		}
 		const sourceBeforeSnap = captureStackSnapshot(foundSource);
@@ -1144,7 +1148,7 @@ function handleHay() {
 		if (existingDest) {
 			const newDestCount = (parseInt(existingDest.dataset.bales, 10) || 0) + baleCount;
 			updateHayStack(existingDest, type, contract, newDestCount);
-			if (rejected) applyStackRejected(existingDest, true);
+			applyStackRejected(existingDest, rejected);
 			applyStackFill(existingDest, fill);
 			if (transferComment) applyStackComment(existingDest, transferComment);
 			applyStackGrade(existingDest, transferGrade);
@@ -1228,14 +1232,16 @@ function handleHay() {
 			return;
 		}
 
-		const existingStack = separateStack ? null : resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
+		const existingStack = separateStack
+			? null
+			: resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay, rejected });
 		const beforeSnap = captureStackSnapshot(existingStack);
 		let createdStack = null;
 
 		if (existingStack) {
 			const newCount = parseInt(existingStack.dataset.bales, 10) + baleCount;
 			updateHayStack(existingStack, type, contract, newCount);
-			if (rejected) applyStackRejected(existingStack, true);
+			applyStackRejected(existingStack, rejected);
 			applyStackFill(existingStack, fill);
 			if (stackComment) applyStackComment(existingStack, stackComment);
 			applyStackGrade(existingStack, stackGrade);
@@ -1275,7 +1281,11 @@ function handleHay() {
 		if (!isle) return;
 
 		const targetContainer = getIsleContainer(bayStackEl, isle);
-		const foundStack = resolveTargetStack(targetContainer, stackKey, locationId, { shed, bay });
+		const foundStack = resolveTargetStack(targetContainer, stackKey, locationId, {
+			shed,
+			bay,
+			rejected,
+		});
 
 		if (!foundStack) {
 			alert("No matching stack found in the selected isle. Check contract, hay type, and isle selection.");

@@ -1179,9 +1179,13 @@ export function listStacksInContainer(container) {
 	return [...container.children].filter((el) => el.classList.contains("hay-stack"));
 }
 
-export function findStackInContainer(container, stackKey) {
+export function findStackInContainer(container, stackKey, { rejected = null } = {}) {
 	if (!container) return null;
-	return listStacksInContainer(container).find((s) => s.dataset.stackKey === stackKey) || null;
+	return listStacksInContainer(container).find((s) => {
+		if (s.dataset.stackKey !== stackKey) return false;
+		if (rejected === null) return true;
+		return (s.dataset.rejected === "true") === !!rejected;
+	}) || null;
 }
 
 export function findMatchingStackInContainer(container, stackKey, snap = null) {
