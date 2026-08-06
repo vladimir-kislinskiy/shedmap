@@ -109,6 +109,43 @@
 		</div>
 	</div>
 
+	<div class="stack-detail" id="stackDetailModal" aria-hidden="true" inert>
+		<div class="stack-detail__overlay" id="stackDetailOverlay"></div>
+		<div class="stack-detail__sheet" role="dialog" aria-modal="true" aria-label="Stack details">
+			<button type="button" class="stack-detail__close" id="stackDetailClose" aria-label="Close"></button>
+			<dl class="stack-detail__list">
+				<div class="stack-detail__row">
+					<dt class="stack-detail__label">Product</dt>
+					<dd class="stack-detail__value" id="stackDetailProduct"></dd>
+				</div>
+				<div class="stack-detail__row">
+					<dt class="stack-detail__label">Contract</dt>
+					<dd class="stack-detail__value" id="stackDetailContract"></dd>
+				</div>
+				<div class="stack-detail__row">
+					<dt class="stack-detail__label">Bales</dt>
+					<dd class="stack-detail__value" id="stackDetailBales"></dd>
+				</div>
+				<div class="stack-detail__row">
+					<dt class="stack-detail__label">Location</dt>
+					<dd class="stack-detail__value" id="stackDetailLocation"></dd>
+				</div>
+				<div class="stack-detail__row" id="stackDetailGradeRow" hidden>
+					<dt class="stack-detail__label">Grade</dt>
+					<dd class="stack-detail__value" id="stackDetailGrade"></dd>
+				</div>
+				<div class="stack-detail__row" id="stackDetailCommentRow" hidden>
+					<dt class="stack-detail__label">Comment</dt>
+					<dd class="stack-detail__value" id="stackDetailComment"></dd>
+				</div>
+				<div class="stack-detail__row" id="stackDetailFlagsRow" hidden>
+					<dt class="stack-detail__label">Flags</dt>
+					<dd class="stack-detail__value" id="stackDetailFlags"></dd>
+				</div>
+			</dl>
+		</div>
+	</div>
+
 	<div class="sync-banner" id="syncBanner" hidden role="status" aria-live="polite">
 		<p class="sync-banner__text" id="syncBannerText"></p>
 	</div>

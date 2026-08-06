@@ -779,14 +779,139 @@ function initEmptyBaySelect(locationId = getCurrentLocation()) {
 	locQueryAll(".shed__bay", locationId).forEach(bindEmptyBaySelect);
 }
 
+function isMobileViewport() {
+	return window.matchMedia("(max-width: 768px)").matches;
+}
+
+function getStackDetailModal() {
+	return document.getElementById("stackDetailModal");
+}
+
+function setStackDetailRow(rowId, valueElId, text) {
+	const row = document.getElementById(rowId);
+	const valueEl = document.getElementById(valueElId);
+	if (!row || !valueEl) return;
+	const show = Boolean(text);
+	row.hidden = !show;
+	valueEl.textContent = text || "";
+}
+
+let stackDetailScrollY = 0;
+
+function lockBodyScrollForStackDetail() {
+	stackDetailScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+	document.documentElement.classList.add("stack-detail-scroll-lock");
+	document.body.classList.add("stack-detail-scroll-lock");
+	document.body.style.top = `-${stackDetailScrollY}px`;
+}
+
+function unlockBodyScrollForStackDetail() {
+	document.documentElement.classList.remove("stack-detail-scroll-lock");
+	document.body.classList.remove("stack-detail-scroll-lock");
+	document.body.style.top = "";
+	window.scrollTo(0, stackDetailScrollY);
+}
+
+function closeStackDetail() {
+	const modal = getStackDetailModal();
+	if (!modal) return;
+	const wasOpen = modal.classList.contains("stack-detail--open");
+	modal.classList.remove("stack-detail--open");
+	modal.setAttribute("aria-hidden", "true");
+	modal.setAttribute("inert", "");
+	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
+		el.classList.remove("hay-stack--selected");
+	});
+	if (wasOpen) unlockBodyScrollForStackDetail();
+}
+
+function openStackDetail(stackEl) {
+	const modal = getStackDetailModal();
+	if (!modal || !stackEl) return;
+
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	if (!bayStack) return;
+
+	const locationId = bayStack.dataset.location || getCurrentLocation();
+	const type = getStackType(stackEl);
+	const { contract } = parseStackKey(stackEl.dataset.stackKey || "");
+	const bales = parseInt(stackEl.dataset.bales, 10) || 0;
+	const rejected = stackEl.dataset.rejected === "true";
+	const fill = stackEl.dataset.fill === "true";
+	const grade = getStackGradeLabel(stackEl.dataset.grade || "");
+	const comment = stackEl.dataset.comment || "";
+	const isle = stackEl.dataset.isle || "both";
+	const shed = bayStack.dataset.shed;
+	const bay = bayStack.dataset.bay;
+	const bayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
+	const shedLabel = getShedLabel(shed, locationId);
+	const locationParts = [`${shedLabel}`, `Bay ${bayLabel}`];
+	if (isle && isle !== "both") locationParts.push(formatIsleLabel(isle));
+	const locationLine = locationParts.join(" · ");
+	const flags = [
+		rejected ? "Rejected" : "",
+		fill ? "Full" : "",
+		contract === NO_TAGS_CONTRACT ? "No tags" : "",
+	].filter(Boolean);
+
+	const productEl = document.getElementById("stackDetailProduct");
+	const contractEl = document.getElementById("stackDetailContract");
+	const balesEl = document.getElementById("stackDetailBales");
+	const locationEl = document.getElementById("stackDetailLocation");
+
+	if (productEl) productEl.textContent = getHayTypeLabel(type) || "—";
+	if (contractEl) {
+		contractEl.textContent = contract === NO_TAGS_CONTRACT ? "No tags" : (contract || "—");
+	}
+	if (balesEl) balesEl.textContent = formatStackCountLabel(bales, rejected);
+	if (locationEl) locationEl.textContent = locationLine;
+
+	setStackDetailRow("stackDetailGradeRow", "stackDetailGrade", grade);
+	setStackDetailRow("stackDetailCommentRow", "stackDetailComment", comment);
+	setStackDetailRow("stackDetailFlagsRow", "stackDetailFlags", flags.join(" · "));
+
+	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
+		el.classList.remove("hay-stack--selected");
+	});
+	stackEl.classList.add("hay-stack--selected");
+
+	const alreadyOpen = modal.classList.contains("stack-detail--open");
+	modal.classList.add("stack-detail--open");
+	modal.removeAttribute("inert");
+	modal.setAttribute("aria-hidden", "false");
+	if (!alreadyOpen) lockBodyScrollForStackDetail();
+}
+
+function initStackDetailModal() {
+	const modal = getStackDetailModal();
+	if (!modal || modal._bound) return;
+	modal._bound = true;
+
+	const close = () => closeStackDetail();
+	document.getElementById("stackDetailOverlay")?.addEventListener("click", close);
+	document.getElementById("stackDetailClose")?.addEventListener("click", close);
+	document.addEventListener("keydown", (event) => {
+		if (event.key === "Escape" && modal.classList.contains("stack-detail--open")) {
+			close();
+		}
+	});
+}
+
 function bindStackSelect(stackEl) {
 	if (stackEl._selectBound) return;
 	stackEl._selectBound = true;
 	stackEl.addEventListener("click", () => {
 		const locationId = stackEl.closest(".shed__bay-stack")?.dataset.location || getCurrentLocation();
-		if (!canEdit(locationId) || stackEl._justDragged) return;
-		fillFormFromStack(stackEl);
-		openCrmSidebar();
+		if (stackEl._justDragged) return;
+
+		if (canEdit(locationId)) {
+			fillFormFromStack(stackEl);
+			openCrmSidebar();
+			return;
+		}
+
+		if (!isMobileViewport()) return;
+		openStackDetail(stackEl);
 	});
 }
 
@@ -2369,6 +2494,7 @@ function refreshEditAccess() {
 	if (toggleBtn) toggleBtn.hidden = !editable;
 
 	if (!editable) setInventoryControlsOpen(false);
+	else closeStackDetail();
 	updateStackInteractionState();
 
 	syncCrmFormVisibility();
@@ -2645,6 +2771,7 @@ function setActiveLocation(locationId, btn) {
 	});
 
 	syncAllShedLayoutsAfterPaint();
+	closeStackDetail();
 	refreshEditAccess();
 	setInventoryControlsOpen(false);
 	updateLogTable(locationId);
@@ -3254,6 +3381,7 @@ async function startApp() {
 	updateSyncBanner();
 	initCrmTheme();
 	initMobileInputScrollFix();
+	initStackDetailModal();
 	initPwa();
 }
 
