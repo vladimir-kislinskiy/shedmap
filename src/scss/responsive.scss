@@ -4,6 +4,19 @@
 	}
 }
 
+@media (max-width: 1600px) {
+	.shed__columns {
+		align-items: flex-start;
+	}
+
+	.shed__bay {
+		flex: 0 0 clamp(150px, 18vw, 170px);
+		min-width: 150px;
+		height: auto;
+		align-self: flex-start;
+	}
+}
+
 @media (max-width: 1280px) {
 	.container {
 		max-width: 960px;
@@ -14,7 +27,8 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(130px, 22vw, 160px);
+		flex: 0 0 clamp(150px, 20vw, 170px);
+		min-width: 150px;
 		height: auto;
 		align-self: flex-start;
 	}
@@ -109,8 +123,8 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(130px, 25vw, 160px);
-		min-width: 130px;
+		flex: 0 0 clamp(150px, 25vw, 170px);
+		min-width: 150px;
 		height: auto;
 		align-self: flex-start;
 	}

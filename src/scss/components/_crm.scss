@@ -619,14 +619,8 @@
 
 @media (min-width: 769px) {
 	.theme-crm .shed__bay {
-		flex: 1 0 130px;
-	}
-}
-
-@media (min-width: 1280px) {
-	.theme-crm.crm-collapsed #location-simply .shed__bay {
-		flex: 1 1 0;
-		min-width: 0;
+		flex: 1 0 150px;
+		min-width: 150px;
 	}
 }
 
