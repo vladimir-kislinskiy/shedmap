@@ -50,10 +50,11 @@ export function captureStackSnapshot(stackEl) {
 		bales: parseInt(stackEl.dataset.bales, 10) || 0,
 		rejected: stackEl.dataset.rejected === "true",
 		fill: stackEl.dataset.fill === "true",
+		front: isStackFront(stackEl),
 		grade: stackEl.dataset.grade || "",
-		comment: stackEl.dataset.comment || "",
+		comment: stripBayFrontCommentTokens(stackEl.dataset.comment || ""),
 	};
-	if (stackEl.classList.contains("hay-stack--bay-front") && stackEl.dataset.frontRank) {
+	if (isStackFront(stackEl) && stackEl.dataset.frontRank) {
 		snap.frontRank = Number(stackEl.dataset.frontRank) || 1;
 	}
 	return snap;
@@ -972,6 +973,7 @@ export function normalizeStackComment(value = "") {
 	return words.join(" ");
 }
 
+/** True if comment still uses legacy “fr” / “bay front” markers. */
 export function isBayFrontComment(comment = "") {
 	const words = String(comment).trim().toLowerCase().split(/\s+/).filter(Boolean);
 	if (words.includes("fr")) return true;
@@ -980,6 +982,31 @@ export function isBayFrontComment(comment = "") {
 		if (words[i] === "bay" && words[i + 1] === "front") return true;
 	}
 
+	return false;
+}
+
+/** Strip front markers from free-text comments (front is a checkbox flag now). */
+export function stripBayFrontCommentTokens(comment = "") {
+	const words = String(comment).trim().split(/\s+/).filter(Boolean);
+	const out = [];
+
+	for (let i = 0; i < words.length; i++) {
+		const w = words[i].toLowerCase();
+		if (w === "fr") continue;
+		if (w === "bay" && words[i + 1]?.toLowerCase() === "front") {
+			i += 1;
+			continue;
+		}
+		out.push(words[i]);
+	}
+
+	return normalizeStackComment(out.join(" "));
+}
+
+export function resolveStackFrontFlag(stackData = {}) {
+	if (stackData.front === true || stackData.front === "true") return true;
+	if (isBayFrontComment(stackData.comment || "")) return true;
+	if (stackData.frontRank != null && stackData.frontRank !== "") return true;
 	return false;
 }
 
@@ -994,10 +1021,10 @@ export function sanitizeCommentInput(value = "") {
 		v.endsWith(" ") && parts.length > words.length && words.length < 3;
 
 	if (trailingSpace) {
-		return `${words.join(" ")} `.slice(0, 24);
+		return stripBayFrontCommentTokens(`${words.join(" ")} `.slice(0, 24));
 	}
 
-	return words.join(" ").slice(0, 24);
+	return stripBayFrontCommentTokens(words.join(" ").slice(0, 24));
 }
 
 function renderStackCommentElement(commentEl, normalizedComment) {
@@ -1072,6 +1099,37 @@ function isStackFill(stackEl) {
 	return stackEl?.dataset.fill === "true" || stackEl?.classList.contains("hay-stack--fill");
 }
 
+export function isStackFront(stackEl) {
+	return (
+		stackEl?.dataset.front === "true"
+		|| stackEl?.classList.contains("hay-stack--bay-front")
+	);
+}
+
+export function applyStackFront(stackEl, front) {
+	if (!stackEl) return;
+
+	const wasFront = stackEl.classList.contains("hay-stack--bay-front");
+	const on = !!front;
+	stackEl.classList.toggle("hay-stack--bay-front", on);
+	stackEl.dataset.front = on ? "true" : "false";
+
+	if (on) {
+		const bayStack = stackEl.closest(".shed__bay-stack");
+		if (bayStack && (!wasFront || !stackEl.dataset.frontRank)) {
+			setFrontRank(stackEl, nextFrontRank(bayStack));
+		}
+	} else {
+		clearFrontRank(stackEl);
+	}
+
+	const bayStack = stackEl.closest(".shed__bay-stack");
+	if (bayStack) {
+		repairBayLayout(bayStack);
+		finalizeBayStackLayout(bayStack);
+	}
+}
+
 function syncFillLayoutClasses(bayStackEl) {
 	if (!bayStackEl) return;
 
@@ -1093,34 +1151,23 @@ function syncFillLayoutClasses(bayStackEl) {
 export function applyStackComment(stackEl, comment = "") {
 	if (!stackEl) return;
 
-	const wasFront = stackEl.classList.contains("hay-stack--bay-front");
-	const normalizedComment = normalizeStackComment(comment);
+	const normalizedComment = stripBayFrontCommentTokens(comment);
 	stackEl.dataset.comment = normalizedComment;
-	const isFront = isBayFrontComment(normalizedComment);
-	stackEl.classList.toggle("hay-stack--bay-front", isFront);
-
-	if (isFront) {
-		const bayStack = stackEl.closest(".shed__bay-stack");
-		if (bayStack && (!wasFront || !stackEl.dataset.frontRank)) {
-			setFrontRank(stackEl, nextFrontRank(bayStack));
-		}
-	} else {
-		clearFrontRank(stackEl);
-	}
 
 	const commentEl = stackEl.querySelector(".hay-stack__comment");
 	if (commentEl) {
 		renderStackCommentElement(commentEl, normalizedComment);
 	}
-
-	const bayStack = stackEl.closest(".shed__bay-stack");
-	if (bayStack) {
-		repairBayLayout(bayStack);
-		finalizeBayStackLayout(bayStack);
-	}
 }
 
-export function createHayStack(type, contract, baleCount, isle, bayStackEl, { rejected = false, fill = false, comment = "", grade = "" } = {}) {
+export function createHayStack(
+	type,
+	contract,
+	baleCount,
+	isle,
+	bayStackEl,
+	{ rejected = false, fill = false, front = false, comment = "", grade = "" } = {},
+) {
 	const tpl = document.getElementById("hayStackTemplate");
 	if (!tpl || !bayStackEl) return null;
 
@@ -1139,6 +1186,7 @@ export function createHayStack(type, contract, baleCount, isle, bayStackEl, { re
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle, locationId));
 	applyIsleLayout(stack, isle, bayStackEl);
 	applyStackComment(stack, comment);
+	applyStackFront(stack, front || isBayFrontComment(comment));
 	return stack;
 }
 
@@ -1208,6 +1256,7 @@ export function findMatchingStackInContainer(container, stackKey, snap = null) {
 		if ((current.grade || "") === (snap.grade || "")) points += 2;
 		if (!!current.rejected === !!snap.rejected) points += 1;
 		if (!!current.fill === !!snap.fill) points += 1;
+		if (!!current.front === !!snap.front) points += 1;
 		if (current.type === snap.type) points += 1;
 		return points;
 	};
@@ -1319,10 +1368,17 @@ export function restoreHayStack(stackData, bayStackEl) {
 	const isle = stackData.isle || "both";
 	const rejected = stackData.rejected === true || stackData.rejected === "true";
 	const fill = stackData.fill === true || stackData.fill === "true";
-	const comment = stackData.comment || "";
+	const front = resolveStackFrontFlag(stackData);
+	const comment = stripBayFrontCommentTokens(stackData.comment || "");
 	const grade = stackData.grade || "";
 
-	const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, fill, comment, grade });
+	const stack = createHayStack(type, contract, bales, isle, bayStackEl, {
+		rejected,
+		fill,
+		front,
+		comment,
+		grade,
+	});
 	if (!stack) return null;
 
 	if (

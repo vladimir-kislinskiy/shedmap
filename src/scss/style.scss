@@ -465,9 +465,9 @@ body.page--view-only .inventory__form {
 	align-items: center;
 	flex: 0 0 auto;
 	flex-wrap: nowrap;
-	gap: 8px;
+	gap: 6px 8px;
 	margin: 0;
-	padding: 0 12px;
+	padding: 0 10px;
 	height: 42px;
 	box-sizing: border-box;
 	border: 1px solid var(--border-color);
@@ -479,8 +479,8 @@ body.page--view-only .inventory__form {
 .inventory__reject-option {
 	display: inline-flex;
 	align-items: center;
-	gap: 6px;
-	font-size: 0.9rem;
+	gap: 4px;
+	font-size: 0.85rem;
 	color: var(--text-main);
 	cursor: pointer;
 	user-select: none;
@@ -496,7 +496,8 @@ body.page--view-only .inventory__form {
 
 .inventory__reject-check--no-tags,
 .inventory__reject-check--separate,
-.inventory__reject-check--fill {
+.inventory__reject-check--fill,
+.inventory__reject-check--front {
 	accent-color: var(--color-primary);
 }
 

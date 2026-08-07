@@ -35,6 +35,7 @@ import {
 import {
 	capitalize,
 	applyStackComment,
+	applyStackFront,
 	applyStackGrade,
 	applyStackRejected,
 	applyStackFill,
@@ -55,9 +56,13 @@ import {
 	getIsleContainer,
 	getStackType,
 	getStackGradeLabel,
+	isStackFront,
+	isBayFrontComment,
 	normalizeStackComment,
 	normalizeStackGrade,
 	parseStackKey,
+	resolveStackFrontFlag,
+	stripBayFrontCommentTokens,
 	restoreHayStack,
 	restoreStackPosition,
 	setStackHeight,
@@ -166,6 +171,7 @@ const OFFLINE_BANNER_DELAY_MS = 4000;
 let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
 let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
 const pendingWriteFingerprintsByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
+const pendingFrontMigrationByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
 const MAX_PENDING_WRITE_FINGERPRINTS = 20;
 let adminBackupModule = null;
 
@@ -636,6 +642,9 @@ function resetInventoryFormFields() {
 	const fullStackCheck = getScopedElement("fullStackCheck", locationId);
 	if (fullStackCheck) fullStackCheck.checked = false;
 
+	const frontStackCheck = getScopedElement("frontStackCheck", locationId);
+	if (frontStackCheck) frontStackCheck.checked = false;
+
 	const stackComment = getScopedElement("stackComment", locationId);
 	if (stackComment) stackComment.value = "";
 
@@ -731,8 +740,13 @@ function fillFormFromStack(stackEl) {
 	const fullStackCheck = getScopedElement("fullStackCheck", locationId);
 	if (fullStackCheck) fullStackCheck.checked = fill;
 
+	const frontStackCheck = getScopedElement("frontStackCheck", locationId);
+	if (frontStackCheck) frontStackCheck.checked = isStackFront(stackEl);
+
 	const stackCommentEl = getScopedElement("stackComment", locationId);
-	if (stackCommentEl) stackCommentEl.value = stackEl.dataset.comment || "";
+	if (stackCommentEl) {
+		stackCommentEl.value = stripBayFrontCommentTokens(stackEl.dataset.comment || "");
+	}
 
 	const stackGradeEl = getScopedElement("stackGrade", locationId);
 	if (stackGradeEl) stackGradeEl.value = stackEl.dataset.grade || "";
@@ -851,6 +865,7 @@ function openStackDetail(stackEl) {
 	const flags = [
 		rejected ? "Rejected" : "",
 		fill ? "Full" : "",
+		isStackFront(stackEl) ? "Front" : "",
 		contract === NO_TAGS_CONTRACT ? "No tags" : "",
 	].filter(Boolean);
 
@@ -867,7 +882,11 @@ function openStackDetail(stackEl) {
 	if (locationEl) locationEl.textContent = locationLine;
 
 	setStackDetailRow("stackDetailGradeRow", "stackDetailGrade", grade);
-	setStackDetailRow("stackDetailCommentRow", "stackDetailComment", comment);
+	setStackDetailRow(
+		"stackDetailCommentRow",
+		"stackDetailComment",
+		stripBayFrontCommentTokens(comment),
+	);
 	setStackDetailRow("stackDetailFlagsRow", "stackDetailFlags", flags.join(" · "));
 
 	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
@@ -1025,7 +1044,10 @@ function handleHay() {
 	const rejected = getScopedElement("rejectCheck", locationId)?.checked ?? false;
 	const separateStack = getScopedElement("separateStackCheck", locationId)?.checked ?? false;
 	const fill = getScopedElement("fullStackCheck", locationId)?.checked ?? false;
-	const stackComment = normalizeStackComment(getScopedElement("stackComment", locationId)?.value || "");
+	const frontStack = getScopedElement("frontStackCheck", locationId)?.checked ?? false;
+	const stackComment = stripBayFrontCommentTokens(
+		normalizeStackComment(getScopedElement("stackComment", locationId)?.value || ""),
+	);
 	const stackGrade = rejected
 		? ""
 		: normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
@@ -1104,6 +1126,7 @@ function handleHay() {
 		updateHayStack(foundStack, type, contract, currentBales);
 		applyStackRejected(foundStack, rejected);
 		applyStackFill(foundStack, fill);
+		applyStackFront(foundStack, frontStack);
 		applyStackComment(foundStack, stackComment);
 		applyStackGrade(foundStack, stackGrade);
 
@@ -1118,8 +1141,10 @@ function handleHay() {
 		}
 		if (rejected) updateNotes.push("Rejected");
 		if (fill) updateNotes.push("Full");
+		if (frontStack) updateNotes.push("Front");
 		if (stackGrade) updateNotes.push(getStackGradeLabel(stackGrade));
-		if (stackComment) updateNotes.push(stackComment);
+		const commentNote = stackComment;
+		if (commentNote) updateNotes.push(commentNote);
 		const afterSnap = captureStackSnapshot(foundStack);
 		logChange(
 			currentPerson,
@@ -1248,8 +1273,10 @@ function handleHay() {
 
 		const sourceGrade = foundSource.dataset.grade || "";
 		const sourceComment = foundSource.dataset.comment || "";
+		const sourceFront = isStackFront(foundSource);
 		const transferGrade = rejected ? "" : stackGrade || sourceGrade;
-		const transferComment = stackComment || sourceComment;
+		const transferComment = stripBayFrontCommentTokens(stackComment || sourceComment);
+		const transferFront = frontStack || sourceFront;
 
 		let destBeforeStack = null;
 		if (!separateStack) {
@@ -1281,7 +1308,8 @@ function handleHay() {
 			applyIsleLayout(foundSource, destIsle, destBayStackEl);
 			applyStackRejected(foundSource, rejected);
 			applyStackFill(foundSource, fill);
-			if (transferComment) applyStackComment(foundSource, transferComment);
+			applyStackFront(foundSource, transferFront);
+			applyStackComment(foundSource, transferComment);
 			applyStackGrade(foundSource, transferGrade);
 			setStackHeight(
 				foundSource,
@@ -1301,12 +1329,14 @@ function handleHay() {
 				updateHayStack(existingDest, type, contract, newDestCount);
 				applyStackRejected(existingDest, rejected);
 				applyStackFill(existingDest, fill);
-				if (transferComment) applyStackComment(existingDest, transferComment);
+				applyStackFront(existingDest, transferFront);
+				applyStackComment(existingDest, transferComment);
 				applyStackGrade(existingDest, transferGrade);
 			} else {
 				createdDestStack = createHayStack(type, contract, baleCount, destIsle, destBayStackEl, {
 					rejected,
 					fill,
+					front: transferFront,
 					comment: transferComment,
 					grade: transferGrade,
 				});
@@ -1331,6 +1361,7 @@ function handleHay() {
 		];
 		if (rejected) transferNotes.push("Rejected");
 		if (fill) transferNotes.push("Full");
+		if (transferFront) transferNotes.push("Front");
 		if (transferGrade) transferNotes.push(getStackGradeLabel(transferGrade));
 		if (transferComment) transferNotes.push(transferComment);
 		logChange(
@@ -1399,12 +1430,14 @@ function handleHay() {
 			updateHayStack(existingStack, type, contract, newCount);
 			applyStackRejected(existingStack, rejected);
 			applyStackFill(existingStack, fill);
-			if (stackComment) applyStackComment(existingStack, stackComment);
+			applyStackFront(existingStack, frontStack);
+			applyStackComment(existingStack, stackComment);
 			applyStackGrade(existingStack, stackGrade);
 		} else {
 			createdStack = createHayStack(type, contract, baleCount, isle, bayStackEl, {
 				rejected,
 				fill,
+				front: frontStack,
 				comment: stackComment,
 				grade: stackGrade,
 			});
@@ -1415,6 +1448,7 @@ function handleHay() {
 		const addNotes = [];
 		if (rejected) addNotes.push("Rejected");
 		if (fill) addNotes.push("Full");
+		if (frontStack) addNotes.push("Front");
 		if (stackGrade) addNotes.push(getStackGradeLabel(stackGrade));
 		if (stackComment) addNotes.push(stackComment);
 		logChange(
@@ -1555,15 +1589,23 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 		return true;
 	}
 
-	const { type, contract, bales, rejected, fill = false, grade, comment } = before;
+	const { type, contract, bales, rejected, fill = false, front = false, grade, comment } = before;
+	const resolvedFront = front || resolveStackFrontFlag(before);
 	if (existing) {
 		updateHayStack(existing, type, contract, bales);
 		applyStackRejected(existing, rejected);
 		applyStackFill(existing, fill);
+		applyStackFront(existing, resolvedFront);
 		applyStackComment(existing, comment);
 		applyStackGrade(existing, grade);
 	} else {
-		const stack = createHayStack(type, contract, bales, isle, bayStackEl, { rejected, fill, comment, grade });
+		const stack = createHayStack(type, contract, bales, isle, bayStackEl, {
+			rejected,
+			fill,
+			front: resolvedFront,
+			comment,
+			grade,
+		});
 		if (!stack) return false;
 		makeStackDraggable(stack);
 	}
@@ -2274,6 +2316,7 @@ function collectAppState(locationId = getCurrentLocation()) {
 			if (!colEl) continue;
 
 			colsData[colId] = Array.from(getBayStacks(colEl)).map((stack) => {
+				const isFront = isStackFront(stack);
 				const data = {
 					type: getStackType(stack),
 					stackKey: stack.dataset.stackKey,
@@ -2281,10 +2324,11 @@ function collectAppState(locationId = getCurrentLocation()) {
 					isle: stack.dataset.isle || "both",
 					rejected: stack.dataset.rejected === "true",
 					fill: stack.dataset.fill === "true",
-					comment: stack.dataset.comment || "",
+					front: isFront,
+					comment: stripBayFrontCommentTokens(stack.dataset.comment || ""),
 					grade: stack.dataset.grade || "",
 				};
-				if (stack.classList.contains("hay-stack--bay-front") && stack.dataset.frontRank) {
+				if (isFront && stack.dataset.frontRank) {
 					data.frontRank = Number(stack.dataset.frontRank) || 1;
 				}
 				return data;
@@ -2304,9 +2348,23 @@ function collectAllAppState() {
 	return fullState;
 }
 
+function locationStateHasLegacyFrontComments(state) {
+	const sheds = state?.sheds;
+	if (!sheds || typeof sheds !== "object") return false;
+
+	return Object.values(sheds).some((shedCols) => {
+		if (!shedCols || typeof shedCols !== "object") return false;
+		return Object.values(shedCols).some((stacks) => {
+			if (!Array.isArray(stacks)) return false;
+			return stacks.some((stackData) => isBayFrontComment(stackData?.comment || ""));
+		});
+	});
+}
+
 function applyAppState(locationId, state) {
 	const normalized = normalizeHayShedState(state, locationId);
 	const locationConfig = getLocationConfig(locationId);
+	const shouldMigrateFrontComments = locationStateHasLegacyFrontComments(normalized);
 
 	if (Array.isArray(normalized.changeLog)) {
 		changeLogs[locationId] = [...normalized.changeLog];
@@ -2339,6 +2397,19 @@ function applyAppState(locationId, state) {
 	}
 
 	updateReportsTable(locationId);
+
+	// Persist cleaned comments + front flags once for editors (migrates Firebase/cache).
+	if (shouldMigrateFrontComments) {
+		pendingFrontMigrationByLocation[locationId] = true;
+		flushPendingFrontMigration(locationId);
+	}
+}
+
+function flushPendingFrontMigration(locationId = getCurrentLocation()) {
+	if (!pendingFrontMigrationByLocation[locationId]) return;
+	if (!canEdit(locationId)) return;
+	pendingFrontMigrationByLocation[locationId] = false;
+	void saveState(locationId);
 }
 
 function renderSyncBanner() {
@@ -2550,6 +2621,7 @@ function setEditMode(authenticated, person = null, email = null) {
 
 	document.querySelectorAll(".hay-stack").forEach((stack) => makeStackDraggable(stack));
 	refreshEditAccess();
+	LOCATION_IDS.forEach((locationId) => flushPendingFrontMigration(locationId));
 }
 
 async function restoreAppStateToFirebase(state) {
