@@ -7,6 +7,39 @@ const PDF_ROW_BORDER = [196, 181, 160];
 const PDF_REJECTED_ROW = [253, 238, 238];
 const PDF_ROW_FILL = [255, 254, 251];
 
+function isStandaloneDisplay() {
+	return (
+		window.matchMedia("(display-mode: standalone)").matches
+		|| window.matchMedia("(display-mode: fullscreen)").matches
+		|| window.navigator.standalone === true
+	);
+}
+
+function downloadPdfBlob(blobUrl, filename) {
+	const link = document.createElement("a");
+	link.href = blobUrl;
+	link.download = filename;
+	link.rel = "noopener";
+	document.body.appendChild(link);
+	link.click();
+	link.remove();
+}
+
+function showPdfInWindow(targetWindow, blobUrl, filename) {
+	if (!targetWindow || targetWindow.closed) return false;
+	try {
+		targetWindow.location.href = blobUrl;
+		try {
+			targetWindow.document.title = filename;
+		} catch {
+			/* cross-origin after navigation */
+		}
+		return true;
+	} catch {
+		return false;
+	}
+}
+
 export function openReportPdf({
 	productLabel,
 	rows,
@@ -16,6 +49,7 @@ export function openReportPdf({
 	gradeFilter = "all",
 	includeRejected = false,
 	generatedAt = new Date(),
+	previewWindow = null,
 }) {
 	const doc = new jsPDF({
 		orientation: "portrait",
@@ -120,13 +154,31 @@ export function openReportPdf({
 	const slug = slugSource.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 	const datePart = generatedAt.toISOString().slice(0, 10);
 	const filename = `${slug || "inventory"}-inventory-${datePart}.pdf`;
-	const blobUrl = doc.output("bloburl");
-	const pdfWindow = window.open(blobUrl, "_blank", "noopener,noreferrer");
+	const blob = doc.output("blob");
+	const blobUrl = URL.createObjectURL(blob);
 
-	if (!pdfWindow) {
-		doc.save(filename);
-		return;
+	// Desktop installed PWAs often block or blank blob: tabs — download is reliable there.
+	const forceDownload = isStandaloneDisplay();
+	let opened = false;
+
+	if (!forceDownload) {
+		opened = showPdfInWindow(previewWindow, blobUrl, filename);
+		if (!opened) {
+			const tab = window.open(blobUrl, "_blank");
+			opened = Boolean(tab);
+		}
 	}
 
-	pdfWindow.document.title = filename;
+	if (!opened) {
+		if (previewWindow && !previewWindow.closed) {
+			try {
+				previewWindow.close();
+			} catch {
+				/* ignore */
+			}
+		}
+		downloadPdfBlob(blobUrl, filename);
+	}
+
+	setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
 }

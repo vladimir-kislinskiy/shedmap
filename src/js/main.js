@@ -2006,7 +2006,7 @@ function syncReportPrintButton(enabled, locationId = getCurrentLocation()) {
 	printBtn.disabled = !enabled;
 	printBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
 	printBtn.title = enabled
-		? "Open current report as PDF in a new tab"
+		? "Export current report as PDF"
 		: "Select a product or search a contract to export a PDF report";
 }
 
@@ -2098,47 +2098,89 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 	});
 }
 
+function openPdfPreviewPlaceholder() {
+	try {
+		const win = window.open("about:blank", "_blank");
+		if (!win) return null;
+		try {
+			win.document.write(
+				"<!doctype html><title>Preparing PDF…</title>"
+				+ "<body style=\"font:14px system-ui,sans-serif;padding:24px;color:#333\">"
+				+ "Preparing PDF…</body>",
+			);
+			win.document.close();
+		} catch {
+			/* ignore write failures */
+		}
+		return win;
+	} catch {
+		return null;
+	}
+}
+
+function closePdfPreviewPlaceholder(win) {
+	if (!win || win.closed) return;
+	try {
+		win.close();
+	} catch {
+		/* ignore */
+	}
+}
+
 async function printCurrentReportPdf(locationId = getCurrentLocation()) {
-	const filterEl = getScopedElement("reportProductFilter", locationId);
-	const searchEl = getScopedElement("reportContractSearch", locationId);
-	const productId = filterEl?.value ?? "";
-	const contractQuery = searchEl?.value.trim() ?? "";
+	// Capture click gesture before await (desktop popup / PWA delivery).
+	const previewWindow = openPdfPreviewPlaceholder();
 
-	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
-	const { openReportPdf } = await import("./report-pdf.js");
+	try {
+		const filterEl = getScopedElement("reportProductFilter", locationId);
+		const searchEl = getScopedElement("reportContractSearch", locationId);
+		const productId = filterEl?.value ?? "";
+		const contractQuery = searchEl?.value.trim() ?? "";
 
-	if (contractQuery) {
-		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
-		if (rows.length === 0) {
-			alert(`No contracts matching “${contractQuery}” to export.`);
+		const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+		const { openReportPdf } = await import("./report-pdf.js");
+
+		if (contractQuery) {
+			const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+			if (rows.length === 0) {
+				closePdfPreviewPlaceholder(previewWindow);
+				alert(`No contracts matching “${contractQuery}” to export.`);
+				return;
+			}
+			openReportPdf({
+				productLabel: contractQuery,
+				headingLabel: `Contract search: ${contractQuery}`,
+				rows,
+				showGrade: false,
+				showProduct: true,
+				includeRejected,
+				previewWindow,
+			});
 			return;
 		}
+
+		if (!productId) {
+			closePdfPreviewPlaceholder(previewWindow);
+			alert("Select a product or search a contract to export a PDF report.");
+			return;
+		}
+
+		const productLabel = getHayTypeLabel(productId);
+		const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
+
 		openReportPdf({
-			productLabel: contractQuery,
-			headingLabel: `Contract search: ${contractQuery}`,
+			productLabel,
 			rows,
-			showGrade: false,
-			showProduct: true,
+			showGrade: isGradeEligibleType(productId),
+			gradeFilter,
 			includeRejected,
+			previewWindow,
 		});
-		return;
+	} catch (err) {
+		closePdfPreviewPlaceholder(previewWindow);
+		console.error("PDF export failed:", err);
+		alert("Could not create the PDF report. Please try again.");
 	}
-
-	if (!productId) {
-		alert("Select a product or search a contract to export a PDF report.");
-		return;
-	}
-
-	const productLabel = getHayTypeLabel(productId);
-	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
-
-	openReportPdf({
-		productLabel,
-		rows,
-		showGrade: isGradeEligibleType(productId),
-		gradeFilter,
-		includeRejected,
-	});
 }
 
 function initReports(locationId = getCurrentLocation()) {
