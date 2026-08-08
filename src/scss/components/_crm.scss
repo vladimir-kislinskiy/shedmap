@@ -617,7 +617,6 @@
 	padding-left: var(--crm-gutter);
 }
 
-/* Sidebar open: keep bay width, scroll horizontally — never squeeze sheds. */
 @media (min-width: 769px) {
 	.theme-crm:not(.crm-collapsed) .shed__columns {
 		align-items: flex-start;
@@ -630,7 +629,6 @@
 	}
 }
 
-/* Sidebar collapsed on large desktop: fill available width without scroll. */
 @media (min-width: 1601px) {
 	.theme-crm.crm-collapsed .shed__bay {
 		flex: 1 1 0;

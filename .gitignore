@@ -10,3 +10,5 @@ rev.json
 backups/
 shedmap/
 .tools/
+secrets/
+*.credentials.md

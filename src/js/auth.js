@@ -1,51 +1,77 @@
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
-export const OLDS_EDITORS = {
-	"operations@barr-ag.com": "Vlad",
-	"tschmitt@barr-ag.com": "Tyler",
-	"rschmitt@barr-ag.com": "Ryley",
-	"tbeschmitt@barr-ag.com": "Taylor",
-	"nmathis@barr-ag.com": "Natalie",
+/**
+ * Flip to true on launch Sunday (with locked database rules).
+ * While false: guests can still view; editors/admins use sign-in for changes.
+ */
+export const REQUIRE_AUTH = false;
+
+export const ROLE_ADMIN = "admin";
+export const ROLE_USER = "user";
+
+/** Authorized accounts (no passwords here — create them in Firebase Auth Console). */
+export const AUTH_USERS = {
+	"admin@barr-ag.com": { name: "Serhii", role: ROLE_USER },
+	"bdyson@barr-ag.com": { name: "Brad", role: ROLE_USER },
+	"bschmitt@barr-ag.com": { name: "Barry", role: ROLE_USER },
+	"cbrocklebank@barr-ag.com": { name: "Chris", role: ROLE_USER },
+	"clee@barr-ag.com": { name: "Jack", role: ROLE_USER },
+	"dehy@barr-ag.com": { name: "Dehy", role: ROLE_USER },
+	"jbergeson@barr-ag.com": { name: "Jay", role: ROLE_USER },
+	"nmathis@barr-ag.com": { name: "Natalie", role: ROLE_ADMIN },
+	"operations@barr-ag.com": { name: "Vlad", role: ROLE_ADMIN },
+	"rschmitt@barr-ag.com": { name: "Ryley", role: ROLE_ADMIN },
+	"scale@barr-ag.com": { name: "Maria", role: ROLE_USER },
+	"shisadomi@barr-ag.com": { name: "Satoko", role: ROLE_USER },
+	"siksika@barr-ag.com": { name: "Peter", role: ROLE_USER },
+	"ssakamoto@barr-ag.com": { name: "Shu", role: ROLE_USER },
+	"tbeschmitt@barr-ag.com": { name: "Taylor", role: ROLE_ADMIN },
+	"tschmitt@barr-ag.com": { name: "Tyler", role: ROLE_ADMIN },
+	"loader@barr-ag.com": { name: "Loaders", role: ROLE_USER },
+	"logistic@barr-ag.com": { name: "Temporary", role: ROLE_USER },
 };
 
-export const SIKSIKA_EDITORS = {
-	"siksika@barr-ag.com": "Siksika",
-};
+const SUPER_ADMIN_EMAIL = "operations@barr-ag.com";
 
-export const USERS = { ...OLDS_EDITORS, ...SIKSIKA_EDITORS };
+export function getUserRecord(email) {
+	if (!email) return null;
+	return AUTH_USERS[email.toLowerCase()] || null;
+}
 
 export function getPersonFromEmail(email) {
-	if (!email) return null;
-	return USERS[email.toLowerCase()] || null;
+	return getUserRecord(email)?.name || null;
+}
+
+export function getUserRole(email) {
+	return getUserRecord(email)?.role || null;
 }
 
 export function isAuthorizedEmail(email) {
-	return !!getPersonFromEmail(email);
+	return !!getUserRecord(email);
 }
 
-export function isOldsEditor(email) {
-	return !!OLDS_EDITORS[email?.toLowerCase()];
+export function isEditor(email) {
+	return getUserRole(email) === ROLE_ADMIN;
 }
 
-export function isSiksikaEditor(email) {
-	const key = email?.toLowerCase();
-	return !!(OLDS_EDITORS[key] || SIKSIKA_EDITORS[key]);
+/** All locations: admin can edit, user is view-only. */
+export function canEditLocation(email, _locationId) {
+	return isEditor(email);
 }
 
-export function isSimplyEditor(email) {
-	return isOldsEditor(email);
-}
-
-export function canEditLocation(email, locationId) {
-	if (!email) return false;
-	if (locationId === "olds") return isOldsEditor(email);
-	if (locationId === "siksika") return isSiksikaEditor(email);
-	if (locationId === "simply") return isSimplyEditor(email);
-	return false;
-}
-
+/** Super admin only (backup / CB map toggle). */
 export function isAdminUser(email) {
-	return email?.toLowerCase() === "operations@barr-ag.com";
+	return email?.toLowerCase() === SUPER_ADMIN_EMAIL;
+}
+
+export function getAuthorizedEmails() {
+	return Object.keys(AUTH_USERS);
+}
+
+export function getEditorEmails() {
+	return Object.entries(AUTH_USERS)
+		.filter(([, record]) => record.role === ROLE_ADMIN)
+		.map(([email]) => email);
 }
 
 export function initAuth(app, onAuthChange) {

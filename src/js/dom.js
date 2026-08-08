@@ -739,9 +739,6 @@ function orderFrontStacksLast(container) {
 	if (isBayStack) {
 		const islesRow = container.querySelector(".shed__isles");
 
-		/* Tracks stay independent for non-fr, but all fr share one frontRank order:
-		   full-bay fr with lower rank sits behind isle fr (before .shed__isles),
-		   higher rank sits ahead (after isles). */
 		regular.forEach((stack) => {
 			container.insertBefore(stack, islesRow ?? container.firstChild);
 		});
@@ -973,7 +970,6 @@ export function normalizeStackComment(value = "") {
 	return words.join(" ");
 }
 
-/** True if comment still uses legacy “fr” / “bay front” markers. */
 export function isBayFrontComment(comment = "") {
 	const words = String(comment).trim().toLowerCase().split(/\s+/).filter(Boolean);
 	if (words.includes("fr")) return true;
@@ -985,7 +981,6 @@ export function isBayFrontComment(comment = "") {
 	return false;
 }
 
-/** Strip front markers from free-text comments (front is a checkbox flag now). */
 export function stripBayFrontCommentTokens(comment = "") {
 	const words = String(comment).trim().split(/\s+/).filter(Boolean);
 	const out = [];

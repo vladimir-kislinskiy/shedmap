@@ -6,6 +6,7 @@ import {
 	logout,
 	isAdminUser,
 	canEditLocation,
+	REQUIRE_AUTH,
 } from "./auth.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { initPwa } from "./pwa.js";
@@ -242,6 +243,27 @@ function getLocationChangeLog(locationId = getCurrentLocation()) {
 
 function canEdit(locationId = getCurrentLocation()) {
 	return isAuthenticated && canEditLocation(currentUserEmail, locationId);
+}
+
+function requiresAuthGate() {
+	return REQUIRE_AUTH && !isAuthenticated;
+}
+
+function refreshAuthGate() {
+	const gated = requiresAuthGate();
+	document.body.classList.toggle("page--auth-gate", gated);
+
+	const hint = document.getElementById("authModalHint");
+	if (hint) {
+		hint.textContent = gated
+			? "Sign in with your company account to view the shed map."
+			: "Sign in to manage inventory and make changes.";
+	}
+
+	if (gated) {
+		setInventoryControlsOpen(false);
+		openAuthModal({ blocking: true });
+	}
 }
 
 function getScopedElement(id, locationId = getCurrentLocation()) {
@@ -2145,14 +2167,10 @@ function openPdfPreviewPlaceholder() {
 		const win = window.open("about:blank", "_blank");
 		if (!win) return null;
 		try {
-			win.document.write(
-				"<!doctype html><title>Preparing PDF…</title>"
-				+ "<body style=\"font:14px system-ui,sans-serif;padding:24px;color:#333\">"
-				+ "Preparing PDF…</body>",
-			);
+			win.document.write("<!doctype html><title>PDF</title><body></body>");
 			win.document.close();
 		} catch {
-			/* ignore write failures */
+			/* noop */
 		}
 		return win;
 	} catch {
@@ -2165,12 +2183,11 @@ function closePdfPreviewPlaceholder(win) {
 	try {
 		win.close();
 	} catch {
-		/* ignore */
+		/* noop */
 	}
 }
 
 async function printCurrentReportPdf(locationId = getCurrentLocation()) {
-	// Capture click gesture before await (desktop popup / PWA delivery).
 	const previewWindow = openPdfPreviewPlaceholder();
 
 	try {
@@ -2398,7 +2415,6 @@ function applyAppState(locationId, state) {
 
 	updateReportsTable(locationId);
 
-	// Persist cleaned comments + front flags once for editors (migrates Firebase/cache).
 	if (shouldMigrateFrontComments) {
 		pendingFrontMigrationByLocation[locationId] = true;
 		flushPendingFrontMigration(locationId);
@@ -2455,6 +2471,7 @@ function updateSyncBanner() {
 }
 
 function applyCachedStateIfSafe(locationId, cached) {
+	if (requiresAuthGate()) return false;
 	if (hasRemoteStateByLocation[locationId]) return false;
 	if (!cached?.state || !validateHayShedState(cached.state, locationId)) return false;
 	cacheSavedAtByLocation[locationId] = cached.savedAt;
@@ -2476,6 +2493,7 @@ async function initLocalCache() {
 }
 
 function applyRemoteState(locationId, state) {
+	if (requiresAuthGate()) return;
 	if (!state || !validateHayShedState(state, locationId)) {
 		console.warn(`Ignoring invalid remote state for ${locationId}`, state);
 		return;
@@ -2650,6 +2668,7 @@ function handleAuthChange(authenticated, person, email = null) {
 	updateAuthUI(authenticated, person);
 	syncAdminBackupUI(authenticated, email);
 	syncColorBlindThemeAccess(authenticated, email);
+	refreshAuthGate();
 
 	if (authenticated && pendingResetLocation) {
 		const locationId = pendingResetLocation;
@@ -2708,16 +2727,19 @@ function enableAuthFields() {
 }
 
 let authModalReturnFocus = null;
+let authModalBlocking = false;
 
-function openAuthModal() {
+function openAuthModal({ blocking = false } = {}) {
 	const modal = document.getElementById("authModal");
 	const dialog = modal?.querySelector(".auth-modal__dialog");
 	const errorEl = document.getElementById("authError");
 	if (!modal) return;
 
+	authModalBlocking = blocking || requiresAuthGate();
 	authModalReturnFocus = document.activeElement;
 
 	modal.classList.add("auth-modal--open");
+	modal.classList.toggle("auth-modal--blocking", authModalBlocking);
 	modal.removeAttribute("inert");
 	modal.setAttribute("aria-hidden", "false");
 	dialog?.setAttribute("aria-modal", "true");
@@ -2733,6 +2755,8 @@ function openAuthModal() {
 }
 
 function closeAuthModal() {
+	if (authModalBlocking && requiresAuthGate()) return;
+
 	const modal = document.getElementById("authModal");
 	if (!modal) return;
 
@@ -2740,7 +2764,9 @@ function closeAuthModal() {
 	const returnFocus = authModalReturnFocus || document.getElementById("authBtn");
 	const focused = document.activeElement;
 
+	authModalBlocking = false;
 	modal.classList.remove("auth-modal--open");
+	modal.classList.remove("auth-modal--blocking");
 	modal.setAttribute("inert", "");
 	clearAuthFields();
 
@@ -2783,7 +2809,10 @@ function initAuthUI() {
 	});
 
 	document.getElementById("authModalClose")?.addEventListener("click", closeAuthModal);
-	document.getElementById("authModalOverlay")?.addEventListener("click", closeAuthModal);
+	document.getElementById("authModalOverlay")?.addEventListener("click", () => {
+		if (authModalBlocking && requiresAuthGate()) return;
+		closeAuthModal();
+	});
 
 	document.getElementById("authPasswordToggle")?.addEventListener("click", () => {
 		const input = document.getElementById("authPassword");
@@ -3199,7 +3228,6 @@ function syncColorBlindThemeAccess(authenticated, email) {
 	const btn = document.getElementById("cbThemeSwitch");
 	const allow = Boolean(authenticated && isAdminUser(email));
 	if (btn) btn.hidden = !allow;
-	// Only operations@ may keep CB mode active
 	applyColorBlindTheme(allow && isColorBlindPrefOn());
 }
 
@@ -3211,7 +3239,7 @@ function initColorBlindTheme() {
 		try {
 			localStorage.setItem(CRM_CB_STORAGE_KEY, next ? "1" : "0");
 		} catch {
-			/* ignore */
+			/* noop */
 		}
 		applyColorBlindTheme(next);
 	});
@@ -3544,6 +3572,7 @@ async function startApp() {
 	initMobileInputScrollFix();
 	initStackDetailModal();
 	initPwa();
+	refreshAuthGate();
 }
 
 if (document.readyState === "loading") {

@@ -32,7 +32,7 @@ function showPdfInWindow(targetWindow, blobUrl, filename) {
 		try {
 			targetWindow.document.title = filename;
 		} catch {
-			/* cross-origin after navigation */
+			/* noop */
 		}
 		return true;
 	} catch {
@@ -157,7 +157,6 @@ export function openReportPdf({
 	const blob = doc.output("blob");
 	const blobUrl = URL.createObjectURL(blob);
 
-	// Desktop installed PWAs often block or blank blob: tabs — download is reliable there.
 	const forceDownload = isStandaloneDisplay();
 	let opened = false;
 
@@ -174,7 +173,7 @@ export function openReportPdf({
 			try {
 				previewWindow.close();
 			} catch {
-				/* ignore */
+				/* noop */
 			}
 		}
 		downloadPdfBlob(blobUrl, filename);

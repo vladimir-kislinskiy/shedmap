@@ -1,6 +1,4 @@
-const PROMPT_SEEN_KEY = "hayshed.pwaInstallPromptSeen";
 const ICON_VERSION_KEY = "hayshed.iconVersion";
-const PROMPT_DELAY_MS = 1200;
 const SW_UPDATE_MS = 60 * 60 * 1000;
 const PROMPT_WAIT_MS = 8000;
 const PROMPT_POLL_MS = 200;
@@ -21,50 +19,10 @@ function getInstallButton() {
 	return document.getElementById("pwaInstallBtn");
 }
 
-function getInstallModal() {
-	return document.getElementById("pwaInstallModal");
-}
-
 function setInstallButtonVisible(visible) {
 	const btn = getInstallButton();
 	if (!btn) return;
 	btn.hidden = !visible;
-}
-
-function hasSeenInstallPrompt() {
-	try {
-		return window.localStorage.getItem(PROMPT_SEEN_KEY) === "1";
-	} catch {
-		return false;
-	}
-}
-
-function rememberInstallPromptSeen() {
-	try {
-		window.localStorage.setItem(PROMPT_SEEN_KEY, "1");
-	} catch {
-		return;
-	}
-}
-
-function openInstallModal() {
-	const modal = getInstallModal();
-	if (!modal || modal.classList.contains("auth-modal--open")) return;
-
-	rememberInstallPromptSeen();
-	modal.classList.add("auth-modal--open");
-	modal.removeAttribute("inert");
-	modal.setAttribute("aria-hidden", "false");
-}
-
-function closeInstallModal() {
-	const modal = getInstallModal();
-	if (!modal) return;
-
-	rememberInstallPromptSeen();
-	modal.classList.remove("auth-modal--open");
-	modal.setAttribute("inert", "");
-	modal.setAttribute("aria-hidden", "true");
 }
 
 function refreshManifestDiscovery() {
@@ -143,14 +101,12 @@ function registerServiceWorker() {
 		});
 }
 
-export function initPwa() {
+function initInstallButton() {
 	const btn = getInstallButton();
-	const modal = getInstallModal();
 	if (!btn) return;
 
 	if (isStandaloneDisplay()) {
 		setInstallButtonVisible(false);
-		registerServiceWorker();
 		return;
 	}
 
@@ -222,31 +178,15 @@ export function initPwa() {
 	window.addEventListener("appinstalled", () => {
 		deferredPrompt = null;
 		setInstallButtonVisible(false);
-		closeInstallModal();
 	});
 
 	btn.addEventListener("click", async (event) => {
 		event.preventDefault();
 		await runNativeInstall();
 	});
+}
 
-	if (modal && !isStandaloneDisplay()) {
-		const dismiss = () => closeInstallModal();
-		modal.querySelector("#pwaInstallOverlay")?.addEventListener("click", dismiss);
-		modal.querySelector("#pwaInstallClose")?.addEventListener("click", dismiss);
-		modal.querySelector("#pwaInstallDismiss")?.addEventListener("click", dismiss);
-		modal.querySelector("#pwaInstallConfirm")?.addEventListener("click", async () => {
-			closeInstallModal();
-			await runNativeInstall();
-		});
-
-		if (!hasSeenInstallPrompt()) {
-			window.setTimeout(() => {
-				if (isStandaloneDisplay() || hasSeenInstallPrompt()) return;
-				openInstallModal();
-			}, PROMPT_DELAY_MS);
-		}
-	}
-
-	registerServiceWorker();
+export function initPwa() {
+	initInstallButton();
+	void registerServiceWorker();
 }

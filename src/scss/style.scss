@@ -598,7 +598,6 @@ body.page--view-only .inventory__form {
 }
 
 .shed__bay {
-	/* Large desktop: share width, no horizontal scroll (e.g. 1920 + Simply 13 bays). */
 	flex: 1 1 0;
 	min-width: 0;
 	height: auto;
@@ -1938,6 +1937,18 @@ body.page--offline .inventory__form {
 
 .auth-modal--open {
 	display: flex;
+}
+
+.auth-modal--blocking .auth-modal__close {
+	display: none;
+}
+
+body.page--auth-gate .page__wrapper,
+body.page--auth-gate .page__footer,
+body.page--auth-gate .crm-sidebar {
+	visibility: hidden;
+	pointer-events: none;
+	user-select: none;
 }
 
 .auth-modal__overlay {
