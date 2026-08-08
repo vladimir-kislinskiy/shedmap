@@ -617,10 +617,24 @@
 	padding-left: var(--crm-gutter);
 }
 
+/* Sidebar open: keep bay width, scroll horizontally — never squeeze sheds. */
 @media (min-width: 769px) {
-	.theme-crm .shed__bay {
-		flex: 1 0 150px;
+	.theme-crm:not(.crm-collapsed) .shed__columns {
+		align-items: flex-start;
+	}
+
+	.theme-crm:not(.crm-collapsed) .shed__bay {
+		flex: 0 0 150px;
 		min-width: 150px;
+		align-self: flex-start;
+	}
+}
+
+/* Sidebar collapsed on large desktop: fill available width without scroll. */
+@media (min-width: 1601px) {
+	.theme-crm.crm-collapsed .shed__bay {
+		flex: 1 1 0;
+		min-width: 0;
 	}
 }
 

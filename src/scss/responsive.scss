@@ -4,12 +4,14 @@
 	}
 }
 
+/* Mid/narrow: keep a readable bay width and allow horizontal scroll (not squeeze). */
 @media (max-width: 1600px) {
 	.shed__columns {
 		align-items: flex-start;
 	}
 
-	.shed__bay {
+	.shed__bay,
+	.theme-crm .shed__bay {
 		flex: 0 0 clamp(150px, 18vw, 170px);
 		min-width: 150px;
 		height: auto;
@@ -26,7 +28,8 @@
 		align-items: flex-start;
 	}
 
-	.shed__bay {
+	.shed__bay,
+	.theme-crm .shed__bay {
 		flex: 0 0 clamp(150px, 20vw, 170px);
 		min-width: 150px;
 		height: auto;
