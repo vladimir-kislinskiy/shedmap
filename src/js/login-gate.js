@@ -47,7 +47,6 @@ function initLoginGate() {
 		passwordEl.type = show ? "text" : "password";
 		toggleEl.setAttribute("aria-pressed", show ? "true" : "false");
 		toggleEl.setAttribute("aria-label", show ? "Hide password" : "Show password");
-		toggleEl.textContent = show ? "Hide" : "Show";
 	});
 
 	form?.addEventListener("submit", async (event) => {

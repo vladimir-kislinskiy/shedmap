@@ -57,9 +57,15 @@
 		}
 		.gate__hint {
 			margin: 0 0 22px;
-			line-height: 1.45;
+			line-height: 1.5;
 			color: var(--muted);
 			font-size: 0.95rem;
+		}
+		.gate__hint p {
+			margin: 0;
+		}
+		.gate__hint p + p {
+			margin-top: 0.55em;
 		}
 		.gate__hint a {
 			color: var(--primary);
@@ -67,6 +73,10 @@
 			text-decoration: none;
 		}
 		.gate__hint a:hover { text-decoration: underline; }
+		.gate__name {
+			color: var(--primary);
+			font-weight: 700;
+		}
 		.gate__form {
 			display: flex;
 			flex-direction: column;
@@ -97,15 +107,46 @@
 			top: 50%;
 			right: 8px;
 			transform: translateY(-50%);
+			display: flex;
+			align-items: center;
+			justify-content: center;
 			width: 36px;
 			height: 36px;
-			border: none;
-			border-radius: 6px;
+			margin: 0;
+			padding: 0;
+			border: 0;
+			border-radius: 0;
+			outline: none;
+			box-shadow: none;
 			background: transparent;
 			color: var(--muted);
 			cursor: pointer;
-			font-size: 0.75rem;
-			font-weight: 600;
+			-webkit-appearance: none;
+			appearance: none;
+		}
+		.gate__toggle:hover,
+		.gate__toggle:focus,
+		.gate__toggle:focus-visible,
+		.gate__toggle:active {
+			border: 0;
+			outline: none;
+			box-shadow: none;
+			color: var(--primary);
+		}
+		.gate__toggle-icon {
+			display: block;
+			width: 20px;
+			height: 20px;
+			flex-shrink: 0;
+		}
+		.gate__toggle-icon--hide {
+			display: none;
+		}
+		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--show {
+			display: none;
+		}
+		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--hide {
+			display: block;
 		}
 		.gate__error {
 			margin: 0;
@@ -132,14 +173,12 @@
 <body>
 	<main class="gate" role="dialog" aria-labelledby="gateTitle" aria-modal="true">
 		<h1 class="gate__title" id="gateTitle">Shed Map — Sign in</h1>
-		<p class="gate__hint">
-			Access is restricted. For a login and password, contact
-			<strong>Vlad</strong>
-			(<a href="mailto:operations@barr-ag.com">operations@barr-ag.com</a>)
-			or
-			<a href="tel:+14039946264">403-994-6264</a>
-			(phone &amp; WhatsApp).
-		</p>
+		<div class="gate__hint">
+			<p>Access is restricted.</p>
+			<p>For a login and password, contact <span class="gate__name">Vlad</span>:</p>
+			<p><a href="mailto:operations@barr-ag.com">operations@barr-ag.com</a></p>
+			<p><a href="tel:+14039946264">403-994-6264</a> (phone &amp; WhatsApp)</p>
+		</div>
 		<form class="gate__form" id="loginForm" novalidate>
 			<input type="email" id="loginEmail" class="gate__input" name="username"
 				placeholder="Email" autocomplete="username" autocapitalize="off"
@@ -149,7 +188,19 @@
 					name="password" placeholder="Password" autocomplete="current-password"
 					required readonly>
 				<button type="button" class="gate__toggle" id="loginPasswordToggle"
-					aria-label="Show password" aria-pressed="false">Show</button>
+					aria-label="Show password" aria-pressed="false">
+					<svg class="gate__toggle-icon gate__toggle-icon--show" xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
+						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z"/>
+					</svg>
+					<svg class="gate__toggle-icon gate__toggle-icon--hide" xmlns="http://www.w3.org/2000/svg"
+						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
+						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
+						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z"/>
+						<path d="M4.5 4.5 L27.5 27.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+					</svg>
+				</button>
 			</div>
 			<p class="gate__error" id="loginError" hidden></p>
 			<button type="submit" class="gate__submit" id="loginSubmit">Sign In</button>
