@@ -7,7 +7,9 @@ import {
 	isAdminUser,
 	canEditLocation,
 	REQUIRE_AUTH,
+	LOGIN_PATH,
 } from "./auth.js";
+import { clearSessionToken, setSessionToken } from "./session.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { initPwa } from "./pwa.js";
 import { getFirebaseConfig } from "./firebase-config.js";
@@ -249,20 +251,36 @@ function requiresAuthGate() {
 	return REQUIRE_AUTH && !isAuthenticated;
 }
 
+function redirectToLoginGate() {
+	clearSessionToken();
+	if (window.location.pathname !== LOGIN_PATH && window.location.pathname !== "/index.html") {
+		window.location.replace(LOGIN_PATH);
+	}
+}
+
+async function refreshSessionCookie() {
+	const user = auth.currentUser;
+	if (!user) return;
+	try {
+		setSessionToken(await user.getIdToken());
+	} catch (err) {
+		console.error("Session cookie refresh failed:", err);
+	}
+}
+
 function refreshAuthGate() {
 	const gated = requiresAuthGate();
 	document.body.classList.toggle("page--auth-gate", gated);
 
-	const hint = document.getElementById("authModalHint");
-	if (hint) {
-		hint.textContent = gated
-			? "Sign in with your company account to view the shed map."
-			: "Sign in to manage inventory and make changes.";
-	}
-
 	if (gated) {
 		setInventoryControlsOpen(false);
-		openAuthModal({ blocking: true });
+		redirectToLoginGate();
+		return;
+	}
+
+	const hint = document.getElementById("authModalHint");
+	if (hint) {
+		hint.textContent = "Sign in to manage inventory and make changes.";
 	}
 }
 
@@ -2664,11 +2682,20 @@ async function restoreAppStateToFirebase(state) {
 }
 
 function handleAuthChange(authenticated, person, email = null) {
+	if (REQUIRE_AUTH && !authenticated) {
+		redirectToLoginGate();
+		return;
+	}
+
 	setEditMode(authenticated, person, email);
 	updateAuthUI(authenticated, person);
 	syncAdminBackupUI(authenticated, email);
 	syncColorBlindThemeAccess(authenticated, email);
 	refreshAuthGate();
+
+	if (authenticated) {
+		void refreshSessionCookie();
+	}
 
 	if (authenticated && pendingResetLocation) {
 		const locationId = pendingResetLocation;
@@ -2788,7 +2815,14 @@ function closeAuthModal() {
 function initAuthUI() {
 	document.getElementById("authBtn")?.addEventListener("click", () => {
 		if (isAuthenticated) {
-			logout(auth).catch((err) => console.error("Sign out error:", err));
+			clearSessionToken();
+			logout(auth)
+				.catch((err) => console.error("Sign out error:", err))
+				.finally(() => {
+					window.location.replace(LOGIN_PATH);
+				});
+		} else if (REQUIRE_AUTH) {
+			redirectToLoginGate();
 		} else {
 			openAuthModal();
 		}
@@ -2799,6 +2833,7 @@ function initAuthUI() {
 		const errorEl = document.getElementById("authError");
 		try {
 			await login(auth, document.getElementById("authEmail").value, document.getElementById("authPassword").value);
+			await refreshSessionCookie();
 		} catch (err) {
 			if (errorEl) {
 				errorEl.hidden = false;
@@ -3572,7 +3607,16 @@ async function startApp() {
 	initMobileInputScrollFix();
 	initStackDetailModal();
 	initPwa();
-	refreshAuthGate();
+	if (!REQUIRE_AUTH) refreshAuthGate();
+
+	// Keep edge-function cookie warm (tokens ~1h).
+	window.setInterval(() => {
+		void refreshSessionCookie();
+	}, 45 * 60 * 1000);
+
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible") void refreshSessionCookie();
+	});
 }
 
 if (document.readyState === "loading") {

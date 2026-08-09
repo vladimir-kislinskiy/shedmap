@@ -1,10 +1,10 @@
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 /**
- * Flip to true on launch Sunday (with locked database rules).
- * While false: guests can still view; editors/admins use sign-in for changes.
+ * Hard gate: unauthenticated users only see the public login page.
+ * Pair with locked database rules + Netlify edge session cookie.
  */
-export const REQUIRE_AUTH = false;
+export const REQUIRE_AUTH = true;
 
 export const ROLE_ADMIN = "admin";
 export const ROLE_USER = "user";
@@ -101,3 +101,6 @@ export function login(auth, email, password) {
 export function logout(auth) {
 	return signOut(auth);
 }
+
+export const LOGIN_PATH = "/";
+export const APP_PATH = "/app.html";

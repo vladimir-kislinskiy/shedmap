@@ -85,6 +85,7 @@ const cleanHashedAssets = () => {
 	return del(
 		[
 			"dist/js/app-*.js",
+			"dist/js/login-gate-*.js",
 			"dist/js/chunks/**",
 			"dist/css/style-*.css",
 			"dist/fonts/*-*.woff",
@@ -96,22 +97,84 @@ const cleanHashedAssets = () => {
 	);
 };
 
+const SESSION_COOKIE = "hayshed_id";
+
+function isPublicDevPath(pathname) {
+	if (pathname === "/" || pathname === "/index.html") return true;
+	if (/^\/js\/login-gate(?:-[a-zA-Z0-9]+)?\.js$/.test(pathname)) return true;
+	if (pathname.startsWith("/favicon")) return true;
+	if (pathname === "/sw.js") return true;
+	if (
+		pathname === "/apple-touch-icon.png" ||
+		pathname === "/apple-touch-icon-precomposed.png" ||
+		pathname === "/apple-touch-icon-180x180.png" ||
+		pathname === "/favicon.ico"
+	) {
+		return true;
+	}
+	return false;
+}
+
+function hasDevSessionCookie(req) {
+	const cookieHeader = req.headers.cookie || "";
+	const match = cookieHeader.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]*)`));
+	return Boolean(match && match[1]);
+}
+
+function protectDevAssets(req, res, next) {
+	const pathname = (req.url || "/").split("?")[0];
+	if (isPublicDevPath(pathname)) {
+		next();
+		return;
+	}
+	if (hasDevSessionCookie(req)) {
+		next();
+		return;
+	}
+
+	const accept = req.headers.accept || "";
+	if (accept.includes("text/html") || pathname.endsWith(".html")) {
+		res.writeHead(302, { Location: "/" });
+		res.end();
+		return;
+	}
+
+	res.writeHead(401, {
+		"Cache-Control": "no-store",
+		"Content-Type": "text/plain; charset=utf-8",
+	});
+	res.end("Unauthorized");
+}
+
 const scriptsBundle = async () => {
 	try {
-		await esbuild.build({
-			entryPoints: ["./src/js/main.js"],
+		const define = getFirebaseDefine();
+		const shared = {
 			bundle: true,
-			splitting: true,
 			minify: isProduction,
 			target: ["es2020"],
 			format: "esm",
-			outdir: "./dist/js",
-			entryNames: "app",
-			chunkNames: "chunks/[name]-[hash]",
 			logLevel: "silent",
 			legalComments: "none",
 			drop: isProduction ? ["console"] : [],
-			define: getFirebaseDefine(),
+			define,
+		};
+
+		// Separate login bundle so app code is never shipped in public JS.
+		await esbuild.build({
+			...shared,
+			entryPoints: ["./src/js/login-gate.js"],
+			splitting: false,
+			outfile: "./dist/js/login-gate.js",
+		});
+
+		await esbuild.build({
+			...shared,
+			entryPoints: ["./src/js/main.js"],
+			splitting: true,
+			outdir: "./dist/js",
+			entryNames: "app",
+			chunkNames: "chunks/[name]-[hash]",
 		});
 		browserSync.stream();
 	} catch (error) {
@@ -179,6 +242,8 @@ const cache = () => {
 			"dist/img/**/*.png",
 			"!dist/favicon/**",
 			"!dist/js/chunks/**",
+			/* Public login bundle must keep a stable URL for the edge allowlist. */
+			"!dist/js/login-gate.js",
 			/* SW must stay at /sw.js — pwa.js registers that exact path. */
 			"!dist/sw.js",
 		],
@@ -238,7 +303,8 @@ const ensureDevAssets = (done) => {
 	}
 
 	const needsCss = !existsSync("./dist/css/style.css");
-	const needsJs = !existsSync("./dist/js/app.js");
+	const needsJs =
+		!existsSync("./dist/js/app.js") || !existsSync("./dist/js/login-gate.js");
 	const needsResources =
 		DEV_FONT_FILES.some((file) => !existsSync(file)) ||
 		DEV_FAVICON_FILES.some((file) => !existsSync(file));
@@ -270,6 +336,7 @@ const watchFiles = () => {
 	browserSync.init({
 		server: {
 			baseDir: "./dist",
+			middleware: [protectDevAssets],
 		},
 		open: false,
 		notify: false,

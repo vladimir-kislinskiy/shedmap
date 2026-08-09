@@ -6,7 +6,18 @@
   NODE_VERSION = "20"
   # Firebase web config is injected into client JS at build time (public by design;
   # protected by Firebase rules + API key referrers, not by hiding these values).
+  # FIREBASE_PROJECT_ID is also required at runtime for the edge auth gate (JWT verify).
   SECRETS_SCAN_OMIT_KEYS = "FIREBASE_API_KEY,FIREBASE_AUTH_DOMAIN,FIREBASE_DATABASE_URL,FIREBASE_PROJECT_ID,FIREBASE_STORAGE_BUCKET,FIREBASE_MESSAGING_SENDER_ID,FIREBASE_APP_ID"
+
+# Cookie-gated app: public only login page + login-gate.js (+ favicons).
+[[edge_functions]]
+  function = "protect-app"
+  path = "/*"
+
+[[headers]]
+  for = "/js/login-gate.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
 
 [[headers]]
   for = "/*"

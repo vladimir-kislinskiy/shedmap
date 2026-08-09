@@ -2,6 +2,16 @@
 
 Passwords are **not** stored in this repo. Keep them only in your private list / password manager.
 
+## Absolute rule
+
+**Before login: no access to application code or data.**
+
+- Public URL (`/`): login popup + message to contact **Vlad** for credentials.
+- Protected (Netlify Edge + session cookie): `/app.html`, `/js/app*`, `/css/*`, fonts, chunks, etc.
+- Firebase RTDB: read/write only for signed-in allowlisted accounts (`database.rules.json` locked).
+
+---
+
 ## Roles
 
 | Role | Rights |
@@ -10,127 +20,74 @@ Passwords are **not** stored in this repo. Keep them only in your private list /
 | **user** | View only (map, reports, PDF) |
 | **super** | `operations@barr-ag.com` only — backup tools + CB theme toggle |
 
-Registry lives in `src/js/auth.js` → `AUTH_USERS`.
+Registry: `src/js/auth.js` → `AUTH_USERS`.
 
 Temporary emergency account: `logistic@barr-ag.com` (role **user** — change password after each use).
 
 ---
 
-## Before Monday (prep)
+## Architecture
 
-### 1. Create Firebase Auth users
+| Piece | Role |
+|-------|------|
+| `src/index.html` + `login-gate.js` | Only public UI (inline CSS, contact Vlad) |
+| `src/app.html` + `app.js` | Full app (edge-protected) |
+| Cookie `hayshed_id` | Firebase ID token, set on login |
+| `netlify/edge-functions/protect-app.ts` | Verifies JWT; blocks raw asset URLs without cookie |
+| `REQUIRE_AUTH = true` | Client redirect to `/` if session lost |
+| Locked RTDB rules | No anonymous data |
 
-Firebase Console → **Authentication** → **Users** → **Add user** for each email in `AUTH_USERS`.
+---
 
-- Use the passwords from your private spreadsheet (not from git).
-- Leave existing accounts as-is; update password if needed.
-- New accounts: email/password only.
+## Before / at deploy
 
-Checklist emails (18):
+### 1. Firebase Auth users
 
-```
-admin@barr-ag.com
-bdyson@barr-ag.com
-bschmitt@barr-ag.com
-cbrocklebank@barr-ag.com
-clee@barr-ag.com
-dehy@barr-ag.com
-jbergeson@barr-ag.com
-nmathis@barr-ag.com
-operations@barr-ag.com
-rschmitt@barr-ag.com
-scale@barr-ag.com
-shisadomi@barr-ag.com
-siksika@barr-ag.com
-ssakamoto@barr-ag.com
-tbeschmitt@barr-ag.com
-tschmitt@barr-ag.com
-loader@barr-ag.com
-logistic@barr-ag.com
+Create each email in `AUTH_USERS` (Authentication → Users).
+
+### 2. Netlify env
+
+Same `FIREBASE_*` as build. **`FIREBASE_PROJECT_ID` must be set** (edge verifies tokens against it).
+
+### 3. Deploy frontend (includes edge function)
+
+```bash
+npm run build
+# deploy dist / Netlify site as usual
 ```
 
-### 2. Deploy **current** database rules (write-admins only, **public read** still on)
+### 4. Deploy locked database rules
 
 ```bash
 npm run deploy:rules
 ```
 
-Uses `database.rules.json`:
+Uses locked `database.rules.json` (read allowlist, write admins only).
 
-- `.read: true` on `hayShedState` (guests still see data this week)
-- `.write` only for admin emails (Natalie, Vlad, Ryley, Taylor, Tyler)
-- `siksika@` no longer has write (user role)
+### 5. Smoke test (private window)
 
-### 3. Test logins this week
-
-- Sign in as **admin** → gear, edit, drag.
-- Sign in as **user** → view only (same as guest UI for editing).
-- Sign out works.
-
-`REQUIRE_AUTH` in `src/js/auth.js` is still **`false`** → map works without login until Sunday.
-
-### 4. Monday onward
-
-Hand out email + password + role to each person. Ask admins to change password after first login if policy requires it.
+1. Open site → **only** sign-in screen + “contact Vlad”.
+2. Direct URL `/app.html` or `/js/app.js` → redirect or **401** (no app code).
+3. Log in → map works.
+4. User role → view only; admin → edit.
+5. Sign out → back to login; assets blocked again.
+6. Wrong password → error; unknown email not in allowlist → denied.
 
 ---
 
-## Sunday cutover (hard login)
-
-Do in order:
-
-### A. App flag
-
-In `src/js/auth.js`:
-
-```js
-export const REQUIRE_AUTH = true;
-```
-
-Build + deploy frontend to Netlify.
-
-### B. Locked database rules
-
-```bash
-cp database.rules.locked.json database.rules.json
-npm run deploy:rules
-```
-
-Or deploy the locked file path if you extend the deploy script.
-
-`database.rules.locked.json`:
-
-- **read** only if signed in + email in allowlist
-- **write** only admins
-- No anonymous data
-
-### C. Smoke test (private window)
-
-1. No login → sign-in required, **no map data**.
-2. User login → map + reports OK, no inventory form.
-3. Admin login → full edit + save.
-4. Super (`operations@`) → backup + CB toggle.
-5. Wrong password → error.
-6. Unknown email (even if Auth account exists but not in `AUTH_USERS`) → signed out.
-
-### D. After cutover
-
-- Monitor Firebase Auth **Signed in** column for issues.
-- If emergency access needed: hand `logistic@` password, then **reset password** after use.
-
----
-
-## Adding a new person later
+## Adding a person later
 
 1. Firebase Auth → Add user.
-2. Add to `AUTH_USERS` in `src/js/auth.js` with `name` + `role`.
-3. Deploy app.
-4. If hard login is already on, also add email to **read** (and **write** if admin) in `database.rules.json` / locked rules + `npm run deploy:rules`.
+2. `AUTH_USERS` in `src/js/auth.js`.
+3. Same email in `database.rules.json` (and `database.rules.locked.json`) read list; write list if admin.
+4. Deploy app + `npm run deploy:rules`.
 
 ---
 
-## Rollback (if needed)
+## Rollback (emergency)
 
-1. Set `REQUIRE_AUTH = false`, redeploy app.
-2. Restore previous rules with public read (backup of current `database.rules.json` before Sunday).
-3. redeploy rules.
+1. Temporarily relax edge function / unset path (or set cookie gate bypass — avoid if possible).
+2. Soften `database.rules.json` read if data must be public again.
+3. Redeploy app + rules.
+
+Prefer fixing accounts over public reopening.
