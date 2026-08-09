@@ -41,13 +41,28 @@ function initLoginGate() {
 		}
 	});
 
-	toggleEl?.addEventListener("click", () => {
+	function syncPasswordToggle() {
 		if (!passwordEl || !toggleEl) return;
+		const hasValue = passwordEl.value.length > 0;
+		toggleEl.hidden = !hasValue;
+		if (!hasValue) {
+			passwordEl.type = "password";
+			toggleEl.setAttribute("aria-pressed", "false");
+			toggleEl.setAttribute("aria-label", "Show password");
+		}
+	}
+
+	toggleEl?.addEventListener("click", () => {
+		if (!passwordEl || !toggleEl || toggleEl.hidden) return;
 		const show = passwordEl.type === "password";
 		passwordEl.type = show ? "text" : "password";
 		toggleEl.setAttribute("aria-pressed", show ? "true" : "false");
 		toggleEl.setAttribute("aria-label", show ? "Hide password" : "Show password");
 	});
+
+	passwordEl?.addEventListener("input", syncPasswordToggle);
+	passwordEl?.addEventListener("change", syncPasswordToggle);
+	syncPasswordToggle();
 
 	form?.addEventListener("submit", async (event) => {
 		event.preventDefault();

@@ -6,6 +6,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 	<meta name="description" content="Shed Map sign-in. Contact Vlad for access.">
 	<meta name="robots" content="noindex, nofollow">
+	<meta name="format-detection" content="telephone=no, email=no, address=no">
 	@include('partials/connected/favicon.html')
 	<style>
 		:root {
@@ -67,12 +68,27 @@
 		.gate__hint p + p {
 			margin-top: 0.55em;
 		}
-		.gate__hint a {
+		.gate__hint a,
+		.gate__hint a:link,
+		.gate__hint a:visited,
+		.gate__hint a:hover,
+		.gate__hint a:active,
+		.gate__hint a:focus {
 			color: var(--primary);
 			font-weight: 600;
-			text-decoration: none;
+			/* iOS Mail/Safari data-detectors force underlines — kill all states */
+			text-decoration: none !important;
+			-webkit-text-decoration: none !important;
+			text-decoration-line: none !important;
+			text-underline-offset: 0;
+			border-bottom: none !important;
+			box-shadow: none;
 		}
-		.gate__hint a:hover { text-decoration: underline; }
+		.gate__hint a.gate__link-email {
+			/* Explicit class so iOS auto-style cannot re-underline "naked" emails */
+			text-decoration: none !important;
+			-webkit-text-decoration: none !important;
+		}
 		.gate__name {
 			color: var(--primary);
 			font-weight: 700;
@@ -145,8 +161,8 @@
 		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--show {
 			display: none;
 		}
-		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--hide {
-			display: block;
+		.gate__toggle[hidden] {
+			display: none !important;
 		}
 		.gate__error {
 			margin: 0;
@@ -173,11 +189,18 @@
 <body>
 	<main class="gate" role="dialog" aria-labelledby="gateTitle" aria-modal="true">
 		<h1 class="gate__title" id="gateTitle">Shed Map — Sign in</h1>
-		<div class="gate__hint">
+		<div class="gate__hint" x-apple-data-detectors="false">
 			<p>Access is restricted.</p>
 			<p>For a login and password, contact <span class="gate__name">Vlad</span>:</p>
-			<p><a href="mailto:operations@barr-ag.com">operations@barr-ag.com</a></p>
-			<p><a href="tel:+14039946264">403-994-6264</a> (phone &amp; WhatsApp)</p>
+			<p>
+				<a class="gate__link-email" href="mailto:operations@barr-ag.com"
+					x-apple-data-detectors="false">operations@barr-ag.com</a>
+			</p>
+			<p>
+				<a href="tel:+14039946264">403-994-6264</a>
+				(phone &amp;
+				<a href="https://wa.me/14039946264" target="_blank" rel="noopener noreferrer">WhatsApp</a>)
+			</p>
 		</div>
 		<form class="gate__form" id="loginForm" novalidate>
 			<input type="email" id="loginEmail" class="gate__input" name="username"
@@ -188,7 +211,7 @@
 					name="password" placeholder="Password" autocomplete="current-password"
 					required readonly>
 				<button type="button" class="gate__toggle" id="loginPasswordToggle"
-					aria-label="Show password" aria-pressed="false">
+					aria-label="Show password" aria-pressed="false" hidden>
 					<svg class="gate__toggle-icon gate__toggle-icon--show" xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
 						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
