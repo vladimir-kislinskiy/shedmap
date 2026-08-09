@@ -83,8 +83,10 @@ export function initAuth(app, onAuthChange) {
 			if (person) {
 				onAuthChange(true, person, user.email);
 			} else {
-				signOut(auth);
-				onAuthChange(false, null, null);
+				// Valid Firebase account but not in allowlist — strip session and kick to login.
+				signOut(auth).finally(() => {
+					onAuthChange(false, null, null, { denied: true });
+				});
 			}
 		} else {
 			onAuthChange(false, null, null);
@@ -101,6 +103,3 @@ export function login(auth, email, password) {
 export function logout(auth) {
 	return signOut(auth);
 }
-
-export const LOGIN_PATH = "/";
-export const APP_PATH = "/app.html";

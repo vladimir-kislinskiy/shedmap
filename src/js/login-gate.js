@@ -1,8 +1,17 @@
 import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "firebase/auth";
+import {
+	getAuth,
+	onAuthStateChanged,
+	signInWithEmailAndPassword,
+	signOut,
+} from "firebase/auth";
 import { getFirebaseConfig } from "./firebase-config.js";
-import { getPersonFromEmail, APP_PATH } from "./auth.js";
 import { clearSessionToken, setSessionToken } from "./session.js";
+
+/**
+ * Public login only — no AUTH_USERS allowlist in this bundle.
+ * Allowlist lives in the protected app.js only (+ Firebase RTDB rules).
+ */
 
 function showError(message) {
 	const errorEl = document.getElementById("loginError");
@@ -12,17 +21,10 @@ function showError(message) {
 }
 
 async function enterApp(user) {
-	const person = getPersonFromEmail(user.email);
-	if (!person) {
-		await signOut(getAuth());
-		clearSessionToken();
-		showError("This account is not authorized. Contact Vlad for access.");
-		return;
-	}
-
 	const token = await user.getIdToken(true);
 	setSessionToken(token);
-	window.location.replace(APP_PATH);
+	// App + login share /; cookie set → hard reload so edge serves app shell (URL stays clean).
+	window.location.reload();
 }
 
 function initLoginGate() {
@@ -32,13 +34,25 @@ function initLoginGate() {
 	const submitEl = document.getElementById("loginSubmit");
 	const toggleEl = document.getElementById("loginPasswordToggle");
 
+	const params = new URLSearchParams(window.location.search);
+	const wasDenied = params.get("error") === "unauthorized";
+	if (wasDenied) {
+		clearSessionToken();
+		showError("This account is not authorized. Contact Vlad for access.");
+		window.history.replaceState({}, "", window.location.pathname);
+	}
+
 	const app = initializeApp(getFirebaseConfig());
 	const auth = getAuth(app);
 
 	onAuthStateChanged(auth, (user) => {
-		if (user && getPersonFromEmail(user.email)) {
-			void enterApp(user);
+		if (!user) return;
+		// Avoid bounce-loop: app already rejected this account.
+		if (wasDenied) {
+			void signOut(auth).then(() => clearSessionToken());
+			return;
 		}
+		void enterApp(user);
 	});
 
 	toggleEl?.addEventListener("click", () => {

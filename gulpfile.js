@@ -99,8 +99,7 @@ const cleanHashedAssets = () => {
 
 const SESSION_COOKIE = "hayshed_id";
 
-function isPublicDevPath(pathname) {
-	if (pathname === "/" || pathname === "/index.html") return true;
+function isAlwaysPublicDevPath(pathname) {
 	if (/^\/js\/login-gate(?:-[a-zA-Z0-9]+)?\.js$/.test(pathname)) return true;
 	if (pathname.startsWith("/favicon")) return true;
 	if (pathname === "/sw.js") return true;
@@ -122,12 +121,34 @@ function hasDevSessionCookie(req) {
 }
 
 function protectDevAssets(req, res, next) {
-	const pathname = (req.url || "/").split("?")[0];
-	if (isPublicDevPath(pathname)) {
+	const raw = req.url || "/";
+	const qIndex = raw.indexOf("?");
+	const pathname = qIndex === -1 ? raw : raw.slice(0, qIndex);
+	const query = qIndex === -1 ? "" : raw.slice(qIndex);
+	const authed = hasDevSessionCookie(req);
+
+	// Clean URL: with session, / and /index.html serve the app shell
+	if (pathname === "/" || pathname === "/index.html") {
+		if (authed) {
+			req.url = `/app.html${query}`;
+		}
 		next();
 		return;
 	}
-	if (hasDevSessionCookie(req)) {
+
+	// Never leave app.html in the address bar
+	if (pathname === "/app.html" || pathname === "/app") {
+		res.writeHead(302, { Location: query ? `/${query}` : "/" });
+		res.end();
+		return;
+	}
+
+	if (isAlwaysPublicDevPath(pathname)) {
+		next();
+		return;
+	}
+
+	if (authed) {
 		next();
 		return;
 	}

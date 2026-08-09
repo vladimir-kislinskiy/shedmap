@@ -8,9 +8,8 @@ const JWKS = jose.createRemoteJWKSet(
 	new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
 );
 
-const PUBLIC_PATHS = [
-	/^\/$/,
-	/^\/index\.html$/,
+/** Static public assets only (not HTML app). */
+const ALWAYS_PUBLIC = [
 	/^\/js\/login-gate(?:-[a-zA-Z0-9]+)?\.js$/,
 	/^\/favicon(?:\/|$)/,
 	/^\/apple-touch-icon(?:-[\w.]+)?\.png$/,
@@ -18,8 +17,16 @@ const PUBLIC_PATHS = [
 	/^\/sw\.js$/,
 ];
 
-function isPublicPath(pathname: string): boolean {
-	return PUBLIC_PATHS.some((re) => re.test(pathname));
+function isAlwaysPublic(pathname: string): boolean {
+	return ALWAYS_PUBLIC.some((re) => re.test(pathname));
+}
+
+function isRoot(pathname: string): boolean {
+	return pathname === "/" || pathname === "/index.html";
+}
+
+function isLegacyAppPath(pathname: string): boolean {
+	return pathname === "/app.html" || pathname === "/app";
 }
 
 function readCookie(request: Request, name: string): string {
@@ -53,17 +60,33 @@ function wantsHtml(request: Request): boolean {
 
 export default async (request: Request, context: Context) => {
 	const url = new URL(request.url);
-	if (isPublicPath(url.pathname)) {
+	const { pathname } = url;
+
+	if (isAlwaysPublic(pathname)) {
 		return context.next();
 	}
 
 	const token = readCookie(request, SESSION_COOKIE);
 	const valid = await verifyFirebaseToken(token);
+
+	// Address bar stays on origin only: session at / serves the app internally.
+	if (isRoot(pathname)) {
+		if (valid) {
+			return context.rewrite("/app.html");
+		}
+		return context.next();
+	}
+
+	// Never leave /app.html in the bar — bounce to clean /
+	if (isLegacyAppPath(pathname)) {
+		return Response.redirect(new URL("/", url), 302);
+	}
+
 	if (valid) {
 		return context.next();
 	}
 
-	if (wantsHtml(request) || url.pathname.endsWith(".html") || url.pathname === "/app" || url.pathname === "/app.html") {
+	if (wantsHtml(request) || pathname.endsWith(".html")) {
 		return Response.redirect(new URL("/", url), 302);
 	}
 

@@ -7,9 +7,8 @@ import {
 	isAdminUser,
 	canEditLocation,
 	REQUIRE_AUTH,
-	LOGIN_PATH,
 } from "./auth.js";
-import { clearSessionToken, setSessionToken } from "./session.js";
+import { clearSessionToken, setSessionToken, LOGIN_PATH } from "./session.js";
 import { bindStackDrag } from "./drag-drop.js";
 import { initPwa } from "./pwa.js";
 import { getFirebaseConfig } from "./firebase-config.js";
@@ -76,6 +75,11 @@ import {
 	sanitizeCommentInput,
 	updateHayStack,
 } from "./dom.js";
+
+// Clean address bar if legacy /app.html is still open somehow
+if (location.pathname === "/app.html" || location.pathname === "/app") {
+	history.replaceState(null, "", "/");
+}
 
 const app = initializeApp(getFirebaseConfig());
 const db = getDatabase(app);
@@ -251,11 +255,24 @@ function requiresAuthGate() {
 	return REQUIRE_AUTH && !isAuthenticated;
 }
 
-function redirectToLoginGate() {
+function redirectToLoginGate({ denied = false } = {}) {
 	clearSessionToken();
-	if (window.location.pathname !== LOGIN_PATH && window.location.pathname !== "/index.html") {
-		window.location.replace(LOGIN_PATH);
+	const target = denied ? `${LOGIN_PATH}?error=unauthorized` : LOGIN_PATH;
+	const onRoot = window.location.pathname === "/" || window.location.pathname === "/index.html";
+
+	if (denied) {
+		// Query change forces navigation even when already on /
+		window.location.replace(target);
+		return;
 	}
+
+	if (onRoot) {
+		// Same path as app — hard reload so edge serves login shell
+		window.location.reload();
+		return;
+	}
+
+	window.location.replace(LOGIN_PATH);
 }
 
 async function refreshSessionCookie() {
@@ -2681,9 +2698,9 @@ async function restoreAppStateToFirebase(state) {
 	updateSyncBanner();
 }
 
-function handleAuthChange(authenticated, person, email = null) {
+function handleAuthChange(authenticated, person, email = null, options = {}) {
 	if (REQUIRE_AUTH && !authenticated) {
-		redirectToLoginGate();
+		redirectToLoginGate({ denied: Boolean(options.denied) });
 		return;
 	}
 
@@ -2819,7 +2836,7 @@ function initAuthUI() {
 			logout(auth)
 				.catch((err) => console.error("Sign out error:", err))
 				.finally(() => {
-					window.location.replace(LOGIN_PATH);
+					redirectToLoginGate();
 				});
 		} else if (REQUIRE_AUTH) {
 			redirectToLoginGate();
