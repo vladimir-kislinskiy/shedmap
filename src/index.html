@@ -164,20 +164,6 @@
 		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--hide {
 			display: block;
 		}
-		.gate__toggle[hidden] {
-			display: none !important;
-		}
-		/* Chrome/Safari fire this animation when autofilling — used in login-gate.js */
-		@keyframes gateAutofill {
-			from { opacity: 1; }
-			to { opacity: 1; }
-		}
-		.gate__input:-webkit-autofill,
-		.gate__input:-webkit-autofill:hover,
-		.gate__input:-webkit-autofill:focus {
-			animation-name: gateAutofill;
-			animation-duration: 0.001s;
-		}
 		.gate__error {
 			margin: 0;
 			min-height: 1.2em;
@@ -225,7 +211,7 @@
 					name="password" placeholder="Password" autocomplete="current-password"
 					required readonly>
 				<button type="button" class="gate__toggle" id="loginPasswordToggle"
-					aria-label="Show password" aria-pressed="false" hidden>
+					aria-label="Show password" aria-pressed="false">
 					<svg class="gate__toggle-icon gate__toggle-icon--show" xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
 						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
