@@ -161,8 +161,22 @@
 		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--show {
 			display: none;
 		}
+		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--hide {
+			display: block;
+		}
 		.gate__toggle[hidden] {
 			display: none !important;
+		}
+		/* Chrome/Safari fire this animation when autofilling — used in login-gate.js */
+		@keyframes gateAutofill {
+			from { opacity: 1; }
+			to { opacity: 1; }
+		}
+		.gate__input:-webkit-autofill,
+		.gate__input:-webkit-autofill:hover,
+		.gate__input:-webkit-autofill:focus {
+			animation-name: gateAutofill;
+			animation-duration: 0.001s;
 		}
 		.gate__error {
 			margin: 0;
