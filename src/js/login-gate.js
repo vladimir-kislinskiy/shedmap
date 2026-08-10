@@ -6,12 +6,19 @@ import {
 	signOut,
 } from "firebase/auth";
 import { getFirebaseConfig } from "./firebase-config.js";
-import { clearSessionToken, setSessionToken } from "./session.js";
+import {
+	SESSION_COOKIE,
+	clearSessionToken,
+	getSessionToken,
+	setSessionToken,
+} from "./session.js";
 
 /**
  * Public login only — no user directory / emails in this bundle.
- * Authorization profiles load from Firebase after login (protected app).
  */
+
+const ENTER_ONCE_KEY = "hayshed.enterOnce";
+const LEAVE_APP_KEY = "hayshed.leaveApp";
 
 function showError(message) {
 	const errorEl = document.getElementById("loginError");
@@ -20,11 +27,26 @@ function showError(message) {
 	errorEl.textContent = message || "";
 }
 
+/**
+ * Set session cookie and navigate to app once.
+ * Prevents reload loops when the local proxy keeps serving the login page.
+ */
 async function enterApp(user) {
+	if (sessionStorage.getItem(ENTER_ONCE_KEY) === "1") {
+		// Previous redirect came back to login — stop thrashing.
+		sessionStorage.removeItem(ENTER_ONCE_KEY);
+		clearSessionToken();
+		showError("Sign-in could not open the app. Try again, or hard-refresh (Cmd+Shift+R).");
+		return;
+	}
+
 	const token = await user.getIdToken(true);
 	setSessionToken(token);
-	// App + login share /; cookie set → hard reload so edge serves app shell (URL stays clean).
-	window.location.reload();
+	sessionStorage.setItem(ENTER_ONCE_KEY, "1");
+	sessionStorage.removeItem(LEAVE_APP_KEY);
+
+	// Same path as login (/). Local middleware rewrites to app when cookie exists.
+	window.location.assign("/");
 }
 
 function initLoginGate() {
@@ -34,24 +56,46 @@ function initLoginGate() {
 	const submitEl = document.getElementById("loginSubmit");
 	const toggleEl = document.getElementById("loginPasswordToggle");
 
+	// Landing on login after leaving app — clear leave lock so future logouts work.
+	sessionStorage.removeItem(LEAVE_APP_KEY);
+
 	const params = new URLSearchParams(window.location.search);
 	const wasDenied = params.get("error") === "unauthorized";
+	let blockAutoEnter = wasDenied;
+
 	if (wasDenied) {
 		clearSessionToken();
+		sessionStorage.removeItem(ENTER_ONCE_KEY);
 		showError("This account is not authorized. Contact Vlad for access.");
-		window.history.replaceState({}, "", window.location.pathname);
+		window.history.replaceState({}, "", window.location.pathname || "/");
+	}
+
+	// Strip leftover query flags without reloading.
+	if (
+		params.has("authed") ||
+		params.has("_") ||
+		params.has("error") ||
+		params.has("signedout")
+	) {
+		window.history.replaceState({}, "", window.location.pathname || "/");
 	}
 
 	const app = initializeApp(getFirebaseConfig());
 	const auth = getAuth(app);
 
+	if (wasDenied) {
+		void signOut(auth)
+			.catch(() => {})
+			.finally(() => {
+				clearSessionToken();
+			});
+	}
+
+	// Resume only if we already have a session cookie (returning user).
+	// Do NOT auto-enter on every Firebase restore without a cookie — that caused reload loops.
 	onAuthStateChanged(auth, (user) => {
-		if (!user) return;
-		// Avoid bounce-loop: app already rejected this account.
-		if (wasDenied) {
-			void signOut(auth).then(() => clearSessionToken());
-			return;
-		}
+		if (!user || blockAutoEnter) return;
+		if (!getSessionToken() && !document.cookie.includes(`${SESSION_COOKIE}=`)) return;
 		void enterApp(user);
 	});
 
@@ -66,6 +110,8 @@ function initLoginGate() {
 	form?.addEventListener("submit", async (event) => {
 		event.preventDefault();
 		showError("");
+		blockAutoEnter = false;
+		sessionStorage.removeItem(ENTER_ONCE_KEY);
 		if (submitEl) submitEl.disabled = true;
 		try {
 			const result = await signInWithEmailAndPassword(
@@ -77,6 +123,7 @@ function initLoginGate() {
 		} catch (err) {
 			console.error("Sign in error:", err);
 			showError("Invalid credentials. Please try again.");
+			sessionStorage.removeItem(ENTER_ONCE_KEY);
 			if (submitEl) submitEl.disabled = false;
 		}
 	});

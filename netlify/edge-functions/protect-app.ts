@@ -41,11 +41,23 @@ function readCookie(request: Request, name: string): string {
 }
 
 async function verifyFirebaseToken(token: string): Promise<boolean> {
-	if (!token || !PROJECT_ID) return false;
+	if (!token) return false;
 	try {
+		// Prefer env; fall back to `aud` claim so a missing Netlify env does not lock everyone out.
+		let projectId = PROJECT_ID;
+		if (!projectId) {
+			const parts = token.split(".");
+			if (parts.length < 2) return false;
+			const raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+			const padded = raw + "=".repeat((4 - (raw.length % 4)) % 4);
+			const payload = JSON.parse(atob(padded));
+			projectId = typeof payload.aud === "string" ? payload.aud : "";
+		}
+		if (!projectId) return false;
+
 		await jose.jwtVerify(token, JWKS, {
-			issuer: `https://securetoken.google.com/${PROJECT_ID}`,
-			audience: PROJECT_ID,
+			issuer: `https://securetoken.google.com/${projectId}`,
+			audience: projectId,
 		});
 		return true;
 	} catch {

@@ -76,9 +76,11 @@ import {
 	updateHayStack,
 } from "./dom.js";
 
-// Clean address bar if legacy /app.html is still open somehow
+// Clean address bar (origin only — no /app.html, no one-shot query flags).
 if (location.pathname === "/app.html" || location.pathname === "/app") {
 	history.replaceState(null, "", "/");
+} else if (location.search && /(?:^|[?&])authed=/.test(location.search)) {
+	history.replaceState(null, "", location.pathname || "/");
 }
 
 const app = initializeApp(getFirebaseConfig());
@@ -257,22 +259,22 @@ function requiresAuthGate() {
 
 function redirectToLoginGate({ denied = false } = {}) {
 	clearSessionToken();
-	const target = denied ? `${LOGIN_PATH}?error=unauthorized` : LOGIN_PATH;
-	const onRoot = window.location.pathname === "/" || window.location.pathname === "/index.html";
+	const leaveKey = "hayshed.leaveApp";
 
-	if (denied) {
-		// Query change forces navigation even when already on /
-		window.location.replace(target);
+	// One navigation only — never location.reload() thrashing with the login gate.
+	if (!denied && sessionStorage.getItem(leaveKey) === "1") {
 		return;
 	}
-
-	if (onRoot) {
-		// Same path as app — hard reload so edge serves login shell
-		window.location.reload();
-		return;
+	try {
+		sessionStorage.setItem(leaveKey, "1");
+	} catch {
+		/* ignore */
 	}
 
-	window.location.replace(LOGIN_PATH);
+	const target = denied
+		? `${LOGIN_PATH}?error=unauthorized`
+		: `${LOGIN_PATH}?signedout=1`;
+	window.location.replace(target);
 }
 
 async function refreshSessionCookie() {
@@ -2702,6 +2704,14 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 	if (REQUIRE_AUTH && !authenticated) {
 		redirectToLoginGate({ denied: Boolean(options.denied) });
 		return;
+	}
+
+	// Successfully in app — clear redirect/loop locks from login gate.
+	try {
+		sessionStorage.removeItem("hayshed.enterOnce");
+		sessionStorage.removeItem("hayshed.leaveApp");
+	} catch {
+		/* ignore */
 	}
 
 	setEditMode(authenticated, person, email);

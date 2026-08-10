@@ -1,66 +1,62 @@
-import {
-	getAuth,
-	signInWithEmailAndPassword,
-	signOut,
-	onAuthStateChanged,
-} from "firebase/auth";
-import { getDatabase, ref, get } from "firebase/database";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
 /**
  * Hard gate: unauthenticated users only see the public login page.
  * Pair with locked database rules + Netlify edge session cookie.
  *
- * User allowlist (emails/names/roles) is NOT in client JS.
- * Each signed-in account may only read its own /userProfiles/{key} row.
+ * Allowlist lives in the protected app bundle only — NOT in public login-gate.js.
+ * Guests without a session never receive this file.
  */
 export const REQUIRE_AUTH = true;
 
 export const ROLE_ADMIN = "admin";
 export const ROLE_USER = "user";
-/** Backup + color-blind toggle (operations only in RTDB seed). */
+/** Backup + color-blind toggle. */
 export const ROLE_SUPER = "super";
 
-/** Resolved after Firebase Auth + profile fetch. Not a static directory. */
+/** Authorized accounts (no passwords — create in Firebase Auth Console). */
+export const AUTH_USERS = {
+	"admin@barr-ag.com": { name: "Serhii", role: ROLE_USER },
+	"bdyson@barr-ag.com": { name: "Brad", role: ROLE_USER },
+	"bschmitt@barr-ag.com": { name: "Barry", role: ROLE_USER },
+	"cbrocklebank@barr-ag.com": { name: "Chris", role: ROLE_USER },
+	"clee@barr-ag.com": { name: "Jack", role: ROLE_USER },
+	"dehy@barr-ag.com": { name: "Dehy", role: ROLE_USER },
+	"jbergeson@barr-ag.com": { name: "Jay", role: ROLE_USER },
+	"nmathis@barr-ag.com": { name: "Natalie", role: ROLE_ADMIN },
+	"operations@barr-ag.com": { name: "Vlad", role: ROLE_SUPER },
+	"rschmitt@barr-ag.com": { name: "Ryley", role: ROLE_ADMIN },
+	"scale@barr-ag.com": { name: "Maria", role: ROLE_USER },
+	"shisadomi@barr-ag.com": { name: "Satoko", role: ROLE_USER },
+	"siksika@barr-ag.com": { name: "Peter", role: ROLE_USER },
+	"ssakamoto@barr-ag.com": { name: "Shu", role: ROLE_USER },
+	"tbeschmitt@barr-ag.com": { name: "Taylor", role: ROLE_ADMIN },
+	"tschmitt@barr-ag.com": { name: "Tyler", role: ROLE_ADMIN },
+	"loader@barr-ag.com": { name: "Loaders", role: ROLE_USER },
+	"logistic@barr-ag.com": { name: "Temporary", role: ROLE_USER },
+};
+
 let currentSession = null;
 
 export function getCurrentSession() {
 	return currentSession;
 }
 
-/** RTDB-safe key from email (does not embed other accounts). */
-export function emailToProfileKey(email) {
-	return String(email || "")
-		.trim()
-		.toLowerCase()
-		.replace(/[.#$\[\]/@]/g, "_");
-}
-
-/**
- * Load only this user's profile (rules block listing others).
- * @returns {Promise<{ email: string, name: string, role: string } | null>}
- */
-export async function loadUserProfile(app, email) {
+export function getUserRecord(email) {
 	if (!email) return null;
-	const key = emailToProfileKey(email);
-	const snap = await get(ref(getDatabase(app), `userProfiles/${key}`));
-	if (!snap.exists()) return null;
-
-	const data = snap.val();
-	if (!data || typeof data !== "object") return null;
-
-	const profileEmail = String(data.email || "").toLowerCase();
-	if (profileEmail !== email.toLowerCase()) return null;
-
-	const name = String(data.name || "").trim();
-	const role = String(data.role || "").trim();
-	if (!name || !role) return null;
-	if (![ROLE_USER, ROLE_ADMIN, ROLE_SUPER].includes(role)) return null;
-
-	return { email: profileEmail, name, role };
+	return AUTH_USERS[email.toLowerCase()] || null;
 }
 
-export function isEditor(_email) {
-	const role = currentSession?.role;
+export function getPersonFromEmail(email) {
+	return getUserRecord(email)?.name || null;
+}
+
+export function getUserRole(email) {
+	return getUserRecord(email)?.role || null;
+}
+
+export function isEditor(email) {
+	const role = currentSession?.role || getUserRole(email);
 	return role === ROLE_ADMIN || role === ROLE_SUPER;
 }
 
@@ -70,42 +66,34 @@ export function canEditLocation(email, _locationId) {
 }
 
 /** Super only (backup / CB map toggle). */
-export function isAdminUser(_email) {
-	return currentSession?.role === ROLE_SUPER;
+export function isAdminUser(email) {
+	const role = currentSession?.role || getUserRole(email);
+	return role === ROLE_SUPER;
 }
 
 export function initAuth(app, onAuthChange) {
 	const auth = getAuth(app);
 
 	onAuthStateChanged(auth, (user) => {
-		void (async () => {
-			if (!user?.email) {
+		if (user) {
+			const record = getUserRecord(user.email);
+			if (record) {
+				currentSession = {
+					email: user.email.toLowerCase(),
+					name: record.name,
+					role: record.role,
+				};
+				onAuthChange(true, record.name, user.email);
+			} else {
 				currentSession = null;
-				onAuthChange(false, null, null);
-				return;
-			}
-
-			try {
-				const profile = await loadUserProfile(app, user.email);
-				if (!profile) {
-					currentSession = null;
-					await signOut(auth);
+				signOut(auth).finally(() => {
 					onAuthChange(false, null, null, { denied: true });
-					return;
-				}
-				currentSession = profile;
-				onAuthChange(true, profile.name, user.email);
-			} catch (err) {
-				console.error("Profile load failed:", err);
-				currentSession = null;
-				try {
-					await signOut(auth);
-				} catch {
-					/* ignore */
-				}
-				onAuthChange(false, null, null, { denied: true });
+				});
 			}
-		})();
+		} else {
+			currentSession = null;
+			onAuthChange(false, null, null);
+		}
 	});
 
 	return auth;
