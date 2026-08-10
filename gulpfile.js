@@ -127,7 +127,6 @@ function protectDevAssets(req, res, next) {
 	const query = qIndex === -1 ? "" : raw.slice(qIndex);
 	const authed = hasDevSessionCookie(req);
 
-	// Clean URL: with session, / and /index.html serve the app shell
 	if (pathname === "/" || pathname === "/index.html") {
 		if (authed) {
 			req.url = `/app.html${query}`;
@@ -136,7 +135,6 @@ function protectDevAssets(req, res, next) {
 		return;
 	}
 
-	// Never leave app.html in the address bar
 	if (pathname === "/app.html" || pathname === "/app") {
 		res.writeHead(302, { Location: query ? `/${query}` : "/" });
 		res.end();
@@ -181,7 +179,6 @@ const scriptsBundle = async () => {
 			define,
 		};
 
-		// Separate login bundle so app code is never shipped in public JS.
 		await esbuild.build({
 			...shared,
 			entryPoints: ["./src/js/login-gate.js"],
@@ -205,9 +202,6 @@ const scriptsBundle = async () => {
 };
 
 const resources = () => {
-	// DMSans is an inactive backup font (kept in src/resources/fonts but not
-	// referenced in CSS). Exclude it from the build so it is never shipped or
-	// downloaded. Remove the negations to ship it again.
 	return src([
 		"./src/resources/**",
 		"!./src/resources/fonts/DMSans-*.woff",
@@ -263,9 +257,7 @@ const cache = () => {
 			"dist/img/**/*.png",
 			"!dist/favicon/**",
 			"!dist/js/chunks/**",
-			/* Public login bundle must keep a stable URL for the edge allowlist. */
 			"!dist/js/login-gate.js",
-			/* SW must stay at /sw.js — pwa.js registers that exact path. */
 			"!dist/sw.js",
 		],
 		{

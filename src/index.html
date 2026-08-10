@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
 	<meta charset="UTF-8">
 	<title>Shed Map — Sign in</title>
@@ -21,17 +22,24 @@
 			--radius: 16px;
 			--font: "Saira Semi Condensed", system-ui, -apple-system, "Segoe UI", sans-serif;
 		}
-		* { box-sizing: border-box; }
+
+		* {
+			box-sizing: border-box;
+		}
+
 		html {
 			height: 100%;
 		}
-		html, body {
+
+		html,
+		body {
 			margin: 0;
 			font-family: var(--font);
 			font-size: 15px;
 			color: var(--text);
 			background: linear-gradient(135deg, #f4f6f9 0%, var(--bg) 100%);
 		}
+
 		body {
 			min-height: 100%;
 			min-height: 100dvh;
@@ -40,6 +48,7 @@
 			justify-content: center;
 			padding: 24px 16px;
 		}
+
 		.gate {
 			width: 100%;
 			max-width: 400px;
@@ -50,24 +59,29 @@
 			border-radius: var(--radius);
 			box-shadow: 0 12px 40px rgba(15, 23, 42, 0.1);
 		}
+
 		.gate__title {
 			margin: 0 0 8px;
 			font-size: 1.35rem;
 			font-weight: 700;
 			color: var(--primary);
 		}
+
 		.gate__hint {
 			margin: 0 0 22px;
 			line-height: 1.5;
 			color: var(--muted);
 			font-size: 0.95rem;
 		}
+
 		.gate__hint p {
 			margin: 0;
 		}
-		.gate__hint p + p {
+
+		.gate__hint p+p {
 			margin-top: 0.55em;
 		}
+
 		.gate__hint a,
 		.gate__hint a:link,
 		.gate__hint a:visited,
@@ -76,7 +90,6 @@
 		.gate__hint a:focus {
 			color: var(--primary);
 			font-weight: 600;
-			/* iOS Mail/Safari data-detectors force underlines — kill all states */
 			text-decoration: none !important;
 			-webkit-text-decoration: none !important;
 			text-decoration-line: none !important;
@@ -84,20 +97,23 @@
 			border-bottom: none !important;
 			box-shadow: none;
 		}
+
 		.gate__hint a.gate__link-email {
-			/* Explicit class so iOS auto-style cannot re-underline "naked" emails */
 			text-decoration: none !important;
 			-webkit-text-decoration: none !important;
 		}
+
 		.gate__name {
 			color: var(--primary);
 			font-weight: 700;
 		}
+
 		.gate__form {
 			display: flex;
 			flex-direction: column;
 			gap: 12px;
 		}
+
 		.gate__input {
 			width: 100%;
 			height: 44px;
@@ -108,16 +124,20 @@
 			color: var(--text);
 			background: #fff;
 		}
+
 		.gate__input:focus {
 			outline: 2px solid rgba(31, 58, 95, 0.25);
 			border-color: var(--primary);
 		}
+
 		.gate__password-wrap {
 			position: relative;
 		}
+
 		.gate__input--password {
 			padding-right: 48px;
 		}
+
 		.gate__toggle {
 			position: absolute;
 			top: 50%;
@@ -140,6 +160,7 @@
 			-webkit-appearance: none;
 			appearance: none;
 		}
+
 		.gate__toggle:hover,
 		.gate__toggle:focus,
 		.gate__toggle:focus-visible,
@@ -149,21 +170,26 @@
 			box-shadow: none;
 			color: var(--primary);
 		}
+
 		.gate__toggle-icon {
 			display: block;
 			width: 20px;
 			height: 20px;
 			flex-shrink: 0;
 		}
+
 		.gate__toggle-icon--hide {
 			display: none;
 		}
+
 		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--show {
 			display: none;
 		}
+
 		.gate__toggle[aria-pressed="true"] .gate__toggle-icon--hide {
 			display: block;
 		}
+
 		.gate__error {
 			margin: 0;
 			min-height: 1.2em;
@@ -171,7 +197,11 @@
 			font-size: 0.88rem;
 			font-weight: 600;
 		}
-		.gate__error[hidden] { display: none; }
+
+		.gate__error[hidden] {
+			display: none;
+		}
+
 		.gate__submit {
 			height: 44px;
 			border: none;
@@ -182,13 +212,21 @@
 			font-weight: 700;
 			cursor: pointer;
 		}
-		.gate__submit:hover:not(:disabled) { background: var(--primary-hover); }
-		.gate__submit:disabled { opacity: 0.65; cursor: wait; }
+
+		.gate__submit:hover:not(:disabled) {
+			background: var(--primary-hover);
+		}
+
+		.gate__submit:disabled {
+			opacity: 0.65;
+			cursor: wait;
+		}
 	</style>
 </head>
+
 <body>
 	<main class="gate" role="dialog" aria-labelledby="gateTitle" aria-modal="true">
-		<h1 class="gate__title" id="gateTitle">Shed Map — Sign in</h1>
+		<h1 class="gate__title" id="gateTitle">Shed Map</h1>
 		<div class="gate__hint" x-apple-data-detectors="false">
 			<p>Access is restricted.</p>
 			<p>For a login and password, please contact <span class="gate__name">Vlad</span>:</p>
@@ -203,25 +241,26 @@
 			</p>
 		</div>
 		<form class="gate__form" id="loginForm" novalidate>
-			<input type="email" id="loginEmail" class="gate__input" name="username"
-				placeholder="Email" autocomplete="username" autocapitalize="off"
-				autocorrect="off" spellcheck="false" required readonly>
+			<input type="email" id="loginEmail" class="gate__input" name="username" placeholder="Email"
+				autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required readonly>
 			<div class="gate__password-wrap">
-				<input type="password" id="loginPassword" class="gate__input gate__input--password"
-					name="password" placeholder="Password" autocomplete="current-password"
-					required readonly>
-				<button type="button" class="gate__toggle" id="loginPasswordToggle"
-					aria-label="Show password" aria-pressed="false">
+				<input type="password" id="loginPassword" class="gate__input gate__input--password" name="password"
+					placeholder="Password" autocomplete="current-password" required readonly>
+				<button type="button" class="gate__toggle" id="loginPasswordToggle" aria-label="Show password"
+					aria-pressed="false">
 					<svg class="gate__toggle-icon gate__toggle-icon--show" xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
-						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z"/>
+						<path
+							d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z" />
+						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z" />
 					</svg>
 					<svg class="gate__toggle-icon gate__toggle-icon--hide" xmlns="http://www.w3.org/2000/svg"
 						viewBox="0 0 32 32" fill="currentColor" aria-hidden="true">
-						<path d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z"/>
-						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z"/>
-						<path d="M4.5 4.5 L27.5 27.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+						<path
+							d="m30.91 15.58c-3.06-6.53-8.77-10.58-14.91-10.58s-11.85 4.05-14.91 10.58a1 1 0 0 0 0 .84c3.06 6.58 8.77 10.58 14.91 10.58s11.85-4 14.91-10.58a1 1 0 0 0 0-.84zm-14.91 9.42c-5.22 0-10.12-3.44-12.89-9 2.77-5.56 7.67-9 12.89-9s10.12 3.44 12.89 9c-2.77 5.56-7.67 9-12.89 9z" />
+						<path d="m16 9a7 7 0 1 0 7 7 7 7 0 0 0 -7-7zm0 12a5 5 0 1 1 5-5 5 5 0 0 1 -5 5z" />
+						<path d="M4.5 4.5 L27.5 27.5" fill="none" stroke="currentColor" stroke-width="2.5"
+							stroke-linecap="round" />
 					</svg>
 				</button>
 			</div>
@@ -231,4 +270,5 @@
 	</main>
 	<script type="module" src="js/login-gate.js"></script>
 </body>
+
 </html>

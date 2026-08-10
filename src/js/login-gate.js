@@ -13,10 +13,6 @@ import {
 	setSessionToken,
 } from "./session.js";
 
-/**
- * Public login only — no user directory / emails in this bundle.
- */
-
 const ENTER_ONCE_KEY = "hayshed.enterOnce";
 const LEAVE_APP_KEY = "hayshed.leaveApp";
 
@@ -27,16 +23,11 @@ function showError(message) {
 	errorEl.textContent = message || "";
 }
 
-/**
- * Set session cookie and navigate to app once.
- * Prevents reload loops when the local proxy keeps serving the login page.
- */
 async function enterApp(user) {
 	if (sessionStorage.getItem(ENTER_ONCE_KEY) === "1") {
-		// Previous redirect came back to login — stop thrashing.
 		sessionStorage.removeItem(ENTER_ONCE_KEY);
 		clearSessionToken();
-		showError("Sign-in could not open the app. Try again, or hard-refresh (Cmd+Shift+R).");
+		showError("Sign-in could not open the app. Please try again.");
 		return;
 	}
 
@@ -44,8 +35,6 @@ async function enterApp(user) {
 	setSessionToken(token);
 	sessionStorage.setItem(ENTER_ONCE_KEY, "1");
 	sessionStorage.removeItem(LEAVE_APP_KEY);
-
-	// Same path as login (/). Local middleware rewrites to app when cookie exists.
 	window.location.assign("/");
 }
 
@@ -56,7 +45,6 @@ function initLoginGate() {
 	const submitEl = document.getElementById("loginSubmit");
 	const toggleEl = document.getElementById("loginPasswordToggle");
 
-	// Landing on login after leaving app — clear leave lock so future logouts work.
 	sessionStorage.removeItem(LEAVE_APP_KEY);
 
 	const params = new URLSearchParams(window.location.search);
@@ -70,7 +58,6 @@ function initLoginGate() {
 		window.history.replaceState({}, "", window.location.pathname || "/");
 	}
 
-	// Strip leftover query flags without reloading.
 	if (
 		params.has("authed") ||
 		params.has("_") ||
@@ -91,8 +78,6 @@ function initLoginGate() {
 			});
 	}
 
-	// Resume only if we already have a session cookie (returning user).
-	// Do NOT auto-enter on every Firebase restore without a cookie — that caused reload loops.
 	onAuthStateChanged(auth, (user) => {
 		if (!user || blockAutoEnter) return;
 		if (!getSessionToken() && !document.cookie.includes(`${SESSION_COOKIE}=`)) return;

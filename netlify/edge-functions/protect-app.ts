@@ -8,7 +8,6 @@ const JWKS = jose.createRemoteJWKSet(
 	new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
 );
 
-/** Static public assets only (not HTML app). */
 const ALWAYS_PUBLIC = [
 	/^\/js\/login-gate(?:-[a-zA-Z0-9]+)?\.js$/,
 	/^\/favicon(?:\/|$)/,
@@ -43,7 +42,6 @@ function readCookie(request: Request, name: string): string {
 async function verifyFirebaseToken(token: string): Promise<boolean> {
 	if (!token) return false;
 	try {
-		// Prefer env; fall back to `aud` claim so a missing Netlify env does not lock everyone out.
 		let projectId = PROJECT_ID;
 		if (!projectId) {
 			const parts = token.split(".");
@@ -81,7 +79,6 @@ export default async (request: Request, context: Context) => {
 	const token = readCookie(request, SESSION_COOKIE);
 	const valid = await verifyFirebaseToken(token);
 
-	// Address bar stays on origin only: session at / serves the app internally.
 	if (isRoot(pathname)) {
 		if (valid) {
 			return context.rewrite("/app.html");
@@ -89,7 +86,6 @@ export default async (request: Request, context: Context) => {
 		return context.next();
 	}
 
-	// Never leave /app.html in the bar — bounce to clean /
 	if (isLegacyAppPath(pathname)) {
 		return Response.redirect(new URL("/", url), 302);
 	}

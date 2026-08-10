@@ -1,20 +1,11 @@
 import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
 
-/**
- * Hard gate: unauthenticated users only see the public login page.
- * Pair with locked database rules + Netlify edge session cookie.
- *
- * Allowlist lives in the protected app bundle only — NOT in public login-gate.js.
- * Guests without a session never receive this file.
- */
 export const REQUIRE_AUTH = true;
 
 export const ROLE_ADMIN = "admin";
 export const ROLE_USER = "user";
-/** Backup + color-blind toggle. */
 export const ROLE_SUPER = "super";
 
-/** Authorized accounts (no passwords — create in Firebase Auth Console). */
 export const AUTH_USERS = {
 	"admin@barr-ag.com": { name: "Serhii", role: ROLE_USER },
 	"bdyson@barr-ag.com": { name: "Brad", role: ROLE_USER },
@@ -60,12 +51,10 @@ export function isEditor(email) {
 	return role === ROLE_ADMIN || role === ROLE_SUPER;
 }
 
-/** All locations: admin/super can edit, user is view-only. */
 export function canEditLocation(email, _locationId) {
 	return isEditor(email);
 }
 
-/** Super only (backup / CB map toggle). */
 export function isAdminUser(email) {
 	const role = currentSession?.role || getUserRole(email);
 	return role === ROLE_SUPER;

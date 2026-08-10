@@ -1,5 +1,4 @@
 export const SESSION_COOKIE = "hayshed_id";
-/** Both app and login use clean root URL (edge rewrites by session). */
 export const LOGIN_PATH = "/";
 export const APP_PATH = "/";
 const MAX_AGE_SEC = 55 * 60;

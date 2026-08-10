@@ -76,7 +76,6 @@ import {
 	updateHayStack,
 } from "./dom.js";
 
-// Clean address bar (origin only — no /app.html, no one-shot query flags).
 if (location.pathname === "/app.html" || location.pathname === "/app") {
 	history.replaceState(null, "", "/");
 } else if (location.search && /(?:^|[?&])authed=/.test(location.search)) {
@@ -261,7 +260,6 @@ function redirectToLoginGate({ denied = false } = {}) {
 	clearSessionToken();
 	const leaveKey = "hayshed.leaveApp";
 
-	// One navigation only — never location.reload() thrashing with the login gate.
 	if (!denied && sessionStorage.getItem(leaveKey) === "1") {
 		return;
 	}
@@ -2706,7 +2704,6 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 		return;
 	}
 
-	// Successfully in app — clear redirect/loop locks from login gate.
 	try {
 		sessionStorage.removeItem("hayshed.enterOnce");
 		sessionStorage.removeItem("hayshed.leaveApp");
@@ -3636,7 +3633,6 @@ async function startApp() {
 	initPwa();
 	if (!REQUIRE_AUTH) refreshAuthGate();
 
-	// Keep edge-function cookie warm (tokens ~1h).
 	window.setInterval(() => {
 		void refreshSessionCookie();
 	}, 45 * 60 * 1000);
