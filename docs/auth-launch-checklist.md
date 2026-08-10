@@ -20,7 +20,8 @@ Passwords are **not** stored in this repo. Keep them only in your private list /
 | **user** | View only (map, reports, PDF) |
 | **super** | `operations@barr-ag.com` only — backup tools + CB theme toggle |
 
-Registry: `src/js/auth.js` → `AUTH_USERS`.
+Registry (names/roles): **Firebase RTDB** `userProfiles/*` (seed: `data/user-profiles.json`).  
+**Not** in client JS — each account can read only its own row.
 
 Temporary emergency account: `logistic@barr-ag.com` (role **user** — change password after each use).
 
@@ -30,12 +31,20 @@ Temporary emergency account: `logistic@barr-ag.com` (role **user** — change pa
 
 | Piece | Role |
 |-------|------|
-| `src/index.html` + `login-gate.js` | Only public UI (inline CSS, contact Vlad) |
-| `src/app.html` + `app.js` | Full app (edge-protected) |
+| `src/index.html` + `login-gate.js` | Only public UI (inline CSS, contact Vlad) — **no email list** |
+| `src/app.html` + `app.js` | Full app (edge-protected) — **no email directory in JS** |
+| `userProfiles/{key}` | name + role per email (read-only own profile) |
 | Cookie `hayshed_id` | Firebase ID token, set on login |
 | `netlify/edge-functions/protect-app.ts` | Verifies JWT; blocks raw asset URLs without cookie |
 | `REQUIRE_AUTH = true` | Client redirect to `/` if session lost |
 | Locked RTDB rules | No anonymous data |
+
+### Seed profiles (required once / when adding people)
+
+```bash
+npm run seed:profiles
+npm run deploy:rules
+```
 
 ---
 

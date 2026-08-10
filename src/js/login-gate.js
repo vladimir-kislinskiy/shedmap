@@ -9,8 +9,8 @@ import { getFirebaseConfig } from "./firebase-config.js";
 import { clearSessionToken, setSessionToken } from "./session.js";
 
 /**
- * Public login only — no AUTH_USERS allowlist in this bundle.
- * Allowlist lives in the protected app.js only (+ Firebase RTDB rules).
+ * Public login only — no user directory / emails in this bundle.
+ * Authorization profiles load from Firebase after login (protected app).
  */
 
 function showError(message) {

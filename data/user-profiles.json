@@ -1,0 +1,92 @@
+{
+	"admin_barr-ag_com": {
+		"email": "admin@barr-ag.com",
+		"name": "Serhii",
+		"role": "user"
+	},
+	"bdyson_barr-ag_com": {
+		"email": "bdyson@barr-ag.com",
+		"name": "Brad",
+		"role": "user"
+	},
+	"bschmitt_barr-ag_com": {
+		"email": "bschmitt@barr-ag.com",
+		"name": "Barry",
+		"role": "user"
+	},
+	"cbrocklebank_barr-ag_com": {
+		"email": "cbrocklebank@barr-ag.com",
+		"name": "Chris",
+		"role": "user"
+	},
+	"clee_barr-ag_com": {
+		"email": "clee@barr-ag.com",
+		"name": "Jack",
+		"role": "user"
+	},
+	"dehy_barr-ag_com": {
+		"email": "dehy@barr-ag.com",
+		"name": "Dehy",
+		"role": "user"
+	},
+	"jbergeson_barr-ag_com": {
+		"email": "jbergeson@barr-ag.com",
+		"name": "Jay",
+		"role": "user"
+	},
+	"nmathis_barr-ag_com": {
+		"email": "nmathis@barr-ag.com",
+		"name": "Natalie",
+		"role": "admin"
+	},
+	"operations_barr-ag_com": {
+		"email": "operations@barr-ag.com",
+		"name": "Vlad",
+		"role": "super"
+	},
+	"rschmitt_barr-ag_com": {
+		"email": "rschmitt@barr-ag.com",
+		"name": "Ryley",
+		"role": "admin"
+	},
+	"scale_barr-ag_com": {
+		"email": "scale@barr-ag.com",
+		"name": "Maria",
+		"role": "user"
+	},
+	"shisadomi_barr-ag_com": {
+		"email": "shisadomi@barr-ag.com",
+		"name": "Satoko",
+		"role": "user"
+	},
+	"siksika_barr-ag_com": {
+		"email": "siksika@barr-ag.com",
+		"name": "Peter",
+		"role": "user"
+	},
+	"ssakamoto_barr-ag_com": {
+		"email": "ssakamoto@barr-ag.com",
+		"name": "Shu",
+		"role": "user"
+	},
+	"tbeschmitt_barr-ag_com": {
+		"email": "tbeschmitt@barr-ag.com",
+		"name": "Taylor",
+		"role": "admin"
+	},
+	"tschmitt_barr-ag_com": {
+		"email": "tschmitt@barr-ag.com",
+		"name": "Tyler",
+		"role": "admin"
+	},
+	"loader_barr-ag_com": {
+		"email": "loader@barr-ag.com",
+		"name": "Loaders",
+		"role": "user"
+	},
+	"logistic_barr-ag_com": {
+		"email": "logistic@barr-ag.com",
+		"name": "Temporary",
+		"role": "user"
+	}
+}

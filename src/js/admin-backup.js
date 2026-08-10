@@ -1,14 +1,10 @@
 import { downloadHayShedStateBackup, readHayShedStateFile } from "./state-backup.js";
+import { isAdminUser } from "./auth.js";
 
-const ADMIN_EMAIL = "operations@barr-ag.com";
 const ROOT_ID = "adt-root";
 
 let mounted = false;
 let handlers = null;
-
-function isAdminSession(email) {
-	return email?.toLowerCase() === ADMIN_EMAIL;
-}
 
 function showStatus(message, { isError = false } = {}) {
 	const statusEl = document.getElementById("adt-status");
@@ -79,7 +75,7 @@ function buildPanel() {
 }
 
 export function mountAdminBackup(email, { collectAppState, restoreState, exportedBy }) {
-	if (!isAdminSession(email)) {
+	if (!isAdminUser(email)) {
 		unmountAdminBackup();
 		return;
 	}

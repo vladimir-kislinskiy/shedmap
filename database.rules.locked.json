@@ -1,5 +1,11 @@
 {
 	"rules": {
+		"userProfiles": {
+			"$key": {
+				".read": "auth != null && data.child('email').val() === auth.token.email",
+				".write": false
+			}
+		},
 		"hayShedState": {
 			".read": "auth != null && (auth.token.email == 'admin@barr-ag.com' || auth.token.email == 'bdyson@barr-ag.com' || auth.token.email == 'bschmitt@barr-ag.com' || auth.token.email == 'cbrocklebank@barr-ag.com' || auth.token.email == 'clee@barr-ag.com' || auth.token.email == 'dehy@barr-ag.com' || auth.token.email == 'jbergeson@barr-ag.com' || auth.token.email == 'nmathis@barr-ag.com' || auth.token.email == 'operations@barr-ag.com' || auth.token.email == 'rschmitt@barr-ag.com' || auth.token.email == 'scale@barr-ag.com' || auth.token.email == 'shisadomi@barr-ag.com' || auth.token.email == 'siksika@barr-ag.com' || auth.token.email == 'ssakamoto@barr-ag.com' || auth.token.email == 'tbeschmitt@barr-ag.com' || auth.token.email == 'tschmitt@barr-ag.com' || auth.token.email == 'loader@barr-ag.com' || auth.token.email == 'logistic@barr-ag.com')",
 			"olds": {
