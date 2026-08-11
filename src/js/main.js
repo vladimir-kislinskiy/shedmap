@@ -2714,7 +2714,6 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 	setEditMode(authenticated, person, email);
 	updateAuthUI(authenticated, person);
 	syncAdminBackupUI(authenticated, email);
-	syncColorBlindThemeAccess(authenticated, email);
 	refreshAuthGate();
 
 	if (authenticated) {
@@ -3259,51 +3258,7 @@ function initToggleControls() {
 
 const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
 const CRM_DARK_STORAGE_KEY = "uiCrmDark";
-const CRM_CB_STORAGE_KEY = "uiColorBlindMap";
 let crmStatsScheduled = false;
-
-function isColorBlindPrefOn() {
-	try {
-		return localStorage.getItem(CRM_CB_STORAGE_KEY) === "1";
-	} catch {
-		return false;
-	}
-}
-
-function applyColorBlindTheme(on) {
-	const root = document.documentElement;
-	root.classList.toggle("theme-cb", on);
-	document.body.classList.toggle("theme-cb", on);
-
-	const btn = document.getElementById("cbThemeSwitch");
-	if (!btn) return;
-	btn.setAttribute("aria-checked", on ? "true" : "false");
-	const label = on ? "Switch to standard map colors" : "Switch to color-blind map colors";
-	btn.setAttribute("aria-label", label);
-	btn.title = label;
-}
-
-function syncColorBlindThemeAccess(authenticated, email) {
-	const btn = document.getElementById("cbThemeSwitch");
-	const allow = Boolean(authenticated && isAdminUser(email));
-	if (btn) btn.hidden = !allow;
-	applyColorBlindTheme(allow && isColorBlindPrefOn());
-}
-
-function initColorBlindTheme() {
-	const btn = document.getElementById("cbThemeSwitch");
-	btn?.addEventListener("click", () => {
-		if (!isAdminUser(currentUserEmail)) return;
-		const next = !document.body.classList.contains("theme-cb");
-		try {
-			localStorage.setItem(CRM_CB_STORAGE_KEY, next ? "1" : "0");
-		} catch {
-			/* noop */
-		}
-		applyColorBlindTheme(next);
-	});
-	syncColorBlindThemeAccess(isAuthenticated, currentUserEmail);
-}
 
 function saveCrmCollapsed(collapsed) {
 	try {
@@ -3627,7 +3582,6 @@ async function startApp() {
 	updateReportsTable(getCurrentLocation());
 	updateSyncBanner();
 	initCrmTheme();
-	initColorBlindTheme();
 	initMobileInputScrollFix();
 	initStackDetailModal();
 	initPwa();
