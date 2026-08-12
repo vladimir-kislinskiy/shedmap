@@ -564,7 +564,7 @@ body.page--view-only .inventory__form {
 	min-height: auto;
 	min-width: 0;
 	max-width: 100%;
-	overflow: hidden;
+	overflow: visible;
 }
 
 .shed__columns {
@@ -1647,7 +1647,7 @@ body.page--offline .inventory__form {
 	flex-wrap: wrap;
 	text-align: right;
 	flex-shrink: 0;
-	margin-top: 100px;
+	margin-top: clamp(12px, 2vh, 28px);
 	padding: clamp(10px, 2vw, 16px);
 	padding-bottom: max(
 		clamp(10px, 2vw, 16px),
