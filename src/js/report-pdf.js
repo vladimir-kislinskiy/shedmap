@@ -32,7 +32,6 @@ function showPdfInWindow(targetWindow, blobUrl, filename) {
 		try {
 			targetWindow.document.title = filename;
 		} catch {
-			/* noop */
 		}
 		return true;
 	} catch {
@@ -173,7 +172,6 @@ export function openReportPdf({
 			try {
 				previewWindow.close();
 			} catch {
-				/* noop */
 			}
 		}
 		downloadPdfBlob(blobUrl, filename);

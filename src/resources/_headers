@@ -4,9 +4,6 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
-# Hashed CSS/JS/img: long cache OK.
-# Favicon, manifest, and sw.js must revalidate so PWA stays in sync with the site.
-
 /css/*
   Cache-Control: public, max-age=31536000, immutable
 

@@ -60,7 +60,6 @@
   [headers.values]
     Cache-Control = "public, max-age=0, must-revalidate"
 
-# Root icon aliases.
 [[redirects]]
   from = "/apple-touch-icon-precomposed.png"
   to = "/apple-touch-icon.png"

@@ -266,7 +266,6 @@ function redirectToLoginGate({ denied = false } = {}) {
 	try {
 		sessionStorage.setItem(leaveKey, "1");
 	} catch {
-		/* ignore */
 	}
 
 	const target = denied
@@ -2205,7 +2204,6 @@ function openPdfPreviewPlaceholder() {
 			win.document.write("<!doctype html><title>PDF</title><body></body>");
 			win.document.close();
 		} catch {
-			/* noop */
 		}
 		return win;
 	} catch {
@@ -2218,7 +2216,6 @@ function closePdfPreviewPlaceholder(win) {
 	try {
 		win.close();
 	} catch {
-		/* noop */
 	}
 }
 
@@ -2708,7 +2705,6 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 		sessionStorage.removeItem("hayshed.enterOnce");
 		sessionStorage.removeItem("hayshed.leaveApp");
 	} catch {
-		/* ignore */
 	}
 
 	setEditMode(authenticated, person, email);

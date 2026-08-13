@@ -579,11 +579,11 @@ body.page--view-only .inventory__form {
 	min-height: 584px;
 	height: auto;
 	overflow-x: auto;
-	overflow-y: visible;
+	overflow-y: hidden;
 	padding-bottom: 8px;
 	box-sizing: border-box;
 	overscroll-behavior-x: contain;
-	overscroll-behavior-y: auto;
+	overscroll-behavior-y: none;
 	scrollbar-width: thin;
 	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 	-webkit-overflow-scrolling: touch;
@@ -886,7 +886,6 @@ body.page--dragging .shed__bay-exit {
 	flex: 0 0 0;
 }
 
-/* Full behind isle fr: free space above the group, stacks packed at bay front. */
 .shed__bay-stack--front-behind-isles > .hay-stack--bay-front {
 	margin-top: auto;
 	flex-shrink: 0;
@@ -903,7 +902,6 @@ body.page--dragging .shed__bay-exit {
 	font-size: calc(var(--stack-font-size) * 1.2);
 }
 
-/* Full checkbox: stretch into leftover height in own track (equal share). */
 .hay-stack--fill,
 .shed__bay-stack--has-front-split > .hay-stack--fill,
 .shed__isle--has-front-split > .hay-stack--fill,
@@ -925,7 +923,6 @@ body.page--dragging .shed__bay-exit {
 	margin-top: 0;
 }
 
-/* Bay-level Full takes leftover; isles size to content unless they also have Full. */
 .shed__bay-stack--has-fill:not(.shed__bay-stack--isle-has-fill) > .shed__isles {
 	flex: 0 1 auto;
 	min-height: 0;

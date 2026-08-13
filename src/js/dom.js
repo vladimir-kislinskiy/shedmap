@@ -521,7 +521,7 @@ function reconcileColumnsLayout(columns) {
 	});
 
 	const columnsHeight = Math.max(getBaseColumnHeight(), maxContent + chrome + 12, tallestBay);
-	columns.style.height = `${Math.ceil(columnsHeight)}px`;
+	columns.style.height = `${Math.ceil(columnsHeight) + 16}px`;
 
 	return maxContent;
 }
@@ -540,7 +540,7 @@ function syncShedColumnsLayout(columns) {
 	const chrome = getBayChromeForColumns(columns);
 	let columnsHeight = Math.max(getBaseColumnHeight(), maxStackContent + chrome + 12);
 
-	columns.style.height = `${Math.round(columnsHeight)}px`;
+	columns.style.height = `${Math.ceil(columnsHeight) + 16}px`;
 	columns.offsetHeight;
 
 	applyUniformBayStackHeights(columns, maxStackContent);
