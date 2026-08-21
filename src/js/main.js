@@ -181,8 +181,70 @@ let cacheSavedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) =>
 let hasRemoteStateByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
 const pendingWriteFingerprintsByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, []]));
 const pendingFrontMigrationByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, false]));
+const localUpdatedAtByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, 0]));
+const unsyncedPayloadByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
+const queuedRemoteByLocation = Object.fromEntries(LOCATION_IDS.map((locationId) => [locationId, null]));
 const MAX_PENDING_WRITE_FINGERPRINTS = 20;
+const MAX_CHANGE_LOG_ENTRIES = 3000;
+const UNSYNCED_STORAGE_KEY = "hayshed.unsyncedPayloads";
 let adminBackupModule = null;
+let conflictNoticeShown = false;
+
+function trimChangeLog(log) {
+	if (!Array.isArray(log)) return [];
+	if (log.length <= MAX_CHANGE_LOG_ENTRIES) return log;
+	return log.slice(log.length - MAX_CHANGE_LOG_ENTRIES);
+}
+
+function getStateUpdatedAt(state) {
+	const value = Number(state?.updatedAt);
+	return Number.isFinite(value) ? value : 0;
+}
+
+function hasUnsyncedChanges(locationId) {
+	if (locationId) return Boolean(unsyncedPayloadByLocation[locationId]);
+	return LOCATION_IDS.some((id) => Boolean(unsyncedPayloadByLocation[id]));
+}
+
+function isDragInProgress() {
+	return document.body.classList.contains("page--dragging");
+}
+
+function persistUnsyncedPayloads() {
+	const out = {};
+	LOCATION_IDS.forEach((locationId) => {
+		if (unsyncedPayloadByLocation[locationId]) {
+			out[locationId] = unsyncedPayloadByLocation[locationId];
+		}
+	});
+	try {
+		if (Object.keys(out).length) {
+			localStorage.setItem(UNSYNCED_STORAGE_KEY, JSON.stringify(out));
+		} else {
+			localStorage.removeItem(UNSYNCED_STORAGE_KEY);
+		}
+	} catch {
+	}
+}
+
+function restoreUnsyncedPayloads() {
+	try {
+		const raw = localStorage.getItem(UNSYNCED_STORAGE_KEY);
+		if (!raw) return;
+		const parsed = JSON.parse(raw);
+		LOCATION_IDS.forEach((locationId) => {
+			const payload = parsed?.[locationId];
+			if (payload && validateHayShedState(payload, locationId)) {
+				unsyncedPayloadByLocation[locationId] = payload;
+				localUpdatedAtByLocation[locationId] = Math.max(
+					localUpdatedAtByLocation[locationId] || 0,
+					getStateUpdatedAt(payload),
+				);
+			}
+		});
+	} catch {
+	}
+}
 
 function getStateFingerprint(state) {
 	try {
@@ -261,9 +323,6 @@ function redirectToLoginGate({ denied = false } = {}) {
 	clearSessionToken();
 	const leaveKey = "hayshed.leaveApp";
 
-	if (!denied && sessionStorage.getItem(leaveKey) === "1") {
-		return;
-	}
 	try {
 		sessionStorage.setItem(leaveKey, "1");
 	} catch {
@@ -850,10 +909,6 @@ function initEmptyBaySelect(locationId = getCurrentLocation()) {
 	locQueryAll(".shed__bay", locationId).forEach(bindEmptyBaySelect);
 }
 
-function isMobileViewport() {
-	return window.matchMedia("(max-width: 768px)").matches;
-}
-
 function getStackDetailModal() {
 	return document.getElementById("stackDetailModal");
 }
@@ -986,7 +1041,6 @@ function bindStackSelect(stackEl) {
 			return;
 		}
 
-		if (!isMobileViewport()) return;
 		openStackDetail(stackEl);
 	});
 }
@@ -2356,7 +2410,10 @@ function initLogFilters(locationId = getCurrentLocation()) {
 
 function collectAppState(locationId = getCurrentLocation()) {
 	const locationConfig = getLocationConfig(locationId);
-	const state = { changeLog: [...getLocationChangeLog(locationId)], sheds: {} };
+	const state = {
+		changeLog: trimChangeLog([...getLocationChangeLog(locationId)]),
+		sheds: {},
+	};
 
 	locationConfig.sheds.forEach((shed) => {
 		const colsData = {};
@@ -2417,7 +2474,11 @@ function applyAppState(locationId, state) {
 	const shouldMigrateFrontComments = locationStateHasLegacyFrontComments(normalized);
 
 	if (Array.isArray(normalized.changeLog)) {
-		changeLogs[locationId] = [...normalized.changeLog];
+		changeLogs[locationId] = trimChangeLog([...normalized.changeLog]);
+		localUpdatedAtByLocation[locationId] = Math.max(
+			localUpdatedAtByLocation[locationId] || 0,
+			getStateUpdatedAt(normalized),
+		);
 		updateLogTable(locationId);
 	}
 
@@ -2476,9 +2537,19 @@ function renderSyncBanner() {
 				? ""
 				: " No cached data is available yet.";
 
-		textEl.textContent = `Firebase is unreachable.${cacheHint} Viewing works; saving changes requires a connection.`;
+		textEl.textContent = hasUnsyncedChanges()
+			? `Firebase is unreachable.${cacheHint} Local changes are kept on this device and will sync when the connection returns.`
+			: `Firebase is unreachable.${cacheHint} Viewing works; saving changes requires a connection.`;
 		banner.hidden = false;
 		document.body.classList.add("page--offline");
+		return;
+	}
+
+	if (hasUnsyncedChanges()) {
+		textEl.textContent =
+			"Local changes are waiting to sync. Keep this tab open — retrying automatically.";
+		banner.hidden = false;
+		document.body.classList.remove("page--offline");
 		return;
 	}
 
@@ -2533,8 +2604,12 @@ function applyRemoteState(locationId, state) {
 	}
 
 	hasRemoteStateByLocation[locationId] = true;
+	const remoteAt = getStateUpdatedAt(state);
 
 	if (consumePendingWriteEcho(locationId, state)) {
+		unsyncedPayloadByLocation[locationId] = null;
+		persistUnsyncedPayloads();
+		localUpdatedAtByLocation[locationId] = remoteAt || Date.now();
 		cacheHayShedState(locationId, state).then(() => {
 			cacheSavedAtByLocation[locationId] = Date.now();
 			updateSyncBanner();
@@ -2542,10 +2617,74 @@ function applyRemoteState(locationId, state) {
 		return;
 	}
 
+	if (isDragInProgress()) {
+		queuedRemoteByLocation[locationId] = state;
+		return;
+	}
+
+	const localAt = localUpdatedAtByLocation[locationId] || 0;
+	const unsynced = unsyncedPayloadByLocation[locationId];
+
+	if (unsynced) {
+		const unsyncedAt = getStateUpdatedAt(unsynced);
+		if (remoteAt <= unsyncedAt || remoteAt <= localAt) {
+			void flushUnsyncedLocation(locationId);
+			return;
+		}
+
+		if (!conflictNoticeShown) {
+			conflictNoticeShown = true;
+			alert(
+				"Another device saved newer shed data while this device had unsynced changes. The newer server data is shown. Re-apply any missing edits if needed.",
+			);
+		}
+		unsyncedPayloadByLocation[locationId] = null;
+		persistUnsyncedPayloads();
+	}
+
 	applyAppState(locationId, state);
+	localUpdatedAtByLocation[locationId] = remoteAt || Date.now();
 	cacheHayShedState(locationId, state).then(() => {
 		cacheSavedAtByLocation[locationId] = Date.now();
 		updateSyncBanner();
+	});
+}
+
+async function flushUnsyncedLocation(locationId) {
+	const payload = unsyncedPayloadByLocation[locationId];
+	if (!payload || !firebaseConnected || !canEdit(locationId)) return false;
+
+	rememberPendingWrite(locationId, payload);
+	try {
+		await set(ref(db, getLocationFirebasePath(locationId)), payload);
+		hasRemoteStateByLocation[locationId] = true;
+		localUpdatedAtByLocation[locationId] = getStateUpdatedAt(payload) || Date.now();
+		unsyncedPayloadByLocation[locationId] = null;
+		persistUnsyncedPayloads();
+		updateSyncBanner();
+		return true;
+	} catch (err) {
+		forgetPendingWrite(locationId, payload);
+		console.error(`Error flushing unsynced ${locationId} state:`, err);
+		updateSyncBanner();
+		return false;
+	}
+}
+
+async function flushAllUnsynced() {
+	for (const locationId of LOCATION_IDS) {
+		if (unsyncedPayloadByLocation[locationId]) {
+			await flushUnsyncedLocation(locationId);
+		}
+	}
+}
+
+function flushQueuedRemoteStates() {
+	LOCATION_IDS.forEach((locationId) => {
+		const queued = queuedRemoteByLocation[locationId];
+		if (!queued) return;
+		queuedRemoteByLocation[locationId] = null;
+		applyRemoteState(locationId, queued);
 	});
 }
 
@@ -2597,8 +2736,12 @@ function initSyncStatus() {
 	onValue(
 		ref(db, ".info/connected"),
 		(snap) => {
+			const wasConnected = firebaseConnected;
 			firebaseConnected = snap.val() === true;
 			updateSyncBanner();
+			if (!wasConnected && firebaseConnected) {
+				void flushAllUnsynced();
+			}
 		},
 		(err) => console.error("Connection status error:", err),
 	);
@@ -2609,24 +2752,30 @@ async function saveState(locationId = getCurrentLocation()) {
 
 	const state = collectAppState(locationId);
 	const payload = sanitizeForFirebase(stampStateForWrite(state));
+	localUpdatedAtByLocation[locationId] = getStateUpdatedAt(payload) || Date.now();
+	unsyncedPayloadByLocation[locationId] = payload;
+	persistUnsyncedPayloads();
 	rememberPendingWrite(locationId, payload);
+	updateSyncBanner();
 
 	try {
 		await set(ref(db, getLocationFirebasePath(locationId)), payload);
 		hasRemoteStateByLocation[locationId] = true;
+		unsyncedPayloadByLocation[locationId] = null;
+		persistUnsyncedPayloads();
 	} catch (err) {
-		forgetPendingWrite(locationId, payload);
 		console.error(`Error saving ${locationId} state:`, err);
 		const reason =
 			err?.code === "PERMISSION_DENIED"
 				? "Permission denied. Sign in with an authorized account."
 				: err?.message || "Unknown server error.";
 		alert(
-			`Failed to save changes to the server (${reason}). Data is cached on this device but may not appear on other devices until sync works.`,
+			`Failed to save changes to the server (${reason}). Changes stay on this device and will retry when the connection returns.`,
 		);
 	}
 
 	await cacheHayShedState(locationId, state);
+	updateSyncBanner();
 }
 
 function setInventoryControlsOpen(open) {
@@ -3324,8 +3473,8 @@ function syncCrmFormVisibility() {
 	const editable = canEdit();
 	const activeForm = loc("inventoryControls", getCurrentLocation());
 	if (activeForm) {
-		activeForm.hidden = false;
-		activeForm.classList.remove("inventory__form--hidden");
+		activeForm.hidden = !editable;
+		activeForm.classList.toggle("inventory__form--hidden", !editable);
 		activeForm.inert = !editable;
 	}
 }
@@ -3496,6 +3645,14 @@ function initMobileInputScrollFix() {
 function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
+	try {
+		const savedCollapsed = localStorage.getItem(CRM_COLLAPSED_STORAGE_KEY);
+		if (savedCollapsed === "0") document.body.classList.remove("crm-collapsed");
+		else document.body.classList.add("crm-collapsed");
+	} catch {
+		document.body.classList.add("crm-collapsed");
+	}
+
 	const applyDark = (dark) => {
 		const root = document.documentElement;
 		root.classList.add("theme-switching");
@@ -3573,8 +3730,10 @@ async function startApp() {
 	});
 
 	await initLocalCache();
+	restoreUnsyncedPayloads();
 	initSyncStatus();
 	initFirebaseSync();
+	void flushAllUnsynced();
 
 	document.querySelectorAll(".hay-stack").forEach((stack) => bindStackSelect(stack));
 	updateStackInteractionState();
@@ -3587,6 +3746,10 @@ async function startApp() {
 	initStackDetailModal();
 	initPwa();
 	if (!REQUIRE_AUTH) refreshAuthGate();
+
+	document.addEventListener("hayshed:dragend", () => {
+		flushQueuedRemoteStates();
+	});
 
 	onIdTokenChanged(auth, (user) => {
 		if (!user) return;

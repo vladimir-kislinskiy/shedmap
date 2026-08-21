@@ -164,6 +164,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		clearDropHighlights();
 		document.body.classList.remove("page--dragging");
 		session = null;
+		document.dispatchEvent(new CustomEvent("hayshed:dragend"));
 	};
 
 	const track = (target, type, handler, options) => {

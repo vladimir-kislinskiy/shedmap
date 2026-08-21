@@ -116,11 +116,16 @@ export function normalizeHayShedState(state, locationId = "olds") {
 		}
 	});
 
-	return {
+	const normalized = {
 		changeLog: Array.isArray(state?.changeLog) ? state.changeLog : [],
 		sheds,
 		locationId,
 	};
+	const updatedAt = Number(state?.updatedAt);
+	if (Number.isFinite(updatedAt) && updatedAt > 0) {
+		normalized.updatedAt = updatedAt;
+	}
+	return normalized;
 }
 
 export function validateHayShedState(state, locationId = "olds") {

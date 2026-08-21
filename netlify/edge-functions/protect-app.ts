@@ -4,6 +4,27 @@ import * as jose from "https://esm.sh/jose@5.9.6?target=deno";
 const SESSION_COOKIE = "hayshed_id";
 const PROJECT_ID = Deno.env.get("FIREBASE_PROJECT_ID") || "";
 
+const ALLOWED_EMAILS = new Set([
+	"admin@barr-ag.com",
+	"bdyson@barr-ag.com",
+	"bschmitt@barr-ag.com",
+	"cbrocklebank@barr-ag.com",
+	"clee@barr-ag.com",
+	"dehy@barr-ag.com",
+	"jbergeson@barr-ag.com",
+	"nmathis@barr-ag.com",
+	"operations@barr-ag.com",
+	"rschmitt@barr-ag.com",
+	"scale@barr-ag.com",
+	"shisadomi@barr-ag.com",
+	"siksika@barr-ag.com",
+	"ssakamoto@barr-ag.com",
+	"tbeschmitt@barr-ag.com",
+	"tschmitt@barr-ag.com",
+	"loader@barr-ag.com",
+	"logistic@barr-ag.com",
+]);
+
 const JWKS = jose.createRemoteJWKSet(
 	new URL("https://www.googleapis.com/service_accounts/v1/jwk/securetoken@system.gserviceaccount.com"),
 );
@@ -41,22 +62,15 @@ function readCookie(request: Request, name: string): string {
 
 async function verifyFirebaseToken(token: string): Promise<boolean> {
 	if (!token) return false;
-	try {
-		let projectId = PROJECT_ID;
-		if (!projectId) {
-			const parts = token.split(".");
-			if (parts.length < 2) return false;
-			const raw = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-			const padded = raw + "=".repeat((4 - (raw.length % 4)) % 4);
-			const payload = JSON.parse(atob(padded));
-			projectId = typeof payload.aud === "string" ? payload.aud : "";
-		}
-		if (!projectId) return false;
+	if (!PROJECT_ID) return false;
 
-		await jose.jwtVerify(token, JWKS, {
-			issuer: `https://securetoken.google.com/${projectId}`,
-			audience: projectId,
+	try {
+		const { payload } = await jose.jwtVerify(token, JWKS, {
+			issuer: `https://securetoken.google.com/${PROJECT_ID}`,
+			audience: PROJECT_ID,
 		});
+		const email = typeof payload.email === "string" ? payload.email.toLowerCase() : "";
+		if (!email || !ALLOWED_EMAILS.has(email)) return false;
 		return true;
 	} catch {
 		return false;

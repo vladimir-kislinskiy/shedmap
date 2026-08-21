@@ -14,6 +14,7 @@ import {
 const ENTER_ONCE_KEY = "hayshed.enterOnce";
 const LEAVE_APP_KEY = "hayshed.leaveApp";
 const WAS_AUTHED_KEY = "hayshed.wasAuthed";
+const MAX_ENTER_ATTEMPTS = 2;
 
 function showError(message) {
 	const errorEl = document.getElementById("loginError");
@@ -30,6 +31,12 @@ function setGateBusy(busy, label) {
 		submitEl.disabled = Boolean(busy);
 		if (label) submitEl.textContent = label;
 	}
+}
+
+function readEnterAttempts() {
+	const raw = sessionStorage.getItem(ENTER_ONCE_KEY);
+	const n = Number(raw);
+	return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
 function initLoginGate() {
@@ -91,7 +98,9 @@ function initLoginGate() {
 
 	async function enterApp(user) {
 		if (enterStarted) return;
-		if (sessionStorage.getItem(ENTER_ONCE_KEY) === "1") {
+
+		const attempts = readEnterAttempts();
+		if (attempts >= MAX_ENTER_ATTEMPTS) {
 			sessionStorage.removeItem(ENTER_ONCE_KEY);
 			clearSessionToken();
 			setGateBusy(false, "Sign In");
@@ -104,7 +113,7 @@ function initLoginGate() {
 		try {
 			const token = await user.getIdToken(true);
 			setSessionToken(token);
-			sessionStorage.setItem(ENTER_ONCE_KEY, "1");
+			sessionStorage.setItem(ENTER_ONCE_KEY, String(attempts + 1));
 			sessionStorage.removeItem(LEAVE_APP_KEY);
 			try {
 				localStorage.setItem(WAS_AUTHED_KEY, "1");
