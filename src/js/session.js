@@ -1,7 +1,7 @@
 export const SESSION_COOKIE = "hayshed_id";
 export const LOGIN_PATH = "/";
 export const APP_PATH = "/";
-const MAX_AGE_SEC = 55 * 60;
+const MAX_AGE_SEC = 60 * 60 * 24 * 400;
 
 function cookieSecureFlag() {
 	return typeof location !== "undefined" && location.protocol === "https:" ? "; Secure" : "";

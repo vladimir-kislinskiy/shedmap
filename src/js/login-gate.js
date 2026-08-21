@@ -7,14 +7,13 @@ import {
 } from "firebase/auth";
 import { getFirebaseConfig } from "./firebase-config.js";
 import {
-	SESSION_COOKIE,
 	clearSessionToken,
-	getSessionToken,
 	setSessionToken,
 } from "./session.js";
 
 const ENTER_ONCE_KEY = "hayshed.enterOnce";
 const LEAVE_APP_KEY = "hayshed.leaveApp";
+const WAS_AUTHED_KEY = "hayshed.wasAuthed";
 
 function showError(message) {
 	const errorEl = document.getElementById("loginError");
@@ -23,39 +22,51 @@ function showError(message) {
 	errorEl.textContent = message || "";
 }
 
-async function enterApp(user) {
-	if (sessionStorage.getItem(ENTER_ONCE_KEY) === "1") {
-		sessionStorage.removeItem(ENTER_ONCE_KEY);
-		clearSessionToken();
-		showError("Sign-in could not open the app. Please try again.");
-		return;
+function setGateBusy(busy, label) {
+	const form = document.getElementById("loginForm");
+	const submitEl = document.getElementById("loginSubmit");
+	if (form) form.setAttribute("aria-busy", busy ? "true" : "false");
+	if (submitEl) {
+		submitEl.disabled = Boolean(busy);
+		if (label) submitEl.textContent = label;
 	}
-
-	const token = await user.getIdToken(true);
-	setSessionToken(token);
-	sessionStorage.setItem(ENTER_ONCE_KEY, "1");
-	sessionStorage.removeItem(LEAVE_APP_KEY);
-	window.location.assign("/");
 }
 
 function initLoginGate() {
 	const form = document.getElementById("loginForm");
 	const emailEl = document.getElementById("loginEmail");
 	const passwordEl = document.getElementById("loginPassword");
-	const submitEl = document.getElementById("loginSubmit");
 	const toggleEl = document.getElementById("loginPasswordToggle");
-
-	sessionStorage.removeItem(LEAVE_APP_KEY);
 
 	const params = new URLSearchParams(window.location.search);
 	const wasDenied = params.get("error") === "unauthorized";
-	let blockAutoEnter = wasDenied;
+	const wasSignedOut = params.get("signedout") === "1";
+	let blockAutoEnter = wasDenied || wasSignedOut;
+	let enterStarted = false;
 
 	if (wasDenied) {
 		clearSessionToken();
 		sessionStorage.removeItem(ENTER_ONCE_KEY);
+		sessionStorage.setItem(LEAVE_APP_KEY, "1");
+		try {
+			localStorage.removeItem(WAS_AUTHED_KEY);
+		} catch {
+		}
 		showError("This account is not authorized. Contact Vlad for access.");
-		window.history.replaceState({}, "", window.location.pathname || "/");
+	} else if (wasSignedOut) {
+		sessionStorage.setItem(LEAVE_APP_KEY, "1");
+		try {
+			localStorage.removeItem(WAS_AUTHED_KEY);
+		} catch {
+		}
+	} else {
+		sessionStorage.removeItem(LEAVE_APP_KEY);
+		try {
+			if (localStorage.getItem(WAS_AUTHED_KEY) === "1") {
+				setGateBusy(true, "Opening…");
+			}
+		} catch {
+		}
 	}
 
 	if (
@@ -70,7 +81,7 @@ function initLoginGate() {
 	const app = initializeApp(getFirebaseConfig());
 	const auth = getAuth(app);
 
-	if (wasDenied) {
+	if (wasDenied || wasSignedOut) {
 		void signOut(auth)
 			.catch(() => {})
 			.finally(() => {
@@ -78,9 +89,51 @@ function initLoginGate() {
 			});
 	}
 
+	async function enterApp(user) {
+		if (enterStarted) return;
+		if (sessionStorage.getItem(ENTER_ONCE_KEY) === "1") {
+			sessionStorage.removeItem(ENTER_ONCE_KEY);
+			clearSessionToken();
+			setGateBusy(false, "Sign In");
+			showError("Sign-in could not open the app. Please try again.");
+			return;
+		}
+
+		enterStarted = true;
+		setGateBusy(true, "Opening…");
+		try {
+			const token = await user.getIdToken(true);
+			setSessionToken(token);
+			sessionStorage.setItem(ENTER_ONCE_KEY, "1");
+			sessionStorage.removeItem(LEAVE_APP_KEY);
+			try {
+				localStorage.setItem(WAS_AUTHED_KEY, "1");
+			} catch {
+			}
+			window.location.assign("/");
+		} catch (err) {
+			console.error("Session restore error:", err);
+			enterStarted = false;
+			sessionStorage.removeItem(ENTER_ONCE_KEY);
+			clearSessionToken();
+			setGateBusy(false, "Sign In");
+			showError("Could not restore session. Please sign in.");
+		}
+	}
+
 	onAuthStateChanged(auth, (user) => {
-		if (!user || blockAutoEnter) return;
-		if (!getSessionToken() && !document.cookie.includes(`${SESSION_COOKIE}=`)) return;
+		if (!user || blockAutoEnter) {
+			if (!user && !blockAutoEnter) {
+				try {
+					if (localStorage.getItem(WAS_AUTHED_KEY) === "1") {
+						localStorage.removeItem(WAS_AUTHED_KEY);
+					}
+				} catch {
+				}
+				setGateBusy(false, "Sign In");
+			}
+			return;
+		}
 		void enterApp(user);
 	});
 
@@ -96,8 +149,10 @@ function initLoginGate() {
 		event.preventDefault();
 		showError("");
 		blockAutoEnter = false;
+		enterStarted = false;
 		sessionStorage.removeItem(ENTER_ONCE_KEY);
-		if (submitEl) submitEl.disabled = true;
+		sessionStorage.removeItem(LEAVE_APP_KEY);
+		setGateBusy(true, "Signing in…");
 		try {
 			const result = await signInWithEmailAndPassword(
 				auth,
@@ -109,7 +164,8 @@ function initLoginGate() {
 			console.error("Sign in error:", err);
 			showError("Invalid credentials. Please try again.");
 			sessionStorage.removeItem(ENTER_ONCE_KEY);
-			if (submitEl) submitEl.disabled = false;
+			enterStarted = false;
+			setGateBusy(false, "Sign In");
 		}
 	});
 

@@ -1,5 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { getDatabase, ref, set, onValue } from "firebase/database";
+import { onIdTokenChanged } from "firebase/auth";
 import {
 	initAuth,
 	login,
@@ -274,11 +275,11 @@ function redirectToLoginGate({ denied = false } = {}) {
 	window.location.replace(target);
 }
 
-async function refreshSessionCookie() {
+async function refreshSessionCookie(force = false) {
 	const user = auth.currentUser;
 	if (!user) return;
 	try {
-		setSessionToken(await user.getIdToken());
+		setSessionToken(await user.getIdToken(force));
 	} catch (err) {
 		console.error("Session cookie refresh failed:", err);
 	}
@@ -2835,6 +2836,10 @@ function initAuthUI() {
 	document.getElementById("authBtn")?.addEventListener("click", () => {
 		if (isAuthenticated) {
 			clearSessionToken();
+			try {
+				localStorage.removeItem("hayshed.wasAuthed");
+			} catch {
+			}
 			logout(auth)
 				.catch((err) => console.error("Sign out error:", err))
 				.finally(() => {
@@ -3583,13 +3588,21 @@ async function startApp() {
 	initPwa();
 	if (!REQUIRE_AUTH) refreshAuthGate();
 
-	window.setInterval(() => {
-		void refreshSessionCookie();
-	}, 45 * 60 * 1000);
-
-	document.addEventListener("visibilitychange", () => {
-		if (document.visibilityState === "visible") void refreshSessionCookie();
+	onIdTokenChanged(auth, (user) => {
+		if (!user) return;
+		void user.getIdToken().then(setSessionToken).catch((err) => {
+			console.error("Session cookie refresh failed:", err);
+		});
 	});
+
+	const keepSessionFresh = () => {
+		void refreshSessionCookie(true);
+	};
+	document.addEventListener("visibilitychange", () => {
+		if (document.visibilityState === "visible") keepSessionFresh();
+	});
+	window.addEventListener("pageshow", keepSessionFresh);
+	window.addEventListener("focus", keepSessionFresh);
 }
 
 if (document.readyState === "loading") {

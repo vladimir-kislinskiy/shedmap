@@ -1,4 +1,4 @@
-const SW_VERSION = "hayshed-pwa-2026-07-30-sm-icon-f";
+const SW_VERSION = "hayshed-pwa-2026-08-20-sm-title-a";
 
 self.addEventListener("install", (event) => {
 	event.waitUntil(self.skipWaiting());
