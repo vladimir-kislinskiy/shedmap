@@ -6,7 +6,7 @@ Passwords are **not** stored in this repo. Keep them only in your private list /
 
 **Before login: no access to application code or data.**
 
-- Public URL (`/`): login popup + message to contact **Vlad** for credentials.
+- Public URL (`/`): login UI + message to contact **Vlad** for credentials.
 - Protected (Netlify Edge + session cookie): `/app.html`, `/js/app*`, `/css/*`, fonts, chunks, etc.
 - Firebase RTDB: read/write only for signed-in allowlisted accounts (`database.rules.json` locked).
 
@@ -17,11 +17,12 @@ Passwords are **not** stored in this repo. Keep them only in your private list /
 | Role | Rights |
 |------|--------|
 | **admin** | Full inventory edit (all locations) |
-| **user** | View only (map, reports, PDF) |
-| **super** | `operations@barr-ag.com` only — backup tools + CB theme toggle |
+| **user** | View only (map, reports, PDF, stack detail) |
+| **super** | `operations@barr-ag.com` — backup tools |
 
-Registry (names/roles): **Firebase RTDB** `userProfiles/*` (seed: `data/user-profiles.json`).  
-**Not** in client JS — each account can read only its own row.
+Client registry: `AUTH_USERS` in `src/js/auth.js` (inside the protected app bundle).  
+Edge allowlist: same emails in `netlify/edge-functions/protect-app.ts`.  
+RTDB allowlist: `database.rules.json` (must stay in sync when adding people).
 
 Temporary emergency account: `logistic@barr-ag.com` (role **user** — change password after each use).
 
@@ -30,21 +31,13 @@ Temporary emergency account: `logistic@barr-ag.com` (role **user** — change pa
 ## Architecture
 
 | Piece | Role |
-|-------|------|
-| `src/index.html` + `login-gate.js` | Only public UI (inline CSS, contact Vlad) — **no email list** |
-| `src/app.html` + `app.js` | Full app (edge-protected) — **no email directory in JS** |
-| `userProfiles/{key}` | name + role per email (read-only own profile) |
+|------|------|
+| `src/index.html` + `login-gate.js` | Public login only (inline CSS, contact Vlad) |
+| `src/app.html` + `app.js` | Full app (edge-protected) |
 | Cookie `hayshed_id` | Firebase ID token, set on login |
-| `netlify/edge-functions/protect-app.ts` | Verifies JWT; blocks raw asset URLs without cookie |
+| `protect-app.ts` | Verifies JWT against `FIREBASE_PROJECT_ID` + email allowlist; fail-closed if env missing |
 | `REQUIRE_AUTH = true` | Client redirect to `/` if session lost |
 | Locked RTDB rules | No anonymous data |
-
-### Seed profiles (required once / when adding people)
-
-```bash
-npm run seed:profiles
-npm run deploy:rules
-```
 
 ---
 
@@ -52,11 +45,11 @@ npm run deploy:rules
 
 ### 1. Firebase Auth users
 
-Create each email in `AUTH_USERS` (Authentication → Users).
+Create each email from `AUTH_USERS` (Authentication → Users).
 
 ### 2. Netlify env
 
-Same `FIREBASE_*` as build. **`FIREBASE_PROJECT_ID` must be set** (edge verifies tokens against it).
+Same `FIREBASE_*` as build. **`FIREBASE_PROJECT_ID` must be set** — without it the edge function rejects all app access (fail-closed).
 
 ### 3. Deploy frontend (includes edge function)
 
@@ -71,16 +64,23 @@ npm run build
 npm run deploy:rules
 ```
 
-Uses locked `database.rules.json` (read allowlist, write admins only).
-
 ### 5. Smoke test (private window)
 
+**Unauthenticated (can run without login):**
+
 1. Open site → **only** sign-in screen + “contact Vlad”.
-2. Direct URL `/app.html` or `/js/app.js` → redirect or **401** (no app code).
-3. Log in → map works.
-4. User role → view only; admin → edit.
-5. Sign out → back to login; assets blocked again.
-6. Wrong password → error; unknown email not in allowlist → denied.
+2. Direct URL `/app.html` → redirect to `/`.
+3. Direct URL `/js/app.js` → **401**.
+4. Fake cookie → still **401** on app assets.
+
+**Authenticated:**
+
+5. Log in → map loads; URL stays `/`.
+6. User role → view only (tap stack → detail); admin → edit + sidebar.
+7. Phone: vertical + horizontal pan on sheds; long-press to drag (editors).
+8. Airplane mode → edit → reconnect → changes sync (banner may show briefly).
+9. Sign out → back to login; assets blocked again.
+10. Wrong password → error; Firebase user not on allowlist → cannot open app.
 
 ---
 
@@ -88,15 +88,14 @@ Uses locked `database.rules.json` (read allowlist, write admins only).
 
 1. Firebase Auth → Add user.
 2. `AUTH_USERS` in `src/js/auth.js`.
-3. Same email in `database.rules.json` (and `database.rules.locked.json`) read list; write list if admin.
-4. Deploy app + `npm run deploy:rules`.
+3. Same email in `protect-app.ts` `ALLOWED_EMAILS`.
+4. Same email in `database.rules.json` (and `database.rules.locked.json`) read list; write list if editor/admin.
+5. Deploy app + `npm run deploy:rules`.
 
 ---
 
 ## Rollback (emergency)
 
-1. Temporarily relax edge function / unset path (or set cookie gate bypass — avoid if possible).
-2. Soften `database.rules.json` read if data must be public again.
+1. Prefer fixing accounts over public reopening.
+2. Soften `database.rules.json` only if data must be readable again.
 3. Redeploy app + rules.
-
-Prefer fixing accounts over public reopening.

@@ -874,6 +874,10 @@
 	}
 }
 
+.crm-backdrop {
+	display: none;
+}
+
 @media (max-width: 900px) {
 	.theme-crm .page__wrapper {
 		padding: var(--crm-gutter) var(--crm-gutter) 0;
@@ -886,6 +890,29 @@
 
 	.theme-crm .crm-sidebar {
 		box-shadow: 0 0 60px rgba(15, 23, 42, 0.28);
+		z-index: 70;
+	}
+
+	.crm-backdrop {
+		display: block;
+		position: fixed;
+		inset: 0;
+		z-index: 65;
+		margin: 0;
+		padding: 0;
+		border: 0;
+		background: rgba(15, 23, 42, 0.4);
+		opacity: 0;
+		visibility: hidden;
+		pointer-events: none;
+		transition: opacity 0.2s ease, visibility 0.2s ease;
+		cursor: pointer;
+	}
+
+	.crm-backdrop--visible {
+		opacity: 1;
+		visibility: visible;
+		pointer-events: auto;
 	}
 
 	.theme-crm .crm-sidebar__collapse {

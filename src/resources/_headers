@@ -4,6 +4,12 @@
   Referrer-Policy: strict-origin-when-cross-origin
   Permissions-Policy: camera=(), microphone=(), geolocation=()
 
+/js/login-gate.js
+  Cache-Control: public, max-age=0, must-revalidate
+
+/js/login-gate-*.js
+  Cache-Control: public, max-age=0, must-revalidate
+
 /css/*
   Cache-Control: public, max-age=31536000, immutable
 

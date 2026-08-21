@@ -3420,7 +3420,41 @@ function openCrmSidebar() {
 	if (!document.body.classList.contains("theme-crm")) return;
 	document.body.classList.remove("crm-collapsed");
 	saveCrmCollapsed(false);
+	syncCrmBackdrop();
 	syncAllShedLayoutsAfterPaint();
+}
+
+function closeCrmSidebar() {
+	if (!document.body.classList.contains("theme-crm")) return;
+	document.body.classList.add("crm-collapsed");
+	saveCrmCollapsed(true);
+	syncCrmBackdrop();
+	syncAllShedLayoutsAfterPaint();
+}
+
+function isCrmDrawerViewport() {
+	return window.matchMedia("(max-width: 900px)").matches;
+}
+
+function syncCrmBackdrop() {
+	let backdrop = document.getElementById("crmBackdrop");
+	if (!backdrop) {
+		backdrop = document.createElement("button");
+		backdrop.type = "button";
+		backdrop.id = "crmBackdrop";
+		backdrop.className = "crm-backdrop";
+		backdrop.setAttribute("aria-label", "Close controls panel");
+		backdrop.addEventListener("click", () => {
+			closeCrmSidebar();
+		});
+		document.body.appendChild(backdrop);
+	}
+
+	const open = !document.body.classList.contains("crm-collapsed");
+	const show = open && isCrmDrawerViewport();
+	backdrop.hidden = !show;
+	backdrop.classList.toggle("crm-backdrop--visible", show);
+	document.body.classList.toggle("crm-drawer-open", show);
 }
 
 const crmOriginalParents = new WeakMap();
@@ -3686,6 +3720,7 @@ function initCrmTheme() {
 	const toggleSidebar = () => {
 		const collapsed = document.body.classList.toggle("crm-collapsed");
 		saveCrmCollapsed(collapsed);
+		syncCrmBackdrop();
 		syncAllShedLayoutsAfterPaint();
 	};
 	collapseBtn?.addEventListener("click", toggleSidebar);
@@ -3693,11 +3728,21 @@ function initCrmTheme() {
 
 	navSlot?.addEventListener("click", (e) => {
 		if (!e.target.closest(".tabs__btn[data-tab]")) return;
-		if (!window.matchMedia("(max-width: 900px)").matches) return;
-		document.body.classList.add("crm-collapsed");
-		saveCrmCollapsed(true);
-		syncAllShedLayoutsAfterPaint();
+		if (!isCrmDrawerViewport()) return;
+		closeCrmSidebar();
 	});
+
+	document.addEventListener("keydown", (e) => {
+		if (e.key !== "Escape") return;
+		if (document.body.classList.contains("crm-collapsed")) return;
+		if (!isCrmDrawerViewport()) return;
+		closeCrmSidebar();
+	});
+
+	window.addEventListener("resize", () => {
+		syncCrmBackdrop();
+	});
+	syncCrmBackdrop();
 
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => {
