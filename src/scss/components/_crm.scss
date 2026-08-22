@@ -225,7 +225,7 @@
 	display: flex;
 	align-items: center;
 	justify-content: flex-start;
-	gap: 4px;
+	gap: 8px;
 	width: 100%;
 	min-height: clamp(28px, 3.8vw, 36px);
 	padding: clamp(4px, 0.7vw, 8px) clamp(10px, 1.2vw, 14px);
@@ -237,37 +237,16 @@
 	background: none;
 	border: none;
 	border-radius: var(--radius-sm);
-	transition: background-color 0.15s ease;
-}
-
-.theme-crm .crm-sidebar__nav .tabs__btn::before {
-	content: "";
-	flex: 0 0 1em;
-	width: 1em;
-	height: 1em;
-	margin: 0;
-	align-self: center;
-	transform: translateY(-1px);
-	background-color: currentColor;
-	-webkit-mask: var(--crm-nav-icon) center / contain no-repeat;
-	mask: var(--crm-nav-icon) center / contain no-repeat;
 	transition: none;
 }
 
-.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Overview"] {
-	--crm-nav-icon: url("../img/icons/overview.svg");
-}
-
-.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Sheds"] {
-	--crm-nav-icon: url("../img/icons/shed.svg");
-}
-
-.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Log"] {
-	--crm-nav-icon: url("../img/icons/change-log.svg");
-}
-
-.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Reports"] {
-	--crm-nav-icon: url("../img/icons/reports.svg");
+.theme-crm .crm-sidebar__nav .crm-nav-icon {
+	flex: 0 0 16px;
+	width: 16px;
+	height: 16px;
+	display: block;
+	overflow: visible;
+	pointer-events: none;
 }
 
 .theme-crm .crm-sidebar__nav .tabs__btn:hover {
@@ -275,7 +254,7 @@
 }
 
 .theme-crm .crm-sidebar__nav .tabs__btn--active {
-	font-weight: 700;
+	font-weight: 600;
 }
 
 .theme-crm:not(.theme-dark) .crm-sidebar__nav .tabs__btn--active {

@@ -426,7 +426,7 @@ function setActiveTab(tabId) {
 	}
 
 	if (tabId === "Sheds") {
-		requestAnimationFrame(() => syncAllShedLayouts());
+		syncAllShedLayouts();
 	}
 
 	if (tabId === "Reports") {
@@ -456,7 +456,7 @@ function setActiveShedTab(panelId, btn, { bay } = {}, locationId = getCurrentLoc
 		updateBaySelectForShed(shed, selectedBayOrNull(bay), locationId);
 	}
 
-	requestAnimationFrame(() => syncAllShedLayouts());
+	syncAllShedLayouts();
 }
 
 function initGrabToScroll() {
