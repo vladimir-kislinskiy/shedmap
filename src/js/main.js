@@ -909,6 +909,10 @@ function initEmptyBaySelect(locationId = getCurrentLocation()) {
 	locQueryAll(".shed__bay", locationId).forEach(bindEmptyBaySelect);
 }
 
+function isMobileViewport() {
+	return window.matchMedia("(max-width: 768px)").matches;
+}
+
 function getStackDetailModal() {
 	return document.getElementById("stackDetailModal");
 }
@@ -1041,6 +1045,7 @@ function bindStackSelect(stackEl) {
 			return;
 		}
 
+		if (!isMobileViewport()) return;
 		openStackDetail(stackEl);
 	});
 }
@@ -3420,41 +3425,7 @@ function openCrmSidebar() {
 	if (!document.body.classList.contains("theme-crm")) return;
 	document.body.classList.remove("crm-collapsed");
 	saveCrmCollapsed(false);
-	syncCrmBackdrop();
 	syncAllShedLayoutsAfterPaint();
-}
-
-function closeCrmSidebar() {
-	if (!document.body.classList.contains("theme-crm")) return;
-	document.body.classList.add("crm-collapsed");
-	saveCrmCollapsed(true);
-	syncCrmBackdrop();
-	syncAllShedLayoutsAfterPaint();
-}
-
-function isCrmDrawerViewport() {
-	return window.matchMedia("(max-width: 900px)").matches;
-}
-
-function syncCrmBackdrop() {
-	let backdrop = document.getElementById("crmBackdrop");
-	if (!backdrop) {
-		backdrop = document.createElement("button");
-		backdrop.type = "button";
-		backdrop.id = "crmBackdrop";
-		backdrop.className = "crm-backdrop";
-		backdrop.setAttribute("aria-label", "Close controls panel");
-		backdrop.addEventListener("click", () => {
-			closeCrmSidebar();
-		});
-		document.body.appendChild(backdrop);
-	}
-
-	const open = !document.body.classList.contains("crm-collapsed");
-	const show = open && isCrmDrawerViewport();
-	backdrop.hidden = !show;
-	backdrop.classList.toggle("crm-backdrop--visible", show);
-	document.body.classList.toggle("crm-drawer-open", show);
 }
 
 const crmOriginalParents = new WeakMap();
@@ -3507,8 +3478,8 @@ function syncCrmFormVisibility() {
 	const editable = canEdit();
 	const activeForm = loc("inventoryControls", getCurrentLocation());
 	if (activeForm) {
-		activeForm.hidden = !editable;
-		activeForm.classList.toggle("inventory__form--hidden", !editable);
+		activeForm.hidden = false;
+		activeForm.classList.remove("inventory__form--hidden");
 		activeForm.inert = !editable;
 	}
 }
@@ -3679,14 +3650,6 @@ function initMobileInputScrollFix() {
 function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
-	try {
-		const savedCollapsed = localStorage.getItem(CRM_COLLAPSED_STORAGE_KEY);
-		if (savedCollapsed === "0") document.body.classList.remove("crm-collapsed");
-		else document.body.classList.add("crm-collapsed");
-	} catch {
-		document.body.classList.add("crm-collapsed");
-	}
-
 	const applyDark = (dark) => {
 		const root = document.documentElement;
 		root.classList.add("theme-switching");
@@ -3720,7 +3683,6 @@ function initCrmTheme() {
 	const toggleSidebar = () => {
 		const collapsed = document.body.classList.toggle("crm-collapsed");
 		saveCrmCollapsed(collapsed);
-		syncCrmBackdrop();
 		syncAllShedLayoutsAfterPaint();
 	};
 	collapseBtn?.addEventListener("click", toggleSidebar);
@@ -3728,21 +3690,11 @@ function initCrmTheme() {
 
 	navSlot?.addEventListener("click", (e) => {
 		if (!e.target.closest(".tabs__btn[data-tab]")) return;
-		if (!isCrmDrawerViewport()) return;
-		closeCrmSidebar();
+		if (!window.matchMedia("(max-width: 900px)").matches) return;
+		document.body.classList.add("crm-collapsed");
+		saveCrmCollapsed(true);
+		syncAllShedLayoutsAfterPaint();
 	});
-
-	document.addEventListener("keydown", (e) => {
-		if (e.key !== "Escape") return;
-		if (document.body.classList.contains("crm-collapsed")) return;
-		if (!isCrmDrawerViewport()) return;
-		closeCrmSidebar();
-	});
-
-	window.addEventListener("resize", () => {
-		syncCrmBackdrop();
-	});
-	syncCrmBackdrop();
 
 	document.querySelectorAll(".location-tabs__btn[data-location]").forEach((btn) => {
 		btn.addEventListener("click", () => {

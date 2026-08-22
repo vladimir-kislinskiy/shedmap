@@ -208,13 +208,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		stackEl.classList.add("hay-stack--dragging");
 		document.body.classList.add("page--dragging");
 		moveGhost(session.ghost, clientX, clientY, session.offsetX, session.offsetY);
-
-		if (!session.isMouse && session.pointerId != null) {
-			try {
-				stackEl.setPointerCapture(session.pointerId);
-			} catch {
-			}
-		}
 	};
 
 	const handleMove = (clientX, clientY) => {
@@ -223,12 +216,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!session.dragging) {
 			const dx = clientX - session.startX;
 			const dy = clientY - session.startY;
-			const dist = Math.hypot(dx, dy);
-			if (dist > DRAG_THRESHOLD) {
-				if (!session.isMouse || Math.abs(dy) >= Math.abs(dx)) {
-					endSession();
-					return;
-				}
+			if (Math.hypot(dx, dy) > DRAG_THRESHOLD) {
 				beginDrag(clientX, clientY);
 			}
 			return;
@@ -315,6 +303,8 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!canDrag()) return;
 		if (session) endSession();
 
+		e.preventDefault();
+
 		session = {
 			isMouse: false,
 			pointerId: e.pointerId,
@@ -349,7 +339,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			e.stopPropagation();
 			armTouchSession(e);
 		},
-		{ passive: true },
+		{ passive: false },
 	);
 
 	stackEl.addEventListener("contextmenu", (e) => {
