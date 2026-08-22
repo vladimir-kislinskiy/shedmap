@@ -519,6 +519,12 @@
 	box-shadow: 0 0 0 3px var(--color-primary-focus);
 }
 
+.theme-crm .theme-switch.theme-switch--instant .theme-switch__track,
+.theme-crm .theme-switch.theme-switch--instant .theme-switch__thumb,
+.theme-crm .theme-switch.theme-switch--instant .theme-switch__icon {
+	transition: none !important;
+}
+
 .theme-switch__track {
 	position: relative;
 	box-sizing: border-box;
@@ -530,7 +536,7 @@
 	border: 1px solid #d1d5db;
 	box-shadow: none;
 	overflow: hidden;
-	transition: background-color 0.25s ease, border-color 0.25s ease;
+	transition: background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__track,
@@ -554,8 +560,7 @@
 	border: 1px solid #d1d5db;
 	box-shadow: none;
 	transform: translate(0, -50%);
-	transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1),
-		background-color 0.25s ease, border-color 0.25s ease;
+	transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__thumb,
@@ -579,8 +584,7 @@
 	width: 9px;
 	height: 9px;
 	pointer-events: none;
-	transition: opacity 0.25s ease,
-		transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.25s ease;
+	transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
 
 .theme-switch__icon--sun {

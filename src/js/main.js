@@ -3650,9 +3650,10 @@ function initMobileInputScrollFix() {
 function initCrmTheme() {
 	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
 
-	const applyDark = (dark) => {
+	const applyDark = (dark, animate = true) => {
 		const root = document.documentElement;
-		root.classList.add("theme-switching");
+		if (animate) root.classList.add("theme-switching");
+		else darkSwitch?.classList.add("theme-switch--instant");
 		document.body.classList.toggle("theme-dark", dark);
 		root.classList.toggle("theme-dark", dark);
 		if (darkSwitch) {
@@ -3661,17 +3662,21 @@ function initCrmTheme() {
 			darkSwitch.setAttribute("aria-label", label);
 			darkSwitch.title = label;
 		}
-		requestAnimationFrame(() => {
-			requestAnimationFrame(() => {
+		if (animate) {
+			window.setTimeout(() => {
 				root.classList.remove("theme-switching");
+			}, 220);
+		} else {
+			requestAnimationFrame(() => {
+				darkSwitch?.classList.remove("theme-switch--instant");
 			});
-		});
+		}
 	};
 	let dark = false;
 	try {
 		dark = localStorage.getItem(CRM_DARK_STORAGE_KEY) === "1";
 	} catch (e) {}
-	applyDark(dark);
+	applyDark(dark, false);
 	darkSwitch?.addEventListener("click", () => {
 		const next = !document.body.classList.contains("theme-dark");
 		try {
