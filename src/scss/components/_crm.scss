@@ -237,6 +237,7 @@
 	background: none;
 	border: none;
 	border-radius: var(--radius-sm);
+	transition: background-color 0.15s ease;
 }
 
 .theme-crm .crm-sidebar__nav .tabs__btn::before {
@@ -250,12 +251,7 @@
 	background-color: currentColor;
 	-webkit-mask: var(--crm-nav-icon) center / contain no-repeat;
 	mask: var(--crm-nav-icon) center / contain no-repeat;
-}
-
-.theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Sheds"]::before {
-	flex-basis: 1.1em;
-	width: 1.1em;
-	height: 1.1em;
+	transition: none;
 }
 
 .theme-crm .crm-sidebar__nav .tabs__btn[data-tab="Overview"] {
@@ -662,7 +658,6 @@
 
 .theme-crm.tab-overview .page__main > .crm-stats {
 	display: flex;
-	animation: fadeIn 0.4s ease-out forwards;
 }
 
 .theme-crm.tab-overview .location-panel {
