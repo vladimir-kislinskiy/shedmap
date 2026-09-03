@@ -458,38 +458,26 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 	});
 }
 
-function measureStackRequiredHeight(stackEl) {
-	const style = getComputedStyle(stackEl);
-	const paddingY = (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0);
-	const gap = parseFloat(style.gap) || 0;
-	const prevHeight = stackEl.style.height;
-	const prevMax = stackEl.style.maxHeight;
-	const prevMin = stackEl.style.minHeight;
-	const prevPct = stackEl.style.getPropertyValue("--stack-height");
+function estimateStackRequiredHeight(stackEl) {
+	const baseLine = 12;
+	const pad = 10;
+	const gap = 2;
+	const scale = stackEl.classList.contains("hay-stack--full") ? 1.2 : 1;
+	const line = baseLine * scale;
 
-	stackEl.style.height = "auto";
-	stackEl.style.maxHeight = "none";
-	stackEl.style.minHeight = "0";
-	stackEl.style.setProperty("--stack-height", "200");
+	let lines = 0;
+	stackEl
+		.querySelectorAll(
+			".hay-stack__type, .hay-stack__contract, .hay-stack__grade, .hay-stack__count, .hay-stack__comment",
+		)
+		.forEach((el) => {
+			if (el.hidden || el.hasAttribute("hidden")) return;
+			if (!String(el.textContent || "").trim()) return;
+			lines += 1;
+		});
 
-	const visibleChildren = [...stackEl.children].filter((child) => !child.hidden);
-	let childrenHeight = 0;
-	visibleChildren.forEach((child, index) => {
-		childrenHeight += child.offsetHeight;
-		if (index > 0) childrenHeight += gap;
-	});
-
-	if (prevPct) stackEl.style.setProperty("--stack-height", prevPct);
-	else stackEl.style.removeProperty("--stack-height");
-
-	if (prevHeight) stackEl.style.height = prevHeight;
-	else stackEl.style.removeProperty("height");
-	if (prevMax) stackEl.style.maxHeight = prevMax;
-	else stackEl.style.removeProperty("max-height");
-	if (prevMin) stackEl.style.minHeight = prevMin;
-	else stackEl.style.removeProperty("min-height");
-
-	return Math.ceil(childrenHeight + paddingY);
+	if (lines <= 0) return Math.ceil(pad + line);
+	return Math.ceil(pad + lines * line + Math.max(0, lines - 1) * gap);
 }
 
 function lockNonFillStackHeight(stackEl) {
@@ -505,7 +493,7 @@ function lockNonFillStackHeight(stackEl) {
 	const bayMax = getMaxBalesPerBay(locationId);
 	const pct = getStackHeightPercent(bales, maxBales, areaBudget, bayMax);
 	const pctPx = Math.max(1, Math.round((pct / 100) * areaBudget));
-	const required = measureStackRequiredHeight(stackEl);
+	const required = estimateStackRequiredHeight(stackEl);
 	const px = Math.max(pctPx, required);
 
 	stackEl.style.setProperty("--stack-height", String(pct));
@@ -531,13 +519,9 @@ function compressBayStacksToFit(bayStackEl) {
 
 	const stacks = [...getBayStacks(bayStackEl)];
 	const hasFill = stacks.some(isStackFill);
-
-	stacks.forEach((stack) => {
-		if (!isStackFill(stack)) lockNonFillStackHeight(stack);
-	});
+	const available = bayStackEl.clientHeight;
 
 	let needed = measureBayContentHeightRaw(bayStackEl);
-	const available = bayStackEl.clientHeight;
 	if (needed <= available + 1) return;
 
 	if (hasFill) {
@@ -546,7 +530,7 @@ function compressBayStacksToFit(bayStackEl) {
 		if (needed <= available + 1) return;
 	}
 
-	for (let pass = 0; pass < 6; pass++) {
+	for (let pass = 0; pass < 3; pass++) {
 		needed = measureBayContentHeightRaw(bayStackEl);
 		if (needed <= available + 1) return;
 
@@ -771,6 +755,8 @@ function reconcileColumnsLayout(columns, bayStackCap = Infinity, columnsCap = In
 function syncShedColumnsLayout(columns) {
 	if (columns.offsetParent === null) return;
 
+	columns.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
+
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
 	const chrome = getBayChromeForColumns(columns);
@@ -790,32 +776,43 @@ function syncShedColumnsLayout(columns) {
 	});
 
 	reconcileColumnsLayout(columns, bayStackCap, columnsCap);
-	repairAllBayLayouts();
-
-	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		finalizeBayStackLayout(bayStack);
-	});
-
-	reconcileColumnsLayout(columns, bayStackCap, columnsCap);
 }
 
 export function refreshAllStackHeights() {
 	document.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		if (bayStack.closest(".shed__columns")?.offsetParent === null) return;
 		redistributeBayStackHeights(bayStack);
 	});
 }
 
 export function syncAllShedLayouts() {
-	repairAllBayLayouts();
-
 	document.querySelectorAll(".shed__columns").forEach(syncShedColumnsLayout);
 }
 
+let shedLayoutSyncTimer = 0;
+let shedLayoutSyncRaf = 0;
+
+export function scheduleShedLayoutSync(delayMs = 32) {
+	if (shedLayoutSyncTimer) {
+		clearTimeout(shedLayoutSyncTimer);
+		shedLayoutSyncTimer = 0;
+	}
+	if (shedLayoutSyncRaf) {
+		cancelAnimationFrame(shedLayoutSyncRaf);
+		shedLayoutSyncRaf = 0;
+	}
+
+	shedLayoutSyncTimer = window.setTimeout(() => {
+		shedLayoutSyncTimer = 0;
+		shedLayoutSyncRaf = requestAnimationFrame(() => {
+			shedLayoutSyncRaf = 0;
+			syncAllShedLayouts();
+		});
+	}, delayMs);
+}
+
 export function syncAllShedLayoutsAfterPaint() {
-	syncAllShedLayouts();
-	requestAnimationFrame(() => {
-		syncAllShedLayouts();
-	});
+	scheduleShedLayoutSync(32);
 }
 
 export function setStackHeight(stackEl, baleCount, maxBales) {
