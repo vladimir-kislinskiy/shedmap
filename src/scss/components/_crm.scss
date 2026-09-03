@@ -6,9 +6,9 @@
 
 .theme-crm {
 	--crm-sidebar-w: 320px;
-	--page-header-h: 64px;
+	--page-header-h: 44px;
 	--crm-gutter: clamp(12px, 2vw, 20px);
-	--auth-bar-control-size: 35px;
+	--auth-bar-control-size: 28px;
 }
 
 .theme-dark .shed-tabs {
@@ -41,9 +41,9 @@
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
-	gap: clamp(8px, 1.5vw, 16px);
+	gap: clamp(6px, 1vw, 10px);
 	min-height: var(--page-header-h);
-	padding: 0 clamp(12px, 2vw, 20px);
+	padding: 0 clamp(8px, 1.5vw, 14px);
 	background: var(--color-surface);
 	backdrop-filter: none;
 	grid-template-columns: none;
@@ -59,7 +59,7 @@
 .theme-crm .auth-bar__start {
 	display: inline-flex;
 	align-items: center;
-	gap: 12px;
+	gap: 8px;
 	min-width: 0;
 	flex: 1 1 auto;
 	justify-content: flex-start;
@@ -74,13 +74,13 @@
 
 .theme-crm .auth-bar__location {
 	min-width: 0;
-	max-width: min(180px, 36vw);
-	padding-left: 12px;
+	max-width: min(160px, 34vw);
+	padding-left: 8px;
 	border-left: 1px solid var(--border-color);
 	font-family: var(--font-heading);
-	font-size: var(--font-size-max);
+	font-size: 12px;
 	font-weight: 600;
-	line-height: 1.2;
+	line-height: 1.15;
 	color: var(--text-heading);
 	white-space: nowrap;
 	overflow: hidden;
@@ -142,8 +142,8 @@
 .auth-bar__menu-icon::before,
 .auth-bar__menu-icon::after {
 	display: block;
-	width: 18px;
-	height: 2px;
+	width: 14px;
+	height: 1.5px;
 	border-radius: 2px;
 	background: var(--text-main);
 }
@@ -160,11 +160,31 @@
 }
 
 .auth-bar__menu-icon::before {
-	top: -6px;
+	top: -5px;
 }
 
 .auth-bar__menu-icon::after {
-	top: 6px;
+	top: 5px;
+}
+
+.theme-crm .auth-bar__actions,
+.theme-crm .auth-bar__status {
+	gap: 6px;
+}
+
+.theme-crm .auth-bar__badge {
+	padding: 2px 7px;
+	font-size: 0.65rem;
+	letter-spacing: 0.03em;
+}
+
+.theme-crm .auth-bar__user {
+	font-size: 11px;
+}
+
+.theme-crm .auth-action__icon {
+	width: 14px;
+	height: 14px;
 }
 
 .theme-crm .crm-sidebar {
@@ -380,8 +400,8 @@
 
 @media (max-width: 768px) {
 	.theme-crm {
-		--page-header-h: 48px;
-		--auth-bar-control-size: 35px;
+		--page-header-h: 40px;
+		--auth-bar-control-size: 26px;
 	}
 
 	.theme-crm .auth-bar {
@@ -389,14 +409,14 @@
 		flex-wrap: nowrap;
 		align-items: center;
 		min-height: var(--page-header-h);
-		padding: 0 10px;
-		gap: 6px;
+		padding: 0 8px;
+		gap: 4px;
 		grid-template-columns: none;
 		grid-template-areas: none;
 	}
 
 	.theme-crm .auth-bar__start {
-		gap: 8px;
+		gap: 6px;
 	}
 
 	.theme-crm .crm-sidebar__nav .tabs__group {
@@ -411,46 +431,48 @@
 	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon,
 	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::before,
 	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::after {
-		width: 14px;
+		width: 12px;
 	}
 
 	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::before {
-		top: -5px;
+		top: -4px;
 	}
 
 	.theme-crm .auth-bar__menu-toggle .auth-bar__menu-icon::after {
-		top: 5px;
+		top: 4px;
 	}
 
 	.theme-crm .auth-bar__location {
-		padding-left: 8px;
-		max-width: min(100px, 28vw);
+		padding-left: 6px;
+		max-width: min(90px, 26vw);
 		font-family: inherit;
-		font-size: clamp(
-			var(--font-size-min),
-			2vw + 0.35rem,
-			var(--font-size-max)
-		);
+		font-size: 11px;
 		font-weight: 600;
-		line-height: 1.2;
+		line-height: 1.15;
 	}
 
 	.theme-crm .auth-bar__user {
-		max-width: clamp(48px, 16vw, 96px);
+		max-width: clamp(40px, 14vw, 80px);
+		font-size: 10px;
+	}
+
+	.theme-crm .auth-bar__actions,
+	.theme-crm .auth-bar__status {
+		gap: 4px;
 	}
 
 	.theme-crm .theme-switch {
-		--theme-switch-w: 38px;
-		--theme-switch-h: 20px;
+		--theme-switch-w: 32px;
+		--theme-switch-h: 16px;
 		--theme-switch-pad: 2px;
-		--theme-switch-thumb: 14px;
+		--theme-switch-thumb: 12px;
 		width: var(--theme-switch-w);
 		height: var(--theme-switch-h);
 	}
 
 	.theme-crm .theme-switch__icon {
-		width: 8px;
-		height: 8px;
+		width: 7px;
+		height: 7px;
 	}
 
 	.theme-crm .crm-sidebar input.inventory__field {
@@ -471,10 +493,10 @@
 }
 
 .theme-crm .theme-switch {
-	--theme-switch-w: 42px;
-	--theme-switch-h: 22px;
+	--theme-switch-w: 34px;
+	--theme-switch-h: 18px;
 	--theme-switch-pad: 2px;
-	--theme-switch-thumb: 16px;
+	--theme-switch-thumb: 14px;
 	display: inline-flex;
 	align-items: center;
 	justify-content: center;
@@ -556,8 +578,8 @@
 
 .theme-switch__icon {
 	grid-area: 1 / 1;
-	width: 9px;
-	height: 9px;
+	width: 8px;
+	height: 8px;
 	pointer-events: none;
 	transition: opacity 0.2s ease, transform 0.2s ease, color 0.2s ease;
 }
@@ -588,7 +610,7 @@
 }
 
 .theme-crm .page__wrapper {
-	padding: var(--crm-gutter) var(--crm-gutter) 0;
+	padding: var(--crm-gutter);
 	padding-left: calc(var(--crm-sidebar-w) + var(--crm-gutter));
 }
 
@@ -603,8 +625,11 @@
 
 	.theme-crm:not(.crm-collapsed) .shed__bay {
 		flex: 0 0 150px;
+		width: 150px;
 		min-width: 150px;
+		max-width: 150px;
 		align-self: flex-start;
+		overflow: hidden;
 	}
 }
 
@@ -853,7 +878,7 @@
 
 @media (max-width: 900px) {
 	.theme-crm .page__wrapper {
-		padding: var(--crm-gutter) var(--crm-gutter) 0;
+		padding: var(--crm-gutter);
 	}
 
 	.theme-crm .page__footer {

@@ -2550,14 +2550,6 @@ function renderSyncBanner() {
 		return;
 	}
 
-	if (hasUnsyncedChanges()) {
-		textEl.textContent =
-			"Local changes are waiting to sync. Keep this tab open — retrying automatically.";
-		banner.hidden = false;
-		document.body.classList.remove("page--offline");
-		return;
-	}
-
 	banner.hidden = true;
 	document.body.classList.remove("page--offline");
 }
@@ -2976,8 +2968,12 @@ function closeAuthModal() {
 			focused.blur();
 		}
 
-		if (returnFocus instanceof HTMLElement) {
-			returnFocus.focus();
+		if (
+			returnFocus instanceof HTMLElement &&
+			returnFocus.id !== "authBtn" &&
+			returnFocus.isConnected
+		) {
+			returnFocus.focus({ preventScroll: true });
 		}
 
 		modal.setAttribute("aria-hidden", "true");

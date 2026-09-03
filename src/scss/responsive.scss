@@ -12,9 +12,12 @@
 	.shed__bay,
 	.theme-crm .shed__bay {
 		flex: 0 0 clamp(150px, 18vw, 170px);
+		width: clamp(150px, 18vw, 170px);
 		min-width: 150px;
+		max-width: clamp(150px, 18vw, 170px);
 		height: auto;
 		align-self: flex-start;
+		overflow: hidden;
 	}
 }
 
@@ -30,9 +33,12 @@
 	.shed__bay,
 	.theme-crm .shed__bay {
 		flex: 0 0 clamp(150px, 20vw, 170px);
+		width: clamp(150px, 20vw, 170px);
 		min-width: 150px;
+		max-width: clamp(150px, 20vw, 170px);
 		height: auto;
 		align-self: flex-start;
+		overflow: hidden;
 	}
 
 	.shed__bay-stack {
@@ -126,9 +132,12 @@
 
 	.shed__bay {
 		flex: 0 0 clamp(150px, 25vw, 170px);
+		width: clamp(150px, 25vw, 170px);
 		min-width: 150px;
+		max-width: clamp(150px, 25vw, 170px);
 		height: auto;
 		align-self: flex-start;
+		overflow: hidden;
 	}
 
 	.shed__bay-stack {

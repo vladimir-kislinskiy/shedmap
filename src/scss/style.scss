@@ -573,14 +573,14 @@ body.page--view-only .inventory__form {
 	width: 100%;
 	max-width: 100%;
 	min-width: 0;
-	min-height: 584px;
+	min-height: 0;
 	height: auto;
 	overflow-x: auto;
 	overflow-y: hidden;
 	padding-bottom: 8px;
 	box-sizing: border-box;
 	overscroll-behavior-x: contain;
-	overscroll-behavior-y: none;
+	overscroll-behavior-y: auto;
 	scrollbar-width: thin;
 	scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
 	-webkit-overflow-scrolling: touch;
@@ -595,6 +595,7 @@ body.page--view-only .inventory__form {
 .shed__bay {
 	flex: 1 1 0;
 	min-width: 0;
+	max-width: 100%;
 	height: auto;
 	display: flex;
 	flex-direction: column;
@@ -602,6 +603,7 @@ body.page--view-only .inventory__form {
 	align-items: center;
 	position: relative;
 	cursor: default;
+	overflow: hidden;
 }
 
 .shed__bay-label,
@@ -629,6 +631,8 @@ body.page--dragging .shed__bay-exit {
 .shed__bay-stack {
 	--stack-area-height: 500px;
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	flex: 0 0 auto;
 	box-sizing: border-box;
 	height: calc(var(--stack-area-height) + 20px);
@@ -809,6 +813,8 @@ body.page--dragging .shed__bay-exit {
 	color: var(--color-on-primary);
 	text-align: center;
 	width: 100%;
+	max-width: 100%;
+	min-width: 0;
 	box-sizing: border-box;
 	display: flex;
 	flex-direction: column;
@@ -820,7 +826,10 @@ body.page--dragging .shed__bay-exit {
 	min-height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
 	);
-	overflow: visible;
+	max-height: calc(
+		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
+	);
+	overflow: hidden;
 	margin-bottom: 0;
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
@@ -903,8 +912,17 @@ body.page--dragging .shed__bay-exit {
 .shed__isle--has-front-split > .hay-stack--fill,
 .shed__isle--front-only > .hay-stack--fill {
 	flex: 1 1 0;
+	flex-shrink: 1;
 	align-self: stretch;
 	margin-top: 0;
+	width: 100%;
+	min-width: 0;
+	max-width: 100%;
+	height: auto;
+	max-height: none;
+	min-height: calc(
+		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
+	);
 }
 
 .shed__isle--has-fill > .shed__stack-spacer,
@@ -1886,9 +1904,10 @@ body.page--offline .inventory__form {
 	transform: scale(0.94);
 }
 
+.auth-action:focus,
 .auth-action:focus-visible {
 	outline: none;
-	box-shadow: 0 0 0 3px var(--color-primary-focus);
+	box-shadow: none;
 }
 
 .auth-action__icon {
