@@ -933,12 +933,21 @@ body.page--dragging .shed__bay-exit {
 }
 
 .shed__isle--has-fill > .hay-stack--bay-front,
-.shed__bay-stack--has-fill > .hay-stack--bay-front {
+.shed__bay-stack--has-fill > .hay-stack--bay-front,
+.shed__bay-stack--has-fill > .shed__front-anchor {
 	margin-top: 0;
 }
 
+.shed__bay-stack--has-fill > .shed__isles:not(:has(.hay-stack)) {
+	display: none;
+	flex: 0 0 0;
+	min-height: 0;
+	height: 0;
+	overflow: hidden;
+}
+
 .shed__bay-stack--has-fill:not(.shed__bay-stack--isle-has-fill) > .shed__isles {
-	flex: 0 1 auto;
+	flex: 0 0 auto;
 	min-height: 0;
 }
 

@@ -560,11 +560,78 @@ function compressBayStacksToFit(bayStackEl) {
 	}
 }
 
+function expandFillStacksToFreeSpace(bayStackEl) {
+	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
+
+	const fillStacks = [...getBayStacks(bayStackEl)].filter(isStackFill);
+	if (!fillStacks.length) return;
+
+	bayStackEl.classList.add("shed__bay-stack--has-fill");
+	fillStacks.forEach((stack) => {
+		stack.style.marginTop = "0";
+	});
+
+	const { top, bottom } = getBayStackPadding(bayStackEl);
+	const inner = Math.max(0, bayStackEl.clientHeight - top - bottom);
+
+	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
+	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
+	const isleBlock = isleHasStacks ? (islesRow?.getBoundingClientRect().height || 0) : 0;
+
+	const directStacks = getDirectStacks(bayStackEl);
+	const directNonFill = directStacks.filter((stack) => !isStackFill(stack));
+	const directFill = directStacks.filter(isStackFill);
+
+	let used = getVerticalStackGaps(directStacks.length);
+	if (isleHasStacks && directStacks.length) used += LAYOUT.stackGap;
+	directNonFill.forEach((stack) => {
+		used += stack.offsetHeight || parseFloat(stack.dataset.contentMinHeight) || 0;
+	});
+	used += isleBlock;
+
+	["1", "2"].forEach((isleNum) => {
+		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
+		if (!isleEl) return;
+		const isleFills = getDirectStacks(isleEl).filter(isStackFill);
+		if (!isleFills.length) return;
+
+		const isleStacks = getDirectStacks(isleEl);
+		const isleNonFill = isleStacks.filter((stack) => !isStackFill(stack));
+		let isleUsed = getVerticalStackGaps(isleStacks.length);
+		isleNonFill.forEach((stack) => {
+			isleUsed += stack.offsetHeight || parseFloat(stack.dataset.contentMinHeight) || 0;
+		});
+		const isleInner = Math.max(0, isleEl.clientHeight || 0);
+		const isleRemaining = Math.max(LAYOUT.minStack, isleInner - isleUsed);
+		const eachIsle = Math.floor(isleRemaining / isleFills.length);
+		isleFills.forEach((stack) => {
+			const px = Math.max(LAYOUT.minStack, eachIsle);
+			stack.style.height = `${px}px`;
+			stack.style.minHeight = `${px}px`;
+			stack.style.maxHeight = `${px}px`;
+			stack.style.marginTop = "0";
+		});
+	});
+
+	if (!directFill.length) return;
+
+	const remaining = Math.max(LAYOUT.minStack, inner - used);
+	const each = Math.floor(remaining / directFill.length);
+	directFill.forEach((stack) => {
+		const px = Math.max(LAYOUT.minStack, each);
+		stack.style.height = `${px}px`;
+		stack.style.minHeight = `${px}px`;
+		stack.style.maxHeight = `${px}px`;
+		stack.style.marginTop = "0";
+	});
+}
+
 function finalizeBayStackLayout(bayStackEl) {
 	[...getBayStacks(bayStackEl)].forEach((stack) => {
 		stack.style.removeProperty("min-height");
 		stack.style.removeProperty("height");
 		stack.style.removeProperty("max-height");
+		stack.style.removeProperty("margin-top");
 		delete stack.dataset.contentMinHeight;
 	});
 	syncFillLayoutClasses(bayStackEl);
@@ -574,6 +641,7 @@ function finalizeBayStackLayout(bayStackEl) {
 		if (!isStackFill(stack)) lockNonFillStackHeight(stack);
 	});
 	compressBayStacksToFit(bayStackEl);
+	expandFillStacksToFreeSpace(bayStackEl);
 }
 
 function getStackAbsoluteHeightPx(stack, bayStackEl) {
