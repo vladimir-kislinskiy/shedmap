@@ -458,13 +458,12 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 	});
 }
 
-function estimateStackRequiredHeight(stackEl) {
-	const baseLine = 12;
-	const pad = 10;
-	const gap = 2;
-	const scale = stackEl.classList.contains("hay-stack--full") ? 1.2 : 1;
-	const line = baseLine * scale;
+const MIN_FIT_STACK_PX = 16;
+const STACK_FONT_MAX_PX = 10.4;
+const STACK_FONT_MAX_FULL_PX = 12.5;
+const STACK_FONT_MIN_PX = 5;
 
+function countStackTextLines(stackEl) {
 	let lines = 0;
 	stackEl
 		.querySelectorAll(
@@ -475,9 +474,27 @@ function estimateStackRequiredHeight(stackEl) {
 			if (!String(el.textContent || "").trim()) return;
 			lines += 1;
 		});
+	return lines;
+}
+
+function estimateStackRequiredHeight(stackEl) {
+	const baseLine = 12;
+	const pad = 10;
+	const gap = 2;
+	const scale = stackEl.classList.contains("hay-stack--full") ? 1.2 : 1;
+	const line = baseLine * scale;
+	const lines = countStackTextLines(stackEl);
 
 	if (lines <= 0) return Math.ceil(pad + line);
 	return Math.ceil(pad + lines * line + Math.max(0, lines - 1) * gap);
+}
+
+function applyStackBoxHeight(stackEl, px) {
+	const h = Math.max(MIN_FIT_STACK_PX, Math.round(px));
+	stackEl.style.height = `${h}px`;
+	stackEl.style.minHeight = `${h}px`;
+	stackEl.style.maxHeight = `${h}px`;
+	stackEl.dataset.contentMinHeight = String(h);
 }
 
 function lockNonFillStackHeight(stackEl) {
@@ -497,9 +514,7 @@ function lockNonFillStackHeight(stackEl) {
 	const px = Math.max(pctPx, required);
 
 	stackEl.style.setProperty("--stack-height", String(pct));
-	stackEl.style.height = `${px}px`;
-	stackEl.style.maxHeight = `${px}px`;
-	stackEl.style.minHeight = `${px}px`;
+	applyStackBoxHeight(stackEl, px);
 	stackEl.dataset.contentMinHeight = String(required);
 }
 
@@ -514,33 +529,88 @@ function softenFillStackMinimums(bayStackEl) {
 	});
 }
 
+function scaleNonFillStacksToFit(bayStackEl, available) {
+	const stacks = [...getBayStacks(bayStackEl)].filter((stack) => !isStackFill(stack));
+	if (!stacks.length) return false;
+
+	const heights = stacks.map(
+		(stack) => parseFloat(stack.style.height) || stack.offsetHeight || MIN_FIT_STACK_PX,
+	);
+	const sum = heights.reduce((total, h) => total + h, 0);
+	if (sum <= 0) return false;
+
+	const needed = measureBayContentHeightRaw(bayStackEl);
+	if (needed <= available + 1) return false;
+
+	const scale = Math.max(0.05, available / needed);
+	stacks.forEach((stack, index) => {
+		applyStackBoxHeight(stack, heights[index] * scale);
+	});
+	return true;
+}
+
+function fitStackFontToBox(stackEl) {
+	const height = parseFloat(stackEl.style.height) || stackEl.clientHeight || 0;
+	if (height <= 0) {
+		stackEl.style.removeProperty("--stack-font-size");
+		stackEl.style.removeProperty("font-size");
+		return;
+	}
+
+	const lines = Math.max(1, countStackTextLines(stackEl));
+	const padY = 6;
+	const gap = 1;
+	const avail = Math.max(STACK_FONT_MIN_PX, height - padY - (lines - 1) * gap);
+	const perLine = avail / lines;
+	const maxPx = stackEl.classList.contains("hay-stack--full")
+		? STACK_FONT_MAX_FULL_PX
+		: STACK_FONT_MAX_PX;
+	let fontPx = Math.floor(perLine / 1.15);
+	fontPx = Math.max(STACK_FONT_MIN_PX, Math.min(maxPx, fontPx));
+
+	stackEl.style.setProperty("--stack-font-size", `${fontPx}px`);
+	stackEl.style.fontSize = `${fontPx}px`;
+
+	const width = stackEl.clientWidth || 0;
+	if (width <= 0) return;
+
+	const textEls = [
+		...stackEl.querySelectorAll(
+			".hay-stack__type, .hay-stack__contract, .hay-stack__grade, .hay-stack__count, .hay-stack__comment",
+		),
+	].filter((el) => !el.hidden && !el.hasAttribute("hidden") && String(el.textContent || "").trim());
+
+	for (let guard = 0; guard < 6; guard++) {
+		const overflows = textEls.some((el) => el.scrollWidth > el.clientWidth + 1);
+		if (!overflows || fontPx <= STACK_FONT_MIN_PX) break;
+		fontPx -= 0.5;
+		stackEl.style.setProperty("--stack-font-size", `${fontPx}px`);
+		stackEl.style.fontSize = `${fontPx}px`;
+	}
+}
+
+function fitAllStackFontsInBay(bayStackEl) {
+	[...getBayStacks(bayStackEl)].forEach((stack) => fitStackFontToBox(stack));
+}
+
 function compressBayStacksToFit(bayStackEl) {
 	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
 
-	const stacks = [...getBayStacks(bayStackEl)];
-	const hasFill = stacks.some(isStackFill);
+	const hasFill = [...getBayStacks(bayStackEl)].some(isStackFill);
 	const available = bayStackEl.clientHeight;
+
+	if (hasFill) softenFillStackMinimums(bayStackEl);
 
 	let needed = measureBayContentHeightRaw(bayStackEl);
 	if (needed <= available + 1) return;
 
-	if (hasFill) {
-		softenFillStackMinimums(bayStackEl);
-		needed = measureBayContentHeightRaw(bayStackEl);
-		if (needed <= available + 1) return;
-	}
-
-	for (let pass = 0; pass < 3; pass++) {
+	for (let pass = 0; pass < 4; pass++) {
 		needed = measureBayContentHeightRaw(bayStackEl);
 		if (needed <= available + 1) return;
 
-		const scale = Math.max(0.08, available / needed);
-		scaleStackAreaBudgets(bayStackEl, scale);
-		applyAllStackHeights(bayStackEl);
-		stacks.forEach((stack) => {
-			if (!isStackFill(stack)) lockNonFillStackHeight(stack);
-		});
 		if (hasFill) softenFillStackMinimums(bayStackEl);
+		const scaled = scaleNonFillStacksToFit(bayStackEl, available);
+		if (!scaled) break;
 	}
 }
 
@@ -569,7 +639,7 @@ function expandFillStacksToFreeSpace(bayStackEl) {
 	let used = getVerticalStackGaps(directStacks.length);
 	if (isleHasStacks && directStacks.length) used += LAYOUT.stackGap;
 	directNonFill.forEach((stack) => {
-		used += stack.offsetHeight || parseFloat(stack.dataset.contentMinHeight) || 0;
+		used += stack.offsetHeight || parseFloat(stack.style.height) || 0;
 	});
 	used += isleBlock;
 
@@ -583,29 +653,23 @@ function expandFillStacksToFreeSpace(bayStackEl) {
 		const isleNonFill = isleStacks.filter((stack) => !isStackFill(stack));
 		let isleUsed = getVerticalStackGaps(isleStacks.length);
 		isleNonFill.forEach((stack) => {
-			isleUsed += stack.offsetHeight || parseFloat(stack.dataset.contentMinHeight) || 0;
+			isleUsed += stack.offsetHeight || parseFloat(stack.style.height) || 0;
 		});
 		const isleInner = Math.max(0, isleEl.clientHeight || 0);
-		const isleRemaining = Math.max(LAYOUT.minStack, isleInner - isleUsed);
+		const isleRemaining = Math.max(MIN_FIT_STACK_PX, isleInner - isleUsed);
 		const eachIsle = Math.floor(isleRemaining / isleFills.length);
 		isleFills.forEach((stack) => {
-			const px = Math.max(LAYOUT.minStack, eachIsle);
-			stack.style.height = `${px}px`;
-			stack.style.minHeight = `${px}px`;
-			stack.style.maxHeight = `${px}px`;
+			applyStackBoxHeight(stack, eachIsle);
 			stack.style.marginTop = "0";
 		});
 	});
 
 	if (!directFill.length) return;
 
-	const remaining = Math.max(LAYOUT.minStack, inner - used);
+	const remaining = Math.max(MIN_FIT_STACK_PX, inner - used);
 	const each = Math.floor(remaining / directFill.length);
 	directFill.forEach((stack) => {
-		const px = Math.max(LAYOUT.minStack, each);
-		stack.style.height = `${px}px`;
-		stack.style.minHeight = `${px}px`;
-		stack.style.maxHeight = `${px}px`;
+		applyStackBoxHeight(stack, each);
 		stack.style.marginTop = "0";
 	});
 }
@@ -616,6 +680,8 @@ function finalizeBayStackLayout(bayStackEl) {
 		stack.style.removeProperty("height");
 		stack.style.removeProperty("max-height");
 		stack.style.removeProperty("margin-top");
+		stack.style.removeProperty("font-size");
+		stack.style.removeProperty("--stack-font-size");
 		delete stack.dataset.contentMinHeight;
 	});
 	syncFillLayoutClasses(bayStackEl);
@@ -626,9 +692,20 @@ function finalizeBayStackLayout(bayStackEl) {
 	});
 	compressBayStacksToFit(bayStackEl);
 	expandFillStacksToFreeSpace(bayStackEl);
+
+	const available = bayStackEl.clientHeight;
+	if (measureBayContentHeightRaw(bayStackEl) > available + 1) {
+		compressBayStacksToFit(bayStackEl);
+		expandFillStacksToFreeSpace(bayStackEl);
+	}
+
+	fitAllStackFontsInBay(bayStackEl);
 }
 
 function getStackAbsoluteHeightPx(stack, bayStackEl) {
+	const styleHeight = parseFloat(stack.style.height) || 0;
+	if (styleHeight > 0) return styleHeight;
+
 	const bales = parseInt(stack.dataset.bales, 10) || 0;
 	const isle = stack.dataset.isle || "both";
 	const locationId = getBayStackLocationId(bayStackEl);
@@ -639,7 +716,8 @@ function getStackAbsoluteHeightPx(stack, bayStackEl) {
 	const minHeight = parseFloat(stack.dataset.contentMinHeight) || 0;
 
 	if (isStackFill(stack)) {
-		return Math.max(pctHeight, minHeight);
+		const styleMin = parseFloat(stack.style.minHeight) || 0;
+		return Math.max(pctHeight, minHeight, styleMin);
 	}
 
 	const actualHeight = stack.offsetHeight || 0;
