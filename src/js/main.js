@@ -320,7 +320,6 @@ function requiresAuthGate() {
 }
 
 function redirectToLoginGate({ denied = false } = {}) {
-	clearSessionToken();
 	const leaveKey = "hayshed.leaveApp";
 
 	try {
@@ -331,14 +330,17 @@ function redirectToLoginGate({ denied = false } = {}) {
 	const target = denied
 		? `${LOGIN_PATH}?error=unauthorized`
 		: `${LOGIN_PATH}?signedout=1`;
-	window.location.replace(target);
+
+	void clearSessionToken().finally(() => {
+		window.location.replace(target);
+	});
 }
 
 async function refreshSessionCookie(force = false) {
 	const user = auth.currentUser;
 	if (!user) return;
 	try {
-		setSessionToken(await user.getIdToken(force));
+		await setSessionToken(await user.getIdToken(force));
 	} catch (err) {
 		console.error("Session cookie refresh failed:", err);
 	}
@@ -2985,15 +2987,18 @@ function closeAuthModal() {
 function initAuthUI() {
 	document.getElementById("authBtn")?.addEventListener("click", () => {
 		if (isAuthenticated) {
-			clearSessionToken();
 			try {
 				localStorage.removeItem("hayshed.wasAuthed");
 			} catch {
 			}
-			logout(auth)
-				.catch((err) => console.error("Sign out error:", err))
+			void clearSessionToken()
+				.catch(() => {})
 				.finally(() => {
-					redirectToLoginGate();
+					logout(auth)
+						.catch((err) => console.error("Sign out error:", err))
+						.finally(() => {
+							redirectToLoginGate();
+						});
 				});
 		} else if (REQUIRE_AUTH) {
 			redirectToLoginGate();
@@ -3751,9 +3756,12 @@ async function startApp() {
 
 	onIdTokenChanged(auth, (user) => {
 		if (!user) return;
-		void user.getIdToken().then(setSessionToken).catch((err) => {
-			console.error("Session cookie refresh failed:", err);
-		});
+		void user
+			.getIdToken()
+			.then((token) => setSessionToken(token))
+			.catch((err) => {
+				console.error("Session cookie refresh failed:", err);
+			});
 	});
 
 	const keepSessionFresh = () => {

@@ -100,6 +100,7 @@ const cleanHashedAssets = () => {
 const SESSION_COOKIE = "hayshed_id";
 
 function isAlwaysPublicDevPath(pathname) {
+	if (pathname === "/api/session") return true;
 	if (/^\/js\/login-gate(?:-[a-zA-Z0-9]+)?\.js$/.test(pathname)) return true;
 	if (pathname.startsWith("/favicon")) return true;
 	if (pathname === "/sw.js") return true;
@@ -112,6 +113,92 @@ function isAlwaysPublicDevPath(pathname) {
 		return true;
 	}
 	return false;
+}
+
+function readRequestBody(req) {
+	return new Promise((resolve, reject) => {
+		const chunks = [];
+		req.on("data", (chunk) => chunks.push(chunk));
+		req.on("end", () => resolve(Buffer.concat(chunks).toString("utf8")));
+		req.on("error", reject);
+	});
+}
+
+async function sessionApiDev(req, res, next) {
+	const raw = req.url || "/";
+	const qIndex = raw.indexOf("?");
+	const pathname = qIndex === -1 ? raw : raw.slice(0, qIndex);
+	if (pathname !== "/api/session") {
+		next();
+		return;
+	}
+
+	const secure = "";
+	const clearCookie = `${SESSION_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
+
+	if (req.method === "OPTIONS") {
+		res.writeHead(204, {
+			Allow: "POST, DELETE, OPTIONS",
+			"Cache-Control": "no-store",
+		});
+		res.end();
+		return;
+	}
+
+	if (req.method === "DELETE") {
+		res.writeHead(200, {
+			"Content-Type": "application/json; charset=utf-8",
+			"Cache-Control": "no-store",
+			"Set-Cookie": clearCookie,
+		});
+		res.end(JSON.stringify({ ok: true }));
+		return;
+	}
+
+	if (req.method !== "POST") {
+		res.writeHead(405, {
+			"Content-Type": "application/json; charset=utf-8",
+			"Cache-Control": "no-store",
+		});
+		res.end(JSON.stringify({ ok: false, error: "method_not_allowed" }));
+		return;
+	}
+
+	try {
+		const rawBody = await readRequestBody(req);
+		const body = rawBody ? JSON.parse(rawBody) : {};
+		if (body.restore === true) {
+			res.writeHead(503, {
+				"Content-Type": "application/json; charset=utf-8",
+				"Cache-Control": "no-store",
+			});
+			res.end(JSON.stringify({ ok: false, error: "restore_unavailable" }));
+			return;
+		}
+		const idToken = typeof body.idToken === "string" ? body.idToken : "";
+		if (!idToken) {
+			res.writeHead(400, {
+				"Content-Type": "application/json; charset=utf-8",
+				"Cache-Control": "no-store",
+			});
+			res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+			return;
+		}
+
+		const maxAge = 60 * 60 * 24 * 30;
+		res.writeHead(200, {
+			"Content-Type": "application/json; charset=utf-8",
+			"Cache-Control": "no-store",
+			"Set-Cookie": `${SESSION_COOKIE}=${encodeURIComponent(idToken)}; Path=/; Max-Age=${maxAge}; SameSite=Lax${secure}`,
+		});
+		res.end(JSON.stringify({ ok: true }));
+	} catch {
+		res.writeHead(400, {
+			"Content-Type": "application/json; charset=utf-8",
+			"Cache-Control": "no-store",
+		});
+		res.end(JSON.stringify({ ok: false, error: "invalid_body" }));
+	}
 }
 
 function hasDevSessionCookie(req) {
@@ -349,7 +436,7 @@ const watchFiles = () => {
 	browserSync.init({
 		server: {
 			baseDir: "./dist",
-			middleware: [protectDevAssets],
+			middleware: [sessionApiDev, protectDevAssets],
 		},
 		open: false,
 		notify: false,

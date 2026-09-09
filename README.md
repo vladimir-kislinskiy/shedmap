@@ -107,6 +107,8 @@ The repo includes `netlify.toml` — Netlify will run `npm run build` and publis
    - `FIREBASE_STORAGE_BUCKET`
    - `FIREBASE_MESSAGING_SENDER_ID`
    - `FIREBASE_APP_ID`
+   - `SESSION_SECRET` (long random string; 30-day HttpOnly session cookie)
+   - `FIREBASE_SERVICE_ACCOUNT` (service account JSON; silent Firebase restore on iPhone PWA)
 
 3. Push to `main` — deploy runs on every push.
 4. Add `shedmap.netlify.app` (or your custom domain) to **Firebase → Authentication → Settings → Authorized domains**.

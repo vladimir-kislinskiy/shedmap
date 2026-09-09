@@ -1,13 +1,20 @@
 import { initializeApp } from "firebase/app";
 import {
+	browserLocalPersistence,
 	getAuth,
+	indexedDBLocalPersistence,
+	initializeAuth,
 	onAuthStateChanged,
+	setPersistence,
+	signInWithCustomToken,
 	signInWithEmailAndPassword,
 	signOut,
 } from "firebase/auth";
 import { getFirebaseConfig } from "./firebase-config.js";
 import {
 	clearSessionToken,
+	fetchFirebaseCustomToken,
+	requestPersistentStorage,
 	setSessionToken,
 } from "./session.js";
 
@@ -39,6 +46,16 @@ function readEnterAttempts() {
 	return Number.isFinite(n) && n > 0 ? n : 0;
 }
 
+function createAuth(app) {
+	try {
+		return initializeAuth(app, {
+			persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+		});
+	} catch {
+		return getAuth(app);
+	}
+}
+
 function initLoginGate() {
 	const form = document.getElementById("loginForm");
 	const emailEl = document.getElementById("loginEmail");
@@ -50,9 +67,10 @@ function initLoginGate() {
 	const wasSignedOut = params.get("signedout") === "1";
 	let blockAutoEnter = wasDenied || wasSignedOut;
 	let enterStarted = false;
+	let restoreTried = false;
 
 	if (wasDenied) {
-		clearSessionToken();
+		void clearSessionToken();
 		sessionStorage.removeItem(ENTER_ONCE_KEY);
 		sessionStorage.setItem(LEAVE_APP_KEY, "1");
 		try {
@@ -86,13 +104,16 @@ function initLoginGate() {
 	}
 
 	const app = initializeApp(getFirebaseConfig());
-	const auth = getAuth(app);
+	const auth = createAuth(app);
+	void setPersistence(auth, indexedDBLocalPersistence).catch(() =>
+		setPersistence(auth, browserLocalPersistence).catch(() => {}),
+	);
 
 	if (wasDenied || wasSignedOut) {
 		void signOut(auth)
 			.catch(() => {})
 			.finally(() => {
-				clearSessionToken();
+				void clearSessionToken();
 			});
 	}
 
@@ -102,7 +123,7 @@ function initLoginGate() {
 		const attempts = readEnterAttempts();
 		if (attempts >= MAX_ENTER_ATTEMPTS) {
 			sessionStorage.removeItem(ENTER_ONCE_KEY);
-			clearSessionToken();
+			await clearSessionToken();
 			setGateBusy(false, "Sign In");
 			showError("Sign-in could not open the app. Please try again.");
 			return;
@@ -112,7 +133,8 @@ function initLoginGate() {
 		setGateBusy(true, "Opening…");
 		try {
 			const token = await user.getIdToken(true);
-			setSessionToken(token);
+			await setSessionToken(token);
+			await requestPersistentStorage();
 			sessionStorage.setItem(ENTER_ONCE_KEY, String(attempts + 1));
 			sessionStorage.removeItem(LEAVE_APP_KEY);
 			try {
@@ -124,22 +146,45 @@ function initLoginGate() {
 			console.error("Session restore error:", err);
 			enterStarted = false;
 			sessionStorage.removeItem(ENTER_ONCE_KEY);
-			clearSessionToken();
+			await clearSessionToken();
 			setGateBusy(false, "Sign In");
 			showError("Could not restore session. Please sign in.");
+		}
+	}
+
+	async function tryRestoreFromCookie() {
+		if (blockAutoEnter || restoreTried || auth.currentUser) return false;
+		restoreTried = true;
+		setGateBusy(true, "Opening…");
+		try {
+			const customToken = await fetchFirebaseCustomToken();
+			if (!customToken) {
+				setGateBusy(false, "Sign In");
+				return false;
+			}
+			const cred = await signInWithCustomToken(auth, customToken);
+			await enterApp(cred.user);
+			return true;
+		} catch (err) {
+			console.error("Cookie session restore failed:", err);
+			setGateBusy(false, "Sign In");
+			return false;
 		}
 	}
 
 	onAuthStateChanged(auth, (user) => {
 		if (!user || blockAutoEnter) {
 			if (!user && !blockAutoEnter) {
-				try {
-					if (localStorage.getItem(WAS_AUTHED_KEY) === "1") {
-						localStorage.removeItem(WAS_AUTHED_KEY);
+				void tryRestoreFromCookie().then((restored) => {
+					if (restored) return;
+					try {
+						if (localStorage.getItem(WAS_AUTHED_KEY) === "1") {
+							localStorage.removeItem(WAS_AUTHED_KEY);
+						}
+					} catch {
 					}
-				} catch {
-				}
-				setGateBusy(false, "Sign In");
+					setGateBusy(false, "Sign In");
+				});
 			}
 			return;
 		}
@@ -159,6 +204,7 @@ function initLoginGate() {
 		showError("");
 		blockAutoEnter = false;
 		enterStarted = false;
+		restoreTried = true;
 		sessionStorage.removeItem(ENTER_ONCE_KEY);
 		sessionStorage.removeItem(LEAVE_APP_KEY);
 		setGateBusy(true, "Signing in…");

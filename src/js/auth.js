@@ -1,4 +1,15 @@
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "firebase/auth";
+import {
+	browserLocalPersistence,
+	getAuth,
+	indexedDBLocalPersistence,
+	initializeAuth,
+	onAuthStateChanged,
+	setPersistence,
+	signInWithCustomToken,
+	signInWithEmailAndPassword,
+	signOut,
+} from "firebase/auth";
+import { clearSessionToken, fetchFirebaseCustomToken, requestPersistentStorage } from "./session.js";
 
 export const REQUIRE_AUTH = true;
 
@@ -28,6 +39,39 @@ export const AUTH_USERS = {
 };
 
 let currentSession = null;
+let restoreInFlight = null;
+let suppressRestore = false;
+
+function createAuth(app) {
+	try {
+		return initializeAuth(app, {
+			persistence: [indexedDBLocalPersistence, browserLocalPersistence],
+		});
+	} catch {
+		return getAuth(app);
+	}
+}
+
+async function tryRestoreFirebaseUser(auth) {
+	if (suppressRestore || auth.currentUser) return false;
+	if (!restoreInFlight) {
+		restoreInFlight = (async () => {
+			const customToken = await fetchFirebaseCustomToken();
+			if (!customToken || suppressRestore) return false;
+			await signInWithCustomToken(auth, customToken);
+			await requestPersistentStorage();
+			return true;
+		})().finally(() => {
+			restoreInFlight = null;
+		});
+	}
+	try {
+		return await restoreInFlight;
+	} catch (err) {
+		console.error("Session restore failed:", err);
+		return false;
+	}
+}
 
 export function getCurrentSession() {
 	return currentSession;
@@ -61,10 +105,22 @@ export function isAdminUser(email) {
 }
 
 export function initAuth(app, onAuthChange) {
-	const auth = getAuth(app);
+	const auth = createAuth(app);
+	void setPersistence(auth, indexedDBLocalPersistence).catch(() =>
+		setPersistence(auth, browserLocalPersistence).catch(() => {}),
+	);
 
 	onAuthStateChanged(auth, (user) => {
-		if (user) {
+		void (async () => {
+			if (!user) {
+				const restored = await tryRestoreFirebaseUser(auth);
+				if (restored || auth.currentUser) return;
+
+				currentSession = null;
+				onAuthChange(false, null, null);
+				return;
+			}
+
 			const record = getUserRecord(user.email);
 			if (record) {
 				currentSession = {
@@ -72,27 +128,32 @@ export function initAuth(app, onAuthChange) {
 					name: record.name,
 					role: record.role,
 				};
+				void requestPersistentStorage();
 				onAuthChange(true, record.name, user.email);
 			} else {
 				currentSession = null;
-				signOut(auth).finally(() => {
-					onAuthChange(false, null, null, { denied: true });
-				});
+				suppressRestore = true;
+				void clearSessionToken()
+					.catch(() => {})
+					.finally(() => {
+						signOut(auth).finally(() => {
+							onAuthChange(false, null, null, { denied: true });
+						});
+					});
 			}
-		} else {
-			currentSession = null;
-			onAuthChange(false, null, null);
-		}
+		})();
 	});
 
 	return auth;
 }
 
 export function login(auth, email, password) {
+	suppressRestore = false;
 	return signInWithEmailAndPassword(auth, email.trim(), password);
 }
 
 export function logout(auth) {
 	currentSession = null;
+	suppressRestore = true;
 	return signOut(auth);
 }

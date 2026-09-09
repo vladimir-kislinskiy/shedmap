@@ -34,10 +34,13 @@ Temporary emergency account: `logistic@barr-ag.com` (role **user** — change pa
 |------|------|
 | `src/index.html` + `login-gate.js` | Public login only (inline CSS, contact Vlad) |
 | `src/app.html` + `app.js` | Full app (edge-protected) |
-| Cookie `hayshed_id` | Firebase ID token, set on login |
-| `protect-app.ts` | Verifies JWT against `FIREBASE_PROJECT_ID` + email allowlist; fail-closed if env missing |
-| `REQUIRE_AUTH = true` | Client redirect to `/` if session lost |
+| Cookie `hayshed_id` | **HttpOnly** app session JWT (~30 days), issued by `/api/session` after Firebase ID token verify |
+| `session-api.ts` | `POST { idToken }` → set cookie; `POST { restore:true }` → Firebase custom token; `DELETE` → clear |
+| `protect-app.ts` | Accepts app session JWT **or** (legacy) Firebase ID token; email allowlist |
+| `REQUIRE_AUTH = true` | Client restore via custom token when IndexedDB was wiped (common on iPhone PWA) |
 | Locked RTDB rules | No anonymous data |
+
+Why iPhone PWAs re-prompted login: the old cookie stored a Firebase **ID token** (~1 hour). Edge rejected it after expiry. Desktop/iPad often restored Auth from IndexedDB; iPhone home-screen WebKit clears that storage aggressively, so users saw the login screen again. Fix: long-lived HttpOnly session + silent Firebase restore via service-account custom token.
 
 ---
 
@@ -49,7 +52,16 @@ Create each email from `AUTH_USERS` (Authentication → Users).
 
 ### 2. Netlify env
 
-Same `FIREBASE_*` as build. **`FIREBASE_PROJECT_ID` must be set** — without it the edge function rejects all app access (fail-closed).
+Same `FIREBASE_*` as build. **`FIREBASE_PROJECT_ID` must be set**.
+
+Also set:
+
+| Var | Purpose |
+|-----|---------|
+| **`SESSION_SECRET`** | Long random string (32+ chars). Signs the 30-day HttpOnly cookie. |
+| **`FIREBASE_SERVICE_ACCOUNT`** | Full service account JSON (one line). Mints custom tokens so iPhone PWA can reopen without the login form after WebKit wipes IndexedDB. |
+
+Without these, login still works, but iPhone may ask for password again on every cold start.
 
 ### 3. Deploy frontend (includes edge function)
 
