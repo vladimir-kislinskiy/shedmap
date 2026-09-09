@@ -12,3 +12,4 @@ shedmap/
 .tools/
 secrets/
 *.credentials.md
+.cursor/
