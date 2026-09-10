@@ -805,7 +805,7 @@ body.page--dragging .shed__bay-exit {
 }
 
 .hay-stack {
-	--stack-font-size: 0.65rem;
+	--stack-font-size: 0.58rem;
 	height: auto;
 	flex-shrink: 0;
 	padding: 5px 6px;
@@ -822,7 +822,7 @@ body.page--dragging .shed__bay-exit {
 	align-items: center;
 	gap: 2px;
 	font-size: var(--stack-font-size);
-	line-height: 1.15;
+	line-height: 1.2;
 	min-height: calc(
 		var(--stack-height, 9.6) * var(--stack-area-height, 500px) / 100
 	);
@@ -904,7 +904,7 @@ body.page--dragging .shed__bay-exit {
 	width: 100%;
 	flex-shrink: 0;
 	align-self: stretch;
-	font-size: calc(var(--stack-font-size) * 1.2);
+	font-size: var(--stack-font-size);
 }
 
 .hay-stack--fill,
@@ -1140,10 +1140,10 @@ body.page--dragging .shed__bay-stack {
 	row-gap: 1px;
 	width: 100%;
 	max-width: 100%;
-	margin-top: 4px;
+	margin-top: 0;
 	font-size: inherit;
 	font-weight: inherit;
-	line-height: 1.15;
+	line-height: 1.2;
 	text-align: center;
 	flex-shrink: 0;
 }
@@ -1182,6 +1182,7 @@ body.page--dragging .shed__bay-stack {
 	font-size: 1em;
 	line-height: 1.2;
 	margin-top: 0;
+	padding-top: 0;
 }
 
 .reports__summary {

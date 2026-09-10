@@ -458,35 +458,43 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 	});
 }
 
-const MIN_FIT_STACK_PX = 16;
-const STACK_FONT_MAX_PX = 10.4;
-const STACK_FONT_MAX_FULL_PX = 12.5;
+const MIN_FIT_STACK_PX = 18;
+const STACK_FONT_MAX_PX = 9.2;
+const STACK_FONT_MAX_FULL_PX = 11;
 const STACK_FONT_MIN_PX = 5;
+const STACK_PAD_Y = 10;
+const STACK_LINE_GAP = 2;
+const STACK_LINE_HEIGHT = 1.2;
+
+function getVisibleStackTextEls(stackEl) {
+	return [
+		...stackEl.querySelectorAll(
+			".hay-stack__type, .hay-stack__contract, .hay-stack__grade, .hay-stack__count, .hay-stack__comment",
+		),
+	].filter((el) => !el.hidden && !el.hasAttribute("hidden") && String(el.textContent || "").trim());
+}
 
 function countStackTextLines(stackEl) {
 	let lines = 0;
-	stackEl
-		.querySelectorAll(
-			".hay-stack__type, .hay-stack__contract, .hay-stack__grade, .hay-stack__count, .hay-stack__comment",
-		)
-		.forEach((el) => {
-			if (el.hidden || el.hasAttribute("hidden")) return;
-			if (!String(el.textContent || "").trim()) return;
-			lines += 1;
-		});
+	getVisibleStackTextEls(stackEl).forEach((el) => {
+		if (el.classList.contains("hay-stack__comment")) {
+			const words = [...el.querySelectorAll(".hay-stack__comment-word")].filter(
+				(word) => !word.hidden && !word.hasAttribute("hidden") && String(word.textContent || "").trim(),
+			);
+			lines += Math.max(1, words.length || 1);
+			return;
+		}
+		lines += 1;
+	});
 	return lines;
 }
 
 function estimateStackRequiredHeight(stackEl) {
-	const baseLine = 12;
-	const pad = 10;
-	const gap = 2;
-	const scale = stackEl.classList.contains("hay-stack--full") ? 1.2 : 1;
-	const line = baseLine * scale;
-	const lines = countStackTextLines(stackEl);
-
-	if (lines <= 0) return Math.ceil(pad + line);
-	return Math.ceil(pad + lines * line + Math.max(0, lines - 1) * gap);
+	const scale = stackEl.classList.contains("hay-stack--full") ? 1.15 : 1;
+	const fontPx = (stackEl.classList.contains("hay-stack--full") ? STACK_FONT_MAX_FULL_PX : STACK_FONT_MAX_PX) * scale;
+	const line = fontPx * STACK_LINE_HEIGHT;
+	const lines = Math.max(1, countStackTextLines(stackEl));
+	return Math.ceil(STACK_PAD_Y + lines * line + Math.max(0, lines - 1) * STACK_LINE_GAP + 4);
 }
 
 function applyStackBoxHeight(stackEl, px) {
@@ -549,48 +557,97 @@ function scaleNonFillStacksToFit(bayStackEl, available) {
 	return true;
 }
 
+function stackTextOverflowsBox(stackEl) {
+	if (stackEl.scrollHeight > stackEl.clientHeight + 1) return true;
+	const desc = stackEl.querySelector(".hay-stack__desc");
+	if (desc && desc.scrollHeight > stackEl.clientHeight - STACK_PAD_Y + 1) return true;
+	return getVisibleStackTextEls(stackEl).some((el) => el.scrollWidth > el.clientWidth + 1);
+}
+
+function applyStackFontSize(stackEl, fontPx) {
+	const px = Math.round(fontPx * 10) / 10;
+	stackEl.style.setProperty("--stack-font-size", `${px}px`);
+	stackEl.style.fontSize = `${px}px`;
+	return px;
+}
+
 function fitStackFontToBox(stackEl) {
 	const height = parseFloat(stackEl.style.height) || stackEl.clientHeight || 0;
 	if (height <= 0) {
 		stackEl.style.removeProperty("--stack-font-size");
 		stackEl.style.removeProperty("font-size");
-		return;
+		return STACK_FONT_MIN_PX;
 	}
 
 	const lines = Math.max(1, countStackTextLines(stackEl));
-	const padY = 6;
-	const gap = 1;
-	const avail = Math.max(STACK_FONT_MIN_PX, height - padY - (lines - 1) * gap);
+	const avail = Math.max(STACK_FONT_MIN_PX, height - STACK_PAD_Y - (lines - 1) * STACK_LINE_GAP);
 	const perLine = avail / lines;
 	const maxPx = stackEl.classList.contains("hay-stack--full")
 		? STACK_FONT_MAX_FULL_PX
 		: STACK_FONT_MAX_PX;
-	let fontPx = Math.floor(perLine / 1.15);
+	let fontPx = Math.floor((perLine / STACK_LINE_HEIGHT) * 10) / 10;
 	fontPx = Math.max(STACK_FONT_MIN_PX, Math.min(maxPx, fontPx));
+	applyStackFontSize(stackEl, fontPx);
 
-	stackEl.style.setProperty("--stack-font-size", `${fontPx}px`);
-	stackEl.style.fontSize = `${fontPx}px`;
-
-	const width = stackEl.clientWidth || 0;
-	if (width <= 0) return;
-
-	const textEls = [
-		...stackEl.querySelectorAll(
-			".hay-stack__type, .hay-stack__contract, .hay-stack__grade, .hay-stack__count, .hay-stack__comment",
-		),
-	].filter((el) => !el.hidden && !el.hasAttribute("hidden") && String(el.textContent || "").trim());
-
-	for (let guard = 0; guard < 6; guard++) {
-		const overflows = textEls.some((el) => el.scrollWidth > el.clientWidth + 1);
-		if (!overflows || fontPx <= STACK_FONT_MIN_PX) break;
-		fontPx -= 0.5;
-		stackEl.style.setProperty("--stack-font-size", `${fontPx}px`);
-		stackEl.style.fontSize = `${fontPx}px`;
+	for (let guard = 0; guard < 16; guard++) {
+		if (!stackTextOverflowsBox(stackEl) || fontPx <= STACK_FONT_MIN_PX) break;
+		fontPx = Math.max(STACK_FONT_MIN_PX, fontPx - 0.5);
+		applyStackFontSize(stackEl, fontPx);
 	}
+
+	return fontPx;
+}
+
+function growStackToFitText(stackEl) {
+	if (!stackEl || isStackFill(stackEl)) return false;
+
+	const fontPx = fitStackFontToBox(stackEl);
+	if (!stackTextOverflowsBox(stackEl)) return false;
+
+	const current = parseFloat(stackEl.style.height) || stackEl.clientHeight || 0;
+	const content = Math.max(
+		stackEl.scrollHeight || 0,
+		(stackEl.querySelector(".hay-stack__desc")?.scrollHeight || 0) + STACK_PAD_Y,
+	);
+	const needed = Math.ceil(Math.max(current + 2, content + 2, estimateStackRequiredHeight(stackEl)));
+	if (needed <= current + 1) {
+		if (fontPx > STACK_FONT_MIN_PX) applyStackFontSize(stackEl, STACK_FONT_MIN_PX);
+		return false;
+	}
+
+	applyStackBoxHeight(stackEl, needed);
+	fitStackFontToBox(stackEl);
+	return true;
 }
 
 function fitAllStackFontsInBay(bayStackEl) {
 	[...getBayStacks(bayStackEl)].forEach((stack) => fitStackFontToBox(stack));
+}
+
+function ensureBayStackTextFits(bayStackEl) {
+	let grew = false;
+	[...getBayStacks(bayStackEl)].forEach((stack) => {
+		if (growStackToFitText(stack)) grew = true;
+	});
+
+	const reflowIfNeeded = () => {
+		if (measureBayContentHeightRaw(bayStackEl) <= bayStackEl.clientHeight + 1) return;
+		compressBayStacksToFit(bayStackEl);
+		expandFillStacksToFreeSpace(bayStackEl);
+		fitAllStackFontsInBay(bayStackEl);
+	};
+
+	if (grew) reflowIfNeeded();
+
+	[...getBayStacks(bayStackEl)].forEach((stack) => {
+		fitStackFontToBox(stack);
+		if (!stackTextOverflowsBox(stack)) return;
+		applyStackFontSize(stack, STACK_FONT_MIN_PX);
+		fitStackFontToBox(stack);
+		if (stackTextOverflowsBox(stack) && growStackToFitText(stack)) grew = true;
+	});
+
+	if (grew) reflowIfNeeded();
 }
 
 function compressBayStacksToFit(bayStackEl) {
@@ -700,6 +757,7 @@ function finalizeBayStackLayout(bayStackEl) {
 	}
 
 	fitAllStackFontsInBay(bayStackEl);
+	ensureBayStackTextFits(bayStackEl);
 }
 
 function getStackAbsoluteHeightPx(stack, bayStackEl) {
