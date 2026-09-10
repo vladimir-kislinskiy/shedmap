@@ -1680,20 +1680,6 @@ body.page--offline .inventory__form {
 	line-height: 1.4;
 	width: 100%;
 	background: transparent;
-
-	a.page__footer-link {
-		font-size: inherit;
-		color: var(--text-muted);
-		text-decoration: none;
-		font-weight: 600;
-		transition: color 0.3s ease;
-
-		&:hover,
-		&:focus-visible,
-		&:active {
-			color: var(--color-primary-hover);
-		}
-	}
 }
 
 .page__footer-copy {
