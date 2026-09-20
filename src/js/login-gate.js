@@ -123,7 +123,7 @@ function initLoginGate() {
 		const attempts = readEnterAttempts();
 		if (attempts >= MAX_ENTER_ATTEMPTS) {
 			sessionStorage.removeItem(ENTER_ONCE_KEY);
-			await clearSessionToken();
+			enterStarted = false;
 			setGateBusy(false, "Sign In");
 			showError("Sign-in could not open the app. Please try again.");
 			return;

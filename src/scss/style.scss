@@ -110,6 +110,19 @@ body {
 	gap: var(--tabs-gutter);
 }
 
+.page--shed-scroll .page__wrapper,
+.page--shed-scroll .page__main,
+.page--shed-scroll .page__content {
+	flex: 0 0 auto;
+	min-height: auto;
+	overflow: visible;
+}
+
+.page--shed-scroll .shed__columns {
+	overflow-y: visible;
+	height: auto;
+}
+
 h2,
 h3 {
 	font-family: var(--font-heading);
@@ -564,6 +577,13 @@ body.page--view-only .inventory__form {
 	overflow: visible;
 }
 
+.page--shed-scroll .shed-tabs__panel--active,
+.page--shed-scroll #Sheds {
+	flex: 0 0 auto;
+	min-height: auto;
+	overflow: visible;
+}
+
 .shed__columns {
 	display: flex;
 	justify-content: flex-start;
@@ -805,7 +825,7 @@ body.page--dragging .shed__bay-exit {
 }
 
 .hay-stack {
-	--stack-font-size: 0.58rem;
+	--stack-font-size: 0.68rem;
 	height: auto;
 	flex-shrink: 0;
 	padding: 5px 6px;

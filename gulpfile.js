@@ -13,8 +13,6 @@ const rev = require("gulp-rev");
 const revRewrite = require("gulp-rev-rewrite");
 const revDel = require("gulp-rev-delete-original");
 const notify = require("gulp-notify");
-const imagemin = require("gulp-imagemin");
-const webp = require("gulp-webp");
 const esbuild = require("esbuild");
 
 let isProduction = false;
@@ -299,19 +297,9 @@ const resources = () => {
 };
 
 const images = () => {
-	const raster = () =>
-		src([
-			"./src/img/*.{jpg,jpeg,png,webp}",
-			"./src/img/**/*.{jpg,jpeg,png,webp}",
-		])
-			.pipe(webp())
-			.pipe(imagemin())
-			.pipe(dest("./dist/img"));
-
-	const vectors = () =>
-		src(["./src/img/**/*.svg"]).pipe(dest("./dist/img"));
-
-	return Promise.all([raster(), vectors()]);
+	return src("./src/img/**/*.{jpg,jpeg,png,webp,svg}", { allowEmpty: true })
+		.pipe(dest("./dist/img"))
+		.pipe(browserSync.stream());
 };
 
 const htmlInclude = () => {
@@ -453,6 +441,8 @@ const watchFiles = () => {
 	watch("./src/img/**/*.{jpg,jpeg,png,svg,webp}", images);
 	watch("./src/img/svg/**.svg", images);
 	watch("./dist/rev.json", { ignoreInitial: true }, restoreDevAssets);
+
+	return new Promise(() => {});
 };
 
 exports.default = series(

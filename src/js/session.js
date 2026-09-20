@@ -41,7 +41,6 @@ export async function setSessionToken(idToken) {
 			body: JSON.stringify({ idToken }),
 		});
 		if (res.ok) {
-			clearClientReadableCookie();
 			return true;
 		}
 	} catch {
