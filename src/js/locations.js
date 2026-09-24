@@ -47,7 +47,7 @@ export const LOCATIONS = {
 		label: "Simply",
 		sheds: ["shed1", "shed2"],
 		bayCount: 13,
-		maxBalesPerBay: 1200,
+		maxBalesPerBay: 1000,
 		bayLabelSpan: 1,
 		shedBayStart: {
 			shed1: 1,

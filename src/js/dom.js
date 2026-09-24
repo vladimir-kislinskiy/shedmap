@@ -470,7 +470,7 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 
 const MIN_FIT_STACK_PX = 18;
 const STACK_FONT_MAX_PX = 11;
-const STACK_FONT_MAX_FULL_PX = 13;
+const STACK_FONT_MAX_FULL_PX = 11;
 const STACK_FONT_MIN_PX = 5.5;
 const STACK_PAD_Y = 8;
 const STACK_LINE_GAP = 2;
