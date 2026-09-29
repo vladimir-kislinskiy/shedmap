@@ -75,6 +75,9 @@ import {
 	syncAllShedLayoutsAfterPaint,
 	sanitizeCommentInput,
 	updateHayStack,
+	isShedScrollLayoutPreferred,
+	setShedScrollLayoutPreferred,
+	setAllowShedScrollPref,
 } from "./dom.js";
 
 if (location.pathname === "/app.html" || location.pathname === "/app") {
@@ -2858,6 +2861,7 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 
 	setEditMode(authenticated, person, email);
 	updateAuthUI(authenticated, person);
+	syncShedLayoutToggleUI(authenticated, email);
 	syncAdminBackupUI(authenticated, email);
 	refreshAuthGate();
 
@@ -2895,6 +2899,51 @@ function updateAuthUI(authenticated, person) {
 		authBtn.classList.add("auth-action--sign-in");
 		authBtn.classList.remove("auth-action--sign-out");
 	}
+}
+
+function syncShedLayoutToggleUI(authenticated, email) {
+	const toggle = document.getElementById("shedLayoutScrollSwitch");
+	if (!toggle) return;
+
+	const allowed = Boolean(authenticated && isAdminUser(email));
+	setAllowShedScrollPref(allowed);
+	toggle.hidden = !allowed;
+
+	if (!allowed) {
+		toggle.setAttribute("aria-checked", "false");
+		toggle.setAttribute("aria-label", "Switch to scrollable shed layout");
+		toggle.title = "Layout: fit to screen";
+		syncAllShedLayoutsAfterPaint();
+		return;
+	}
+
+	const scrollOn = isShedScrollLayoutPreferred();
+	toggle.setAttribute("aria-checked", scrollOn ? "true" : "false");
+	toggle.setAttribute(
+		"aria-label",
+		scrollOn ? "Switch to fit-to-screen shed layout" : "Switch to scrollable shed layout",
+	);
+	toggle.title = scrollOn ? "Layout: scroll" : "Layout: fit to screen";
+	syncAllShedLayoutsAfterPaint();
+}
+
+function initShedLayoutToggle() {
+	const toggle = document.getElementById("shedLayoutScrollSwitch");
+	if (!toggle || toggle.dataset.bound === "1") return;
+	toggle.dataset.bound = "1";
+
+	toggle.addEventListener("click", () => {
+		if (toggle.hidden) return;
+		const next = toggle.getAttribute("aria-checked") !== "true";
+		setShedScrollLayoutPreferred(next);
+		toggle.setAttribute("aria-checked", next ? "true" : "false");
+		toggle.setAttribute(
+			"aria-label",
+			next ? "Switch to fit-to-screen shed layout" : "Switch to scrollable shed layout",
+		);
+		toggle.title = next ? "Layout: scroll" : "Layout: fit to screen";
+		syncAllShedLayouts();
+	});
 }
 
 function clearAuthFields() {
@@ -3745,6 +3794,7 @@ async function startApp() {
 	updateReportsTable(getCurrentLocation());
 	updateSyncBanner();
 	initCrmTheme();
+	initShedLayoutToggle();
 	initMobileInputScrollFix();
 	initStackDetailModal();
 	initPwa();
