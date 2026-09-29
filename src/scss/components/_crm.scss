@@ -341,38 +341,49 @@
 	width: 100%;
 }
 
-.crm-sidebar__collapse {
+.crm-sidebar__auth {
 	display: flex;
 	align-items: center;
+	justify-content: space-between;
 	gap: 8px;
 	margin-top: auto;
 	padding: 10px 12px;
-	font-family: inherit;
-	font-weight: 600;
 	color: var(--text-muted);
 	background: var(--color-surface-muted);
 	border: 1px solid var(--border-color);
 	border-radius: var(--radius-sm);
-	cursor: pointer;
 }
 
-.crm-sidebar__collapse:hover {
-	background: var(--color-surface-hover);
+.crm-sidebar__user {
+	display: none;
+	min-width: 0;
+	flex: 1 1 auto;
+	font-size: var(--crm-sidebar-font-size);
+	font-weight: 600;
+	color: var(--text-main);
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	max-width: none;
 }
 
-.crm-sidebar__collapse-icon {
-	width: 14px;
-	height: 2px;
-	background: currentColor;
-	box-shadow:
-		0 -5px 0 currentColor,
-		0 5px 0 currentColor;
+.crm-sidebar__auth--authenticated .crm-sidebar__user {
+	display: inline;
+}
+
+.crm-sidebar__auth .auth-action {
+	width: 28px;
+	height: 28px;
+}
+
+.crm-sidebar__auth .auth-action__icon {
+	width: 16px;
+	height: 16px;
 }
 
 .theme-crm .crm-sidebar .location-tabs__btn,
 .theme-crm .crm-sidebar .inventory__isle-option,
-.theme-crm .crm-sidebar .inventory__reject-option,
-.theme-crm .crm-sidebar .crm-sidebar__collapse {
+.theme-crm .crm-sidebar .inventory__reject-option {
 	font-size: var(--crm-sidebar-font-size);
 }
 
@@ -475,20 +486,6 @@
 		height: 7px;
 	}
 
-	.theme-crm .layout-switch:not([hidden]) {
-		--layout-switch-w: 32px;
-		--layout-switch-h: 16px;
-		--layout-switch-pad: 2px;
-		--layout-switch-thumb: 12px;
-		width: var(--layout-switch-w);
-		height: var(--layout-switch-h);
-	}
-
-	.theme-crm .layout-switch__icon {
-		width: 7px;
-		height: 7px;
-	}
-
 	.theme-crm .crm-sidebar input.inventory__field {
 		font-size: var(--crm-sidebar-font-size);
 		-webkit-text-size-adjust: 100%;
@@ -551,7 +548,7 @@
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__track,
-.theme-crm.theme-dark .theme-switch__track {
+.theme-crm.theme-dark .theme-switch:not(.layout-switch) .theme-switch__track {
 	background: #3d4a5f;
 	border-color: #5a6a82;
 	box-shadow: none;
@@ -575,7 +572,7 @@
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__thumb,
-.theme-crm.theme-dark .theme-switch__thumb {
+.theme-crm.theme-dark .theme-switch:not(.layout-switch) .theme-switch__thumb {
 	transform: translate(
 		calc(
 			var(--theme-switch-w) - var(--theme-switch-thumb) - var(
@@ -611,116 +608,52 @@
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__icon--sun,
-.theme-crm.theme-dark .theme-switch__icon--sun {
+.theme-crm.theme-dark .theme-switch:not(.layout-switch) .theme-switch__icon--sun {
 	opacity: 0;
 	transform: rotate(90deg) scale(0.35);
 }
 
 .theme-crm .theme-switch[aria-checked="true"] .theme-switch__icon--moon,
-.theme-crm.theme-dark .theme-switch__icon--moon {
+.theme-crm.theme-dark .theme-switch:not(.layout-switch) .theme-switch__icon--moon {
 	opacity: 1;
 	transform: rotate(0deg) scale(1);
 	color: #4a5568;
 }
 
-.layout-switch {
-	display: none;
+.theme-crm .layout-switch[hidden] {
+	display: none !important;
 }
 
-.theme-crm .layout-switch:not([hidden]) {
-	--layout-switch-w: 34px;
-	--layout-switch-h: 18px;
-	--layout-switch-pad: 2px;
-	--layout-switch-thumb: 14px;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	flex: 0 0 auto;
-	width: var(--layout-switch-w);
-	height: var(--layout-switch-h);
-	padding: 0;
-	color: inherit;
-	background: transparent;
-	border: none;
-	border-radius: 999px;
-	cursor: pointer;
+.theme-crm.theme-dark .layout-switch .theme-switch__track {
+	background: #3d4a5f;
+	border-color: #5a6a82;
 }
 
-.theme-crm .layout-switch:focus-visible {
-	outline: none;
-	box-shadow: 0 0 0 3px var(--color-primary-focus);
+.theme-crm.theme-dark .layout-switch[aria-checked="true"] .theme-switch__track {
+	background: #4a5a73;
+	border-color: #6b7c96;
 }
 
-.layout-switch__track {
-	position: relative;
-	box-sizing: border-box;
-	display: block;
-	width: 100%;
-	height: 100%;
-	border-radius: inherit;
-	background: #e5e7eb;
-	border: 1px solid #d1d5db;
-	overflow: hidden;
-	transition: background-color 0.2s ease, border-color 0.2s ease;
+.theme-crm.theme-dark .layout-switch .theme-switch__thumb {
+	background: #e6eaf0;
+	border-color: #c5ced9;
 }
 
-.theme-crm .layout-switch[aria-checked="true"] .layout-switch__track {
-	background: #cbd5e1;
-	border-color: #94a3b8;
-}
-
-.theme-crm.theme-dark .layout-switch__track {
-	background: #334155;
-	border-color: #475569;
-}
-
-.theme-crm.theme-dark .layout-switch[aria-checked="true"] .layout-switch__track {
-	background: #475569;
-	border-color: #64748b;
-}
-
-.layout-switch__thumb {
-	position: absolute;
-	top: var(--layout-switch-pad);
-	left: var(--layout-switch-pad);
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	width: var(--layout-switch-thumb);
-	height: var(--layout-switch-thumb);
-	border-radius: 50%;
-	background: #fff;
-	box-shadow: 0 1px 2px rgba(15, 23, 42, 0.2);
-	transition: transform 0.2s ease;
-}
-
-.theme-crm .layout-switch[aria-checked="true"] .layout-switch__thumb {
-	transform: translateX(
-		calc(var(--layout-switch-w) - var(--layout-switch-thumb) - var(--layout-switch-pad) * 2)
-	);
-}
-
-.theme-crm.theme-dark .layout-switch__thumb {
-	background: #e2e8f0;
-}
-
-.layout-switch__icon {
-	position: absolute;
-	width: 10px;
-	height: 10px;
-	opacity: 0;
-	transform: scale(0.8);
-	transition: opacity 0.15s ease, transform 0.15s ease;
-}
-
-.layout-switch__icon--fit {
+.theme-crm .layout-switch .layout-switch__icon--fit {
+	color: #64748b;
 	opacity: 1;
 	transform: scale(1);
 }
 
+.theme-crm .layout-switch .layout-switch__icon--scroll {
+	color: #4a5568;
+	opacity: 0;
+	transform: scale(0.35);
+}
+
 .theme-crm .layout-switch[aria-checked="true"] .layout-switch__icon--fit {
 	opacity: 0;
-	transform: scale(0.8);
+	transform: scale(0.35);
 }
 
 .theme-crm .layout-switch[aria-checked="true"] .layout-switch__icon--scroll {
@@ -1009,7 +942,7 @@
 		box-shadow: 0 0 60px rgba(15, 23, 42, 0.28);
 	}
 
-	.theme-crm .crm-sidebar__collapse {
+	.theme-crm .crm-sidebar__auth {
 		margin-top: 28px;
 	}
 

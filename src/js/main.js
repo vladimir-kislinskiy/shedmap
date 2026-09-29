@@ -2784,8 +2784,7 @@ async function saveState(locationId = getCurrentLocation()) {
 function setInventoryControlsOpen(open) {
 	const locationId = getCurrentLocation();
 	const controls = loc("inventoryControls", locationId);
-	const toggleBtn = document.getElementById("toggleControls");
-	if (!controls || !toggleBtn) return;
+	if (!controls) return;
 
 	if (open && currentTab !== "Sheds") {
 		setActiveTab("Sheds");
@@ -2793,21 +2792,12 @@ function setInventoryControlsOpen(open) {
 
 	controls.hidden = !open;
 	controls.classList.toggle("inventory__form--hidden", !open);
-
-	toggleBtn.classList.toggle("inventory-settings--active", open);
-	toggleBtn.setAttribute("aria-pressed", open ? "true" : "false");
-	const label = open ? "Close inventory management" : "Manage inventory";
-	toggleBtn.setAttribute("aria-label", label);
-	toggleBtn.title = label;
 }
 
 function refreshEditAccess() {
 	const editable = canEdit();
 	document.body.classList.toggle("page--view-only", !editable);
 	document.body.classList.toggle("page--log-undo", canUndoChangeLog());
-
-	const toggleBtn = document.getElementById("toggleControls");
-	if (toggleBtn) toggleBtn.hidden = !editable;
 
 	if (!editable) setInventoryControlsOpen(false);
 	else closeStackDetail();
@@ -2879,26 +2869,34 @@ function handleAuthChange(authenticated, person, email = null, options = {}) {
 
 function updateAuthUI(authenticated, person) {
 	const authBar = document.getElementById("authBar");
-	const authUserName = document.getElementById("authUserName");
-	const authBtn = document.getElementById("authBtn");
-	if (!authBar || !authUserName || !authBtn) return;
+	const sidebarAuth = document.getElementById("crmSidebarAuth");
+	const sidebarUserName = document.getElementById("crmSidebarUserName");
+	const sidebarAuthBtn = document.getElementById("crmSidebarAuthBtn");
+	if (!authBar) return;
 
 	authBar.classList.toggle("auth-bar--guest", !authenticated);
 	authBar.classList.toggle("auth-bar--authenticated", authenticated && !!person);
+	sidebarAuth?.classList.toggle("crm-sidebar__auth--authenticated", authenticated && !!person);
+
+	if (sidebarAuthBtn) {
+		if (authenticated && person) {
+			sidebarAuthBtn.setAttribute("aria-label", "Sign out");
+			sidebarAuthBtn.title = "Sign out";
+			sidebarAuthBtn.classList.remove("auth-action--sign-in");
+			sidebarAuthBtn.classList.add("auth-action--sign-out");
+		} else {
+			sidebarAuthBtn.setAttribute("aria-label", "Sign in");
+			sidebarAuthBtn.title = "Sign in";
+			sidebarAuthBtn.classList.add("auth-action--sign-in");
+			sidebarAuthBtn.classList.remove("auth-action--sign-out");
+		}
+	}
 
 	if (authenticated && person) {
-		authUserName.textContent = `Hi, ${person}`;
-		authBtn.setAttribute("aria-label", "Sign out");
-		authBtn.title = "Sign out";
-		authBtn.classList.remove("auth-action--sign-in");
-		authBtn.classList.add("auth-action--sign-out");
+		if (sidebarUserName) sidebarUserName.textContent = `Hi, ${person}`;
 		closeAuthModal();
-	} else {
-		authUserName.textContent = "";
-		authBtn.setAttribute("aria-label", "Sign in");
-		authBtn.title = "Sign in";
-		authBtn.classList.add("auth-action--sign-in");
-		authBtn.classList.remove("auth-action--sign-out");
+	} else if (sidebarUserName) {
+		sidebarUserName.textContent = "";
 	}
 }
 
@@ -2989,7 +2987,7 @@ function closeAuthModal() {
 	if (!modal) return;
 
 	const dialog = modal.querySelector(".auth-modal__dialog");
-	const returnFocus = authModalReturnFocus || document.getElementById("authBtn");
+	const returnFocus = authModalReturnFocus || document.getElementById("crmSidebarAuthBtn");
 	const focused = document.activeElement;
 
 	authModalBlocking = false;
@@ -3005,7 +3003,7 @@ function closeAuthModal() {
 
 		if (
 			returnFocus instanceof HTMLElement &&
-			returnFocus.id !== "authBtn" &&
+			returnFocus.id !== "crmSidebarAuthBtn" &&
 			returnFocus.isConnected
 		) {
 			returnFocus.focus({ preventScroll: true });
@@ -3017,28 +3015,30 @@ function closeAuthModal() {
 	});
 }
 
-function initAuthUI() {
-	document.getElementById("authBtn")?.addEventListener("click", () => {
-		if (isAuthenticated) {
-			try {
-				localStorage.removeItem("hayshed.wasAuthed");
-			} catch {
-			}
-			void clearSessionToken()
-				.catch(() => {})
-				.finally(() => {
-					logout(auth)
-						.catch((err) => console.error("Sign out error:", err))
-						.finally(() => {
-							redirectToLoginGate();
-						});
-				});
-		} else if (REQUIRE_AUTH) {
-			redirectToLoginGate();
-		} else {
-			openAuthModal();
+function handleAuthButtonClick() {
+	if (isAuthenticated) {
+		try {
+			localStorage.removeItem("hayshed.wasAuthed");
+		} catch {
 		}
-	});
+		void clearSessionToken()
+			.catch(() => {})
+			.finally(() => {
+				logout(auth)
+					.catch((err) => console.error("Sign out error:", err))
+					.finally(() => {
+						redirectToLoginGate();
+					});
+			});
+	} else if (REQUIRE_AUTH) {
+		redirectToLoginGate();
+	} else {
+		openAuthModal();
+	}
+}
+
+function initAuthUI() {
+	document.getElementById("crmSidebarAuthBtn")?.addEventListener("click", handleAuthButtonClick);
 
 	document.getElementById("authForm")?.addEventListener("submit", async (e) => {
 		e.preventDefault();
@@ -3437,15 +3437,6 @@ function initInventoryForm(locationId = getCurrentLocation()) {
 	}
 }
 
-function initToggleControls() {
-	const toggleBtn = document.getElementById("toggleControls");
-	toggleBtn?.addEventListener("click", () => {
-		if (!canEdit()) return;
-		const controls = loc("inventoryControls", getCurrentLocation());
-		setInventoryControlsOpen(Boolean(controls?.hidden));
-	});
-}
-
 const CRM_COLLAPSED_STORAGE_KEY = "uiCrmCollapsed";
 const CRM_DARK_STORAGE_KEY = "uiCrmDark";
 let crmStatsScheduled = false;
@@ -3469,7 +3460,6 @@ function getCrmEls() {
 	return {
 		navSlot: document.getElementById("crmNavSlot"),
 		controlsSlot: document.getElementById("crmControlsSlot"),
-		collapseBtn: document.getElementById("crmCollapse"),
 		menuToggle: document.getElementById("crmMenuToggle"),
 		darkSwitch: document.getElementById("crmThemeSwitch"),
 		stats: document.getElementById("crmStats"),
@@ -3683,7 +3673,7 @@ function initMobileInputScrollFix() {
 }
 
 function initCrmTheme() {
-	const { collapseBtn, menuToggle, darkSwitch, navSlot } = getCrmEls();
+	const { menuToggle, darkSwitch, navSlot } = getCrmEls();
 
 	const applyDark = (dark, animate = true) => {
 		const root = document.documentElement;
@@ -3725,7 +3715,6 @@ function initCrmTheme() {
 		saveCrmCollapsed(collapsed);
 		syncAllShedLayoutsAfterPaint();
 	};
-	collapseBtn?.addEventListener("click", toggleSidebar);
 	menuToggle?.addEventListener("click", toggleSidebar);
 
 	navSlot?.addEventListener("click", (e) => {
@@ -3756,7 +3745,6 @@ window.resetSiksika = () => resetAllBays({ locationId: "siksika" });
 async function startApp() {
 	initGrabToScroll();
 	initAuthUI();
-	initToggleControls();
 	initLocationTabs();
 	initMainTabs();
 	LOCATION_IDS.forEach((locationId) => {

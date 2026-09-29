@@ -51,10 +51,13 @@
 			</div>
 		</nav>
 		<div class="crm-sidebar__controls" id="crmControlsSlot"></div>
-		<button type="button" class="crm-sidebar__collapse" id="crmCollapse" aria-label="Collapse panel">
-			<span class="crm-sidebar__collapse-icon" aria-hidden="true"></span>
-			<span class="crm-sidebar__collapse-text">Collapse</span>
-		</button>
+		<div class="crm-sidebar__auth" id="crmSidebarAuth">
+			<span class="crm-sidebar__user" id="crmSidebarUserName"></span>
+			<button type="button" class="auth-action auth-action--sign-in" id="crmSidebarAuthBtn"
+				aria-label="Sign in" title="Sign in">
+				<span class="auth-action__icon" aria-hidden="true"></span>
+			</button>
+		</div>
 	</aside>
 
 	<header class="page__header">
@@ -87,17 +90,19 @@
 							</span>
 						</span>
 					</button>
-					<button type="button" class="layout-switch" id="shedLayoutScrollSwitch" hidden role="switch"
-						aria-checked="false" aria-label="Switch to scrollable shed layout"
+					<button type="button" class="theme-switch layout-switch" id="shedLayoutScrollSwitch" hidden
+						role="switch" aria-checked="false" aria-label="Switch to scrollable shed layout"
 						title="Layout: fit to screen">
-						<span class="layout-switch__track" aria-hidden="true">
-							<span class="layout-switch__thumb">
-								<svg class="layout-switch__icon layout-switch__icon--fit" viewBox="0 0 24 24"
+						<span class="theme-switch__track" aria-hidden="true">
+							<span class="theme-switch__thumb">
+								<svg class="theme-switch__icon layout-switch__icon--fit" viewBox="0 0 24 24"
 									fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
 									stroke-linejoin="round">
-									<path d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3"></path>
+									<path
+										d="M8 3H5a2 2 0 0 0-2 2v3M16 3h3a2 2 0 0 1 2 2v3M8 21H5a2 2 0 0 1-2-2v-3M16 21h3a2 2 0 0 0 2-2v-3">
+									</path>
 								</svg>
-								<svg class="layout-switch__icon layout-switch__icon--scroll" viewBox="0 0 24 24"
+								<svg class="theme-switch__icon layout-switch__icon--scroll" viewBox="0 0 24 24"
 									fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
 									stroke-linejoin="round">
 									<path d="M12 5v14M8 9l4-4 4 4M8 15l4 4 4-4"></path>
@@ -105,19 +110,7 @@
 							</span>
 						</span>
 					</button>
-					<span class="auth-bar__badge" id="viewOnlyBadge">View Only</span>
-					<button type="button" id="toggleControls" class="inventory-settings" hidden
-						aria-label="Manage inventory" aria-pressed="false" title="Manage inventory">
-						<span class="inventory-settings__icon" aria-hidden="true"></span>
-					</button>
-					<span class="auth-bar__user" id="authUserName"></span>
 				</div>
-				<nav class="location-tabs auth-bar__auth" aria-label="Account">
-					<button type="button" class="auth-action auth-action--sign-in" id="authBtn" aria-label="Sign in"
-						title="Sign in">
-						<span class="auth-action__icon" aria-hidden="true"></span>
-					</button>
-				</nav>
 			</div>
 		</div>
 	</header>
