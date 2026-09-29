@@ -296,6 +296,28 @@ function getBayStackPadding(bayStackEl) {
 	};
 }
 
+function getBayStackBorderY(bayStackEl) {
+	if (!bayStackEl) return 0;
+	const style = getComputedStyle(bayStackEl);
+	return (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
+}
+
+function applyBayStackBoxHeight(bayStackEl, contentHeight) {
+	if (!bayStackEl) return;
+	const borderY = getBayStackBorderY(bayStackEl);
+	const h = Math.max(1, Math.ceil(contentHeight + borderY + 1));
+	bayStackEl.style.height = `${h}px`;
+	bayStackEl.style.minHeight = `${h}px`;
+}
+
+function expandBayStackToFitContent(bayStackEl) {
+	if (!bayStackEl || bayStackEl.clientHeight <= 0) return false;
+	const needed = measureBayContentHeightRaw(bayStackEl);
+	if (needed <= bayStackEl.clientHeight + 1) return false;
+	applyBayStackBoxHeight(bayStackEl, needed);
+	return true;
+}
+
 function getStackAreaBudgetForBay(bayStackEl) {
 	if (!bayStackEl) return getStackAreaBudgetValue();
 
@@ -471,7 +493,7 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 const MIN_FIT_STACK_PX = 18;
 const STACK_FONT_MAX_PX = 11;
 const STACK_FONT_MAX_FULL_PX = 11;
-const STACK_FONT_MIN_PX = 5.5;
+const STACK_FONT_MIN_PX = 9;
 const STACK_PAD_Y = 8;
 const STACK_LINE_GAP = 2;
 const STACK_LINE_HEIGHT = 1.15;
@@ -499,12 +521,21 @@ function countStackTextLines(stackEl) {
 	return lines;
 }
 
-function estimateStackRequiredHeight(stackEl) {
-	const scale = stackEl.classList.contains("hay-stack--full") ? 1.15 : 1;
-	const fontPx = (stackEl.classList.contains("hay-stack--full") ? STACK_FONT_MAX_FULL_PX : STACK_FONT_MAX_PX) * scale;
+function estimateStackHeightForFont(stackEl, fontPx) {
 	const line = fontPx * STACK_LINE_HEIGHT;
 	const lines = Math.max(1, countStackTextLines(stackEl));
 	return Math.ceil(STACK_PAD_Y + lines * line + Math.max(0, lines - 1) * STACK_LINE_GAP + 4);
+}
+
+function estimateStackRequiredHeight(stackEl) {
+	const maxPx = stackEl.classList.contains("hay-stack--full")
+		? STACK_FONT_MAX_FULL_PX
+		: STACK_FONT_MAX_PX;
+	return estimateStackHeightForFont(stackEl, maxPx);
+}
+
+function estimateStackMinReadableHeight(stackEl) {
+	return estimateStackHeightForFont(stackEl, STACK_FONT_MIN_PX);
 }
 
 function applyStackBoxHeight(stackEl, px) {
@@ -554,6 +585,7 @@ function scaleNonFillStacksToFit(bayStackEl, available) {
 	const heights = stacks.map(
 		(stack) => parseFloat(stack.style.height) || stack.offsetHeight || MIN_FIT_STACK_PX,
 	);
+	const mins = stacks.map((stack) => estimateStackMinReadableHeight(stack));
 	const sum = heights.reduce((total, h) => total + h, 0);
 	if (sum <= 0) return false;
 
@@ -561,10 +593,15 @@ function scaleNonFillStacksToFit(bayStackEl, available) {
 	if (needed <= available + 1) return false;
 
 	const scale = Math.max(0.05, available / needed);
+	let changed = false;
 	stacks.forEach((stack, index) => {
-		applyStackBoxHeight(stack, heights[index] * scale);
+		const next = Math.max(mins[index], heights[index] * scale);
+		if (Math.abs(next - heights[index]) > 0.5) {
+			applyStackBoxHeight(stack, next);
+			changed = true;
+		}
 	});
-	return true;
+	return changed;
 }
 
 function stackTextOverflowsBox(stackEl) {
@@ -637,19 +674,17 @@ function fitStackFontToBox(stackEl) {
 function growStackToFitText(stackEl) {
 	if (!stackEl || isStackFill(stackEl)) return false;
 
-	const fontPx = fitStackFontToBox(stackEl);
+	fitStackFontToBox(stackEl);
 	if (!stackTextOverflowsBox(stackEl)) return false;
 
 	const current = parseFloat(stackEl.style.height) || stackEl.clientHeight || 0;
 	const content = Math.max(
 		stackEl.scrollHeight || 0,
 		(stackEl.querySelector(".hay-stack__desc")?.scrollHeight || 0) + STACK_PAD_Y,
+		estimateStackMinReadableHeight(stackEl),
 	);
-	const needed = Math.ceil(Math.max(current + 2, content + 2, estimateStackRequiredHeight(stackEl)));
-	if (needed <= current + 1) {
-		if (fontPx > STACK_FONT_MIN_PX) applyStackFontSize(stackEl, STACK_FONT_MIN_PX);
-		return false;
-	}
+	const needed = Math.ceil(Math.max(current + 2, content + 2));
+	if (needed <= current + 1) return false;
 
 	applyStackBoxHeight(stackEl, needed);
 	fitStackFontToBox(stackEl);
@@ -666,24 +701,34 @@ function ensureBayStackTextFits(bayStackEl) {
 		if (growStackToFitText(stack)) grew = true;
 	});
 
-	const reflowIfNeeded = () => {
-		if (measureBayContentHeightRaw(bayStackEl) <= bayStackEl.clientHeight + 1) return;
+	if (grew && measureBayContentHeightRaw(bayStackEl) > bayStackEl.clientHeight + 1) {
 		compressBayStacksToFit(bayStackEl);
 		expandFillStacksToFreeSpace(bayStackEl);
 		fitAllStackFontsInBay(bayStackEl);
-	};
-
-	if (grew) reflowIfNeeded();
+	}
 
 	[...getBayStacks(bayStackEl)].forEach((stack) => {
 		fitStackFontToBox(stack);
 		if (!stackTextOverflowsBox(stack)) return;
-		applyStackFontSize(stack, STACK_FONT_MIN_PX);
-		fitStackFontToBox(stack);
-		if (stackTextOverflowsBox(stack) && growStackToFitText(stack)) grew = true;
+		if (growStackToFitText(stack)) grew = true;
 	});
 
-	if (grew) reflowIfNeeded();
+	return grew;
+}
+
+function bayHasUnreadableOverflow(bayStackEl) {
+	if (!bayStackEl || bayStackEl.clientHeight <= 0) return false;
+	if (measureBayContentHeightRaw(bayStackEl) > bayStackEl.clientHeight + 2) return true;
+
+	return [...getBayStacks(bayStackEl)].some((stack) => {
+		if (isStackFill(stack)) return false;
+		fitStackFontToBox(stack);
+		return stackTextOverflowsBox(stack);
+	});
+}
+
+function columnsNeedReadableScroll(columns) {
+	return [...columns.querySelectorAll(".shed__bay-stack")].some(bayHasUnreadableOverflow);
 }
 
 function compressBayStacksToFit(bayStackEl) {
@@ -890,8 +935,7 @@ function applyStackAreaHeight(bayStack) {
 function applyUniformBayStackHeights(columns, contentHeight) {
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
 		applyStackAreaHeight(bayStack);
-		bayStack.style.height = `${contentHeight}px`;
-		bayStack.style.minHeight = `${contentHeight}px`;
+		applyBayStackBoxHeight(bayStack, contentHeight);
 	});
 }
 
@@ -916,12 +960,54 @@ function reconcileColumnsLayout(columns, bayStackCap = Infinity, columnsCap = In
 		: Math.ceil(targetBay + getBayChromeForColumns(columns) + 12) + 16;
 
 	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		bayStack.style.height = `${targetBay}px`;
-		bayStack.style.minHeight = `${targetBay}px`;
+		applyBayStackBoxHeight(bayStack, targetBay);
 	});
 
 	columns.style.height = `${targetColumns}px`;
 	return targetBay;
+}
+
+function applyColumnsScrollLayout(columns, chrome, minBay) {
+	document.body.classList.add("page--shed-scroll");
+
+	columns.style.removeProperty("height");
+	columns.style.removeProperty("max-height");
+
+	const naturalBay = Math.max(minBay, getStandardBayStackContentHeight());
+	applyUniformBayStackHeights(columns, naturalBay);
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalizeBayStackLayout(bayStack);
+	});
+
+	let contentBay = Math.max(naturalBay, measureMaxBayStackRenderedHeight(columns));
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		contentBay = Math.max(contentBay, measureBayContentHeightRaw(bayStack));
+	});
+
+	applyUniformBayStackHeights(columns, contentBay);
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalizeBayStackLayout(bayStack);
+	});
+
+	let finalBay = contentBay;
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalBay = Math.max(finalBay, measureBayContentHeightRaw(bayStack));
+	});
+	finalBay = Math.max(finalBay, measureMaxBayStackRenderedHeight(columns));
+
+	applyUniformBayStackHeights(columns, finalBay);
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalizeBayStackLayout(bayStack);
+		expandBayStackToFitContent(bayStack);
+	});
+
+	let outerMax = 0;
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		outerMax = Math.max(outerMax, bayStack.offsetHeight || 0);
+	});
+
+	columns.style.height = "auto";
+	columns.style.minHeight = `${Math.ceil(Math.max(outerMax, finalBay) + chrome + 12)}px`;
 }
 
 function syncShedColumnsLayout(columns) {
@@ -932,13 +1018,13 @@ function syncShedColumnsLayout(columns) {
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
 	const chrome = getBayChromeForColumns(columns);
-	const fitViewport = shouldFitColumnsToViewport();
+	const preferViewport = shouldFitColumnsToViewport();
 	const minBay =
 		LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
 
-	document.body.classList.toggle("page--shed-scroll", !fitViewport);
+	if (preferViewport) {
+		document.body.classList.remove("page--shed-scroll");
 
-	if (fitViewport) {
 		const columnsCap = getAvailableColumnsHeight(columns);
 		const bayStackCap = Math.max(minBay, columnsCap - chrome - 12);
 
@@ -951,34 +1037,11 @@ function syncShedColumnsLayout(columns) {
 			finalizeBayStackLayout(bayStack);
 		});
 		reconcileColumnsLayout(columns, bayStackCap, columnsCap);
-		return;
+
+		if (!columnsNeedReadableScroll(columns)) return;
 	}
 
-	columns.style.removeProperty("height");
-	columns.style.removeProperty("max-height");
-
-	const naturalBay = Math.max(minBay, getStandardBayStackContentHeight());
-	applyUniformBayStackHeights(columns, naturalBay);
-	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		finalizeBayStackLayout(bayStack);
-	});
-
-	const contentBay = Math.max(naturalBay, measureMaxBayStackRenderedHeight(columns));
-	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		bayStack.style.height = `${contentBay}px`;
-		bayStack.style.minHeight = `${contentBay}px`;
-	});
-	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		finalizeBayStackLayout(bayStack);
-	});
-
-	const finalBay = Math.max(contentBay, measureMaxBayStackRenderedHeight(columns));
-	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-		bayStack.style.height = `${finalBay}px`;
-		bayStack.style.minHeight = `${finalBay}px`;
-	});
-	columns.style.height = "auto";
-	columns.style.minHeight = `${Math.ceil(finalBay + chrome + 12)}px`;
+	applyColumnsScrollLayout(columns, chrome, minBay);
 }
 
 export function refreshAllStackHeights() {
