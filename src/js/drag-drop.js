@@ -312,11 +312,19 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		track(window, "mouseup", onMouseUp);
 	};
 
+	const clearTextUI = () => {
+		const selection = window.getSelection?.();
+		if (selection?.removeAllRanges) selection.removeAllRanges();
+	};
+
 	const armTouchSession = (e) => {
 		if (!canDrag()) return;
 		if (session) endSession();
 
-		// Do not preventDefault here — allow native scroll until long-press activates drag.
+		// Block iOS callout / text menu; pan still allowed via CSS touch-action.
+		e.preventDefault();
+		clearTextUI();
+
 		session = {
 			isMouse: false,
 			pointerId: e.pointerId,
@@ -326,6 +334,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			listeners: [],
 			pressTimer: setTimeout(() => {
 				if (!session || session.dragging) return;
+				clearTextUI();
 				beginDrag(session.startX, session.startY);
 				try {
 					stackEl.setPointerCapture?.(session.pointerId);
@@ -356,10 +365,16 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			e.stopPropagation();
 			armTouchSession(e);
 		},
-		{ passive: true },
+		{ passive: false },
 	);
 
-	stackEl.addEventListener("contextmenu", (e) => {
-		if (canDrag()) e.preventDefault();
-	});
+	const blockBrowserChrome = (e) => {
+		e.preventDefault();
+		e.stopPropagation();
+	};
+
+	stackEl.addEventListener("contextmenu", blockBrowserChrome);
+	stackEl.addEventListener("selectstart", blockBrowserChrome);
+	stackEl.addEventListener("dragstart", blockBrowserChrome);
+	stackEl.addEventListener("gesturestart", blockBrowserChrome);
 }
