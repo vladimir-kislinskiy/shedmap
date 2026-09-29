@@ -1021,26 +1021,9 @@ body.page--dragging .shed__bay-exit {
 	text-overflow: ellipsis;
 }
 
-.hay-stack,
-.hay-stack * {
-	-webkit-user-select: none !important;
-	user-select: none !important;
-	-webkit-touch-callout: none !important;
-	-webkit-user-drag: none !important;
-}
-
 body:not(.page--view-only) .hay-stack {
 	cursor: grab;
 	touch-action: pan-x pan-y;
-}
-
-body:not(.page--view-only) .hay-stack--pressing,
-body:not(.page--view-only) .hay-stack--dragging,
-html.page--dragging,
-body.page--dragging {
-	-webkit-touch-callout: none !important;
-	-webkit-user-select: none !important;
-	user-select: none !important;
 }
 
 body:not(.page--view-only) .hay-stack--pressing,
@@ -1048,12 +1031,13 @@ body:not(.page--view-only) .hay-stack--dragging {
 	touch-action: none;
 }
 
-/* Freeze page scroll once a stack drag is active (touch-action can't change mid-gesture). */
 html.page--dragging,
 body.page--dragging {
 	overflow: hidden !important;
 	overscroll-behavior: none;
 	touch-action: none;
+	-webkit-user-select: none;
+	user-select: none;
 }
 
 body.page--dragging .page__wrapper,

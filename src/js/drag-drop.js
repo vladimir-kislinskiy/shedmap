@@ -234,7 +234,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			const dy = clientY - session.startY;
 			const dist = Math.hypot(dx, dy);
 
-			// Touch/pen: movement before long-press is a scroll — cancel drag arming.
 			if (!session.isMouse) {
 				if (dist > TOUCH_CANCEL_THRESHOLD) {
 					endSession();
@@ -242,7 +241,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 				return;
 			}
 
-			// Mouse: start drag after a small move (or wait for long-press timer).
 			if (dist > DRAG_THRESHOLD) {
 				beginDrag(clientX, clientY);
 			}
@@ -295,7 +293,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 	const onPointerMove = (e) => {
 		if (!session || session.isMouse) return;
 		if (e.pointerId !== session.pointerId) return;
-		// After drag starts, kill native scroll (touch-action can't change mid-gesture).
 		if (session.dragging) e.preventDefault();
 		handleMove(e.clientX, e.clientY);
 	};
@@ -306,7 +303,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		handleEnd(e.clientX, e.clientY);
 	};
 
-	// iOS scrolls on touchmove even when pointermove preventDefault runs.
 	const onTouchMove = (e) => {
 		if (!session || session.isMouse) return;
 		const touch = [...e.touches].find((t) => t.identifier === session.touchId) || e.touches[0];
@@ -383,7 +379,6 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		track(window, "pointermove", onPointerMove, { passive: false });
 		track(window, "pointerup", onPointerEnd);
 		track(window, "pointercancel", onPointerEnd);
-		// Non-passive touchmove is the reliable way to stop iOS scroll mid-gesture.
 		track(window, "touchmove", onTouchMove, { passive: false, capture: true });
 		track(window, "touchend", onTouchEnd, { capture: true });
 		track(window, "touchcancel", onTouchEnd, { capture: true });
