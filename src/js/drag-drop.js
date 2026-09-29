@@ -1,7 +1,8 @@
 import { applyIsleLayout, placeStackInContainer, reorderFrontAgainst, placeFullFrontBehindIsles } from "./dom.js";
 
 const DRAG_THRESHOLD = 6;
-const LONG_PRESS_MS = 400;
+const TOUCH_CANCEL_THRESHOLD = 10;
+const LONG_PRESS_MS = 450;
 
 function getDragContext(stackEl) {
 	const parent = stackEl.parentElement;
@@ -160,7 +161,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (session.pressTimer) clearTimeout(session.pressTimer);
 		if (session.ghost) session.ghost.remove();
 		detach();
-		stackEl.classList.remove("hay-stack--dragging");
+		stackEl.classList.remove("hay-stack--dragging", "hay-stack--pressing");
 		clearDropHighlights();
 		document.body.classList.remove("page--dragging");
 		session = null;
@@ -205,6 +206,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		session.offsetY = clientY - rect.top;
 		session.ghost = createGhost(stackEl);
 
+		stackEl.classList.remove("hay-stack--pressing");
 		stackEl.classList.add("hay-stack--dragging");
 		document.body.classList.add("page--dragging");
 		moveGhost(session.ghost, clientX, clientY, session.offsetX, session.offsetY);
@@ -216,7 +218,18 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!session.dragging) {
 			const dx = clientX - session.startX;
 			const dy = clientY - session.startY;
-			if (Math.hypot(dx, dy) > DRAG_THRESHOLD) {
+			const dist = Math.hypot(dx, dy);
+
+			// Touch/pen: movement before long-press is a scroll — cancel drag arming.
+			if (!session.isMouse) {
+				if (dist > TOUCH_CANCEL_THRESHOLD) {
+					endSession();
+				}
+				return;
+			}
+
+			// Mouse: start drag after a small move (or wait for long-press timer).
+			if (dist > DRAG_THRESHOLD) {
 				beginDrag(clientX, clientY);
 			}
 			return;
@@ -303,8 +316,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!canDrag()) return;
 		if (session) endSession();
 
-		e.preventDefault();
-
+		// Do not preventDefault here — allow native scroll until long-press activates drag.
 		session = {
 			isMouse: false,
 			pointerId: e.pointerId,
@@ -313,11 +325,16 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			dragging: false,
 			listeners: [],
 			pressTimer: setTimeout(() => {
-				if (session && !session.dragging) {
-					beginDrag(session.startX, session.startY);
+				if (!session || session.dragging) return;
+				beginDrag(session.startX, session.startY);
+				try {
+					stackEl.setPointerCapture?.(session.pointerId);
+				} catch {
 				}
 			}, LONG_PRESS_MS),
 		};
+
+		stackEl.classList.add("hay-stack--pressing");
 
 		track(window, "pointermove", onPointerMove, { passive: false });
 		track(window, "pointerup", onPointerEnd);
@@ -339,7 +356,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 			e.stopPropagation();
 			armTouchSession(e);
 		},
-		{ passive: false },
+		{ passive: true },
 	);
 
 	stackEl.addEventListener("contextmenu", (e) => {

@@ -1009,10 +1009,20 @@ body.page--dragging .shed__bay-exit {
 
 body:not(.page--view-only) .hay-stack {
 	cursor: grab;
-	touch-action: none;
+	touch-action: pan-x pan-y;
 	user-select: none;
 	-webkit-user-select: none;
 	-webkit-user-drag: none;
+}
+
+body:not(.page--view-only) .hay-stack--pressing,
+body:not(.page--view-only) .hay-stack--dragging {
+	touch-action: none;
+}
+
+.hay-stack--pressing {
+	transform: scale(0.98);
+	transition: transform 0.15s ease;
 }
 
 .hay-stack--selected {
@@ -1025,6 +1035,7 @@ body:not(.page--view-only) .hay-stack {
 	opacity: 0.35;
 	cursor: grabbing;
 	pointer-events: none;
+	transform: none;
 }
 
 .hay-stack--drop-target {
