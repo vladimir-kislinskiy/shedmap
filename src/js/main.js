@@ -2904,7 +2904,7 @@ function syncShedLayoutToggleUI(authenticated, email) {
 	const toggle = document.getElementById("shedLayoutScrollSwitch");
 	if (!toggle) return;
 
-	const allowed = Boolean(authenticated && isAdminUser(email));
+	const allowed = Boolean(authenticated);
 	setAllowShedScrollPref(allowed);
 	toggle.hidden = !allowed;
 
