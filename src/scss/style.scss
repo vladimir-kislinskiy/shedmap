@@ -1036,6 +1036,7 @@ body:not(.page--view-only) .hay-stack {
 
 body:not(.page--view-only) .hay-stack--pressing,
 body:not(.page--view-only) .hay-stack--dragging,
+html.page--dragging,
 body.page--dragging {
 	-webkit-touch-callout: none !important;
 	-webkit-user-select: none !important;
@@ -1045,6 +1046,25 @@ body.page--dragging {
 body:not(.page--view-only) .hay-stack--pressing,
 body:not(.page--view-only) .hay-stack--dragging {
 	touch-action: none;
+}
+
+/* Freeze page scroll once a stack drag is active (touch-action can't change mid-gesture). */
+html.page--dragging,
+body.page--dragging {
+	overflow: hidden !important;
+	overscroll-behavior: none;
+	touch-action: none;
+}
+
+body.page--dragging .page__wrapper,
+body.page--dragging .page__main,
+body.page--dragging .page__content,
+body.page--dragging .shed__columns,
+body.page--dragging .shed-tabs__panel,
+body.page--dragging #Sheds {
+	overflow: hidden !important;
+	touch-action: none !important;
+	overscroll-behavior: none;
 }
 
 .hay-stack--pressing {

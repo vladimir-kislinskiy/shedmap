@@ -156,6 +156,14 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		});
 	};
 
+	const unlockScroll = () => {
+		document.documentElement.classList.remove("page--dragging");
+		document.body.classList.remove("page--dragging");
+		if (session?.scrollLocked && typeof session.scrollX === "number") {
+			window.scrollTo(session.scrollX, session.scrollY);
+		}
+	};
+
 	const endSession = () => {
 		if (!session) return;
 		if (session.pressTimer) clearTimeout(session.pressTimer);
@@ -163,7 +171,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		detach();
 		stackEl.classList.remove("hay-stack--dragging", "hay-stack--pressing");
 		clearDropHighlights();
-		document.body.classList.remove("page--dragging");
+		unlockScroll();
 		session = null;
 		document.dispatchEvent(new CustomEvent("hayshed:dragend"));
 	};
@@ -208,6 +216,12 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 
 		stackEl.classList.remove("hay-stack--pressing");
 		stackEl.classList.add("hay-stack--dragging");
+		if (!session.scrollLocked) {
+			session.scrollLocked = true;
+			session.scrollX = window.scrollX;
+			session.scrollY = window.scrollY;
+		}
+		document.documentElement.classList.add("page--dragging");
 		document.body.classList.add("page--dragging");
 		moveGhost(session.ghost, clientX, clientY, session.offsetX, session.offsetY);
 	};
@@ -281,6 +295,7 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 	const onPointerMove = (e) => {
 		if (!session || session.isMouse) return;
 		if (e.pointerId !== session.pointerId) return;
+		// After drag starts, kill native scroll (touch-action can't change mid-gesture).
 		if (session.dragging) e.preventDefault();
 		handleMove(e.clientX, e.clientY);
 	};
@@ -289,6 +304,30 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!session || session.isMouse) return;
 		if (e.pointerId !== session.pointerId) return;
 		handleEnd(e.clientX, e.clientY);
+	};
+
+	// iOS scrolls on touchmove even when pointermove preventDefault runs.
+	const onTouchMove = (e) => {
+		if (!session || session.isMouse) return;
+		const touch = [...e.touches].find((t) => t.identifier === session.touchId) || e.touches[0];
+		if (!touch) return;
+		if (session.dragging) {
+			e.preventDefault();
+			handleMove(touch.clientX, touch.clientY);
+			return;
+		}
+		handleMove(touch.clientX, touch.clientY);
+	};
+
+	const onTouchEnd = (e) => {
+		if (!session || session.isMouse) return;
+		const touch =
+			[...e.changedTouches].find((t) => t.identifier === session.touchId) || e.changedTouches[0];
+		if (!touch) {
+			endSession();
+			return;
+		}
+		handleEnd(touch.clientX, touch.clientY);
 	};
 
 	const armMouseSession = (clientX, clientY) => {
@@ -321,25 +360,21 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		if (!canDrag()) return;
 		if (session) endSession();
 
-		// Block iOS callout / text menu; pan still allowed via CSS touch-action.
-		e.preventDefault();
 		clearTextUI();
 
 		session = {
 			isMouse: false,
 			pointerId: e.pointerId,
+			touchId: e.pointerId,
 			startX: e.clientX,
 			startY: e.clientY,
 			dragging: false,
+			scrollLocked: false,
 			listeners: [],
 			pressTimer: setTimeout(() => {
 				if (!session || session.dragging) return;
 				clearTextUI();
 				beginDrag(session.startX, session.startY);
-				try {
-					stackEl.setPointerCapture?.(session.pointerId);
-				} catch {
-				}
 			}, LONG_PRESS_MS),
 		};
 
@@ -348,6 +383,10 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		track(window, "pointermove", onPointerMove, { passive: false });
 		track(window, "pointerup", onPointerEnd);
 		track(window, "pointercancel", onPointerEnd);
+		// Non-passive touchmove is the reliable way to stop iOS scroll mid-gesture.
+		track(window, "touchmove", onTouchMove, { passive: false, capture: true });
+		track(window, "touchend", onTouchEnd, { capture: true });
+		track(window, "touchcancel", onTouchEnd, { capture: true });
 	};
 
 	stackEl.addEventListener("mousedown", (e) => {
