@@ -1007,12 +1007,17 @@ body.page--dragging .shed__bay-exit {
 	text-overflow: ellipsis;
 }
 
+.hay-stack,
+.hay-stack * {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+	-webkit-user-drag: none;
+}
+
 body:not(.page--view-only) .hay-stack {
 	cursor: grab;
 	touch-action: pan-x pan-y;
-	user-select: none;
-	-webkit-user-select: none;
-	-webkit-user-drag: none;
 }
 
 body:not(.page--view-only) .hay-stack--pressing,
