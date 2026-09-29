@@ -75,8 +75,8 @@ import {
 	syncAllShedLayoutsAfterPaint,
 	sanitizeCommentInput,
 	updateHayStack,
-	isShedScrollLayoutPreferred,
 	setShedScrollLayoutPreferred,
+	clearShedScrollLayoutOverride,
 	setAllowShedScrollPref,
 } from "./dom.js";
 
@@ -461,6 +461,7 @@ function setActiveShedTab(panelId, btn, { bay } = {}, locationId = getCurrentLoc
 		updateBaySelectForShed(shed, selectedBayOrNull(bay), locationId);
 	}
 
+	clearShedScrollLayoutOverride();
 	syncAllShedLayouts();
 }
 
@@ -2910,20 +2911,9 @@ function syncShedLayoutToggleUI(authenticated, email) {
 	toggle.hidden = !allowed;
 
 	if (!allowed) {
-		toggle.setAttribute("aria-checked", "false");
-		toggle.setAttribute("aria-label", "Switch to scrollable shed layout");
-		toggle.title = "Layout: fit to screen";
-		syncAllShedLayoutsAfterPaint();
-		return;
+		clearShedScrollLayoutOverride();
 	}
 
-	const scrollOn = isShedScrollLayoutPreferred();
-	toggle.setAttribute("aria-checked", scrollOn ? "true" : "false");
-	toggle.setAttribute(
-		"aria-label",
-		scrollOn ? "Switch to fit-to-screen shed layout" : "Switch to scrollable shed layout",
-	);
-	toggle.title = scrollOn ? "Layout: scroll" : "Layout: fit to screen";
 	syncAllShedLayoutsAfterPaint();
 }
 
@@ -2936,12 +2926,6 @@ function initShedLayoutToggle() {
 		if (toggle.hidden) return;
 		const next = toggle.getAttribute("aria-checked") !== "true";
 		setShedScrollLayoutPreferred(next);
-		toggle.setAttribute("aria-checked", next ? "true" : "false");
-		toggle.setAttribute(
-			"aria-label",
-			next ? "Switch to fit-to-screen shed layout" : "Switch to scrollable shed layout",
-		);
-		toggle.title = next ? "Layout: scroll" : "Layout: fit to screen";
 		syncAllShedLayouts();
 	});
 }
@@ -3177,6 +3161,7 @@ function setActiveLocation(locationId, btn) {
 		}
 	});
 
+	clearShedScrollLayoutOverride();
 	syncAllShedLayoutsAfterPaint();
 	closeStackDetail();
 	refreshEditAccess();
@@ -3833,7 +3818,13 @@ if (document.readyState === "loading") {
 }
 
 let resizeTimer;
+let orientationTimer;
 window.addEventListener("resize", () => {
 	clearTimeout(resizeTimer);
 	resizeTimer = setTimeout(() => syncAllShedLayouts(), 150);
+});
+window.addEventListener("orientationchange", () => {
+	clearShedScrollLayoutOverride();
+	clearTimeout(orientationTimer);
+	orientationTimer = setTimeout(() => syncAllShedLayouts(), 200);
 });

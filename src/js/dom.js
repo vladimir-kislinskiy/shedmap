@@ -123,35 +123,144 @@ function isMobileStackLayout() {
 
 const SHED_SCROLL_PREF_KEY = "hayshed.shedScrollLayout";
 let allowShedScrollPref = false;
+/** null = auto, true = force scroll, false = force fit (ops toggle only). */
+let shedScrollOverride = null;
 
 export function isShedScrollLayoutPreferred() {
-	try {
-		return localStorage.getItem(SHED_SCROLL_PREF_KEY) === "1";
-	} catch {
-		return false;
-	}
+	return shedScrollOverride === true;
 }
 
 export function setShedScrollLayoutPreferred(on) {
+	shedScrollOverride = on ? true : false;
 	try {
 		localStorage.setItem(SHED_SCROLL_PREF_KEY, on ? "1" : "0");
 	} catch {
 	}
 }
 
-export function setAllowShedScrollPref(allow) {
-	allowShedScrollPref = Boolean(allow);
+export function clearShedScrollLayoutOverride() {
+	shedScrollOverride = null;
+	try {
+		localStorage.removeItem(SHED_SCROLL_PREF_KEY);
+	} catch {
+	}
 }
 
-function shouldFitColumnsToViewport() {
-	if (allowShedScrollPref && isShedScrollLayoutPreferred()) return false;
+export function setAllowShedScrollPref(allow) {
+	allowShedScrollPref = Boolean(allow);
+	if (!allowShedScrollPref) {
+		shedScrollOverride = null;
+	}
+}
+
+function getIdealStackHeightPx(stackEl, bayStackEl) {
+	const bales = parseInt(stackEl.dataset.bales, 10) || 0;
+	const locationId = getBayStackLocationId(bayStackEl);
+	const isle = stackEl.dataset.isle || "both";
+	const areaBudget = getStackAreaBudgetValue();
+	const bayMax = getMaxBalesPerBay(locationId);
+	const pct = getStackHeightPercent(
+		bales,
+		getIsleMaxBales(isle, locationId),
+		areaBudget,
+		bayMax,
+	);
+	const pctPx = Math.max(1, Math.round((pct / 100) * areaBudget));
+	if (isStackFill(stackEl)) {
+		return Math.max(LAYOUT.minStack, pctPx);
+	}
+	return Math.max(pctPx, estimateStackRequiredHeight(stackEl));
+}
+
+function measureIdealStacksBlockHeight(stacks, bayStackEl) {
+	if (!stacks.length) return 0;
+	let total = 0;
+	stacks.forEach((stack, index) => {
+		total += getIdealStackHeightPx(stack, bayStackEl);
+		if (index < stacks.length - 1) total += LAYOUT.stackGap;
+	});
+	return total;
+}
+
+function measureIdealBayContentHeight(bayStackEl) {
+	if (!bayStackEl) return 0;
+
+	const directStacks = getDirectStacks(bayStackEl);
+	const regularDirect = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
+	const frontDirect = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
+	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
+	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
+	const islesHeight = Math.max(
+		measureIdealStacksBlockHeight(isle1Stacks, bayStackEl),
+		measureIdealStacksBlockHeight(isle2Stacks, bayStackEl),
+	);
+	const regularHeight = measureIdealStacksBlockHeight(regularDirect, bayStackEl);
+	const frontHeight = measureIdealStacksBlockHeight(frontDirect, bayStackEl);
+
+	let total = 0;
+	let sections = 0;
+	if (regularHeight > 0) {
+		total += regularHeight;
+		sections++;
+	}
+	if (islesHeight > 0) {
+		if (sections) total += LAYOUT.stackGap;
+		total += islesHeight;
+		sections++;
+	}
+	if (frontHeight > 0) {
+		if (sections) total += LAYOUT.stackGap;
+		total += frontHeight;
+		sections++;
+	}
+	if (!sections) return 0;
+
+	const { top, bottom } = getBayStackPadding(bayStackEl);
+	return total + top + bottom;
+}
+
+function columnsContentNeedsScroll(columns, chrome) {
+	const minBay = LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
+	const columnsCap = getAvailableColumnsHeight(columns);
+	const bayCap = Math.max(minBay, columnsCap - chrome - 12);
+
+	let maxIdeal = 0;
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		maxIdeal = Math.max(maxIdeal, measureIdealBayContentHeight(bayStack));
+	});
+	return maxIdeal > bayCap + 2;
+}
+
+function reflectShedLayoutToggle(scrollOn) {
+	const toggle = document.getElementById("shedLayoutScrollSwitch");
+	if (!toggle || toggle.hidden) return;
+	toggle.setAttribute("aria-checked", scrollOn ? "true" : "false");
+	toggle.setAttribute(
+		"aria-label",
+		scrollOn ? "Switch to fit-to-screen shed layout" : "Switch to scrollable shed layout",
+	);
+	toggle.title = scrollOn ? "Layout: scroll (auto)" : "Layout: fit to screen (auto)";
+	if (shedScrollOverride !== null) {
+		toggle.title = scrollOn ? "Layout: scroll (manual)" : "Layout: fit to screen (manual)";
+	}
+}
+
+function shouldFitColumnsToViewport(columns = null, chrome = LAYOUT.bayChrome) {
+	if (allowShedScrollPref && shedScrollOverride !== null) {
+		return !shedScrollOverride;
+	}
 
 	const vh = getViewportHeight();
 	if (vh > 0 && vh <= LAYOUT.shortViewportMax) return false;
 	if (window.matchMedia("(orientation: landscape) and (max-height: 700px)").matches) {
 		return false;
 	}
+	if (columns && columnsContentNeedsScroll(columns, chrome)) return false;
 	return true;
+}
+
+function isFittingColumnsToViewport() {
+	return !document.body.classList.contains("page--shed-scroll");
 }
 
 export function getStackAreaBudgetValue() {
@@ -724,7 +833,7 @@ function ensureBayStackTextFits(bayStackEl) {
 		if (growStackToFitText(stack)) grew = true;
 	});
 
-	const fitViewport = shouldFitColumnsToViewport();
+	const fitViewport = isFittingColumnsToViewport();
 	const reflowIfNeeded = () => {
 		if (!fitViewport) return;
 		if (measureBayContentHeightRaw(bayStackEl) <= bayStackEl.clientHeight + 1) return;
@@ -825,7 +934,7 @@ function expandFillStacksToFreeSpace(bayStackEl) {
 }
 
 function finalizeBayStackLayout(bayStackEl) {
-	const fitViewport = shouldFitColumnsToViewport();
+	const fitViewport = isFittingColumnsToViewport();
 
 	[...getBayStacks(bayStackEl)].forEach((stack) => {
 		stack.style.removeProperty("min-height");
@@ -1000,11 +1109,12 @@ function syncShedColumnsLayout(columns) {
 	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
 
 	const chrome = getBayChromeForColumns(columns);
-	const fitViewport = shouldFitColumnsToViewport();
+	const fitViewport = shouldFitColumnsToViewport(columns, chrome);
 	const minBay =
 		LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
 
 	document.body.classList.toggle("page--shed-scroll", !fitViewport);
+	reflectShedLayoutToggle(!fitViewport);
 
 	if (fitViewport) {
 		const columnsCap = getAvailableColumnsHeight(columns);
