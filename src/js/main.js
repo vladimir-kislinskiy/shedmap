@@ -3578,13 +3578,13 @@ function renderCrmDonut(freePct, freeVal, usedPct, usedVal) {
 	const el = document.getElementById("crmDonut");
 	if (!el) return;
 
-	const targetDeg = (freePct / 100) * 360;
+	const targetDeg = (usedPct / 100) * 360;
 	const gt50 = targetDeg > 180;
 
 	el.innerHTML = `
 		<div class="crm-donut__wrap" role="img"
-			aria-label="Free ${freePct}% (${freeVal.toLocaleString()}), used ${usedPct}% (${usedVal.toLocaleString()})"
-			title="Free: ${freeVal.toLocaleString()} (${freePct}%) — Used: ${usedVal.toLocaleString()} (${usedPct}%)">
+			aria-label="Used ${usedPct}% (${usedVal.toLocaleString()}), free ${freePct}% (${freeVal.toLocaleString()})"
+			title="Used: ${usedVal.toLocaleString()} (${usedPct}%) — Free: ${freeVal.toLocaleString()} (${freePct}%)">
 			<div class="crm-donut__pie"></div>
 			<div class="crm-donut__slice${gt50 ? " is-gt50" : ""}">
 				<div class="crm-donut__bar"></div>
@@ -3621,7 +3621,8 @@ function renderCrmShedBars(shedEntries) {
 	el.querySelectorAll(".crm-bar__fill").forEach((fill, index) => {
 		const shed = shedEntries[index];
 		if (!shed) return;
-		fill.style.setProperty("transform", `scaleX(${shed.freePct / 100})`);
+		const usedPct = Math.max(0, 100 - shed.freePct);
+		fill.style.setProperty("transform", `scaleX(${usedPct / 100})`);
 	});
 }
 
