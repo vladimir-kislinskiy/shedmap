@@ -2040,7 +2040,7 @@ function syncReportGradeFilterVisibility(
 	const gradeEl = getScopedElement("reportGradeFilter", locationId);
 	if (!wrap || !gradeEl) return;
 
-	const show = isGradeEligibleType(productId);
+	const show = productId !== "all" && isGradeEligibleType(productId);
 	wrap.hidden = !show;
 	if (!show) gradeEl.value = "all";
 }
@@ -2053,7 +2053,8 @@ function setReportGradeColumnVisible(show, locationId = getCurrentLocation()) {
 
 function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false } = {}, locationId = getCurrentLocation()) {
 	const rows = [];
-	const sortByGrade = isGradeEligibleType(typeId);
+	const allProducts = typeId === "all";
+	const sortByGrade = !allProducts && isGradeEligibleType(typeId);
 	const locationConfig = getLocationConfig(locationId);
 
 	locationConfig.sheds.forEach((shed, shedOrder) => {
@@ -2062,7 +2063,8 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 			if (!colEl) continue;
 
 			getBayStacks(colEl).forEach((stack) => {
-				if (getStackType(stack) !== typeId) return;
+				const type = getStackType(stack);
+				if (!allProducts && type !== typeId) return;
 
 				const rejected = stack.dataset.rejected === "true";
 				if (!includeRejected && rejected) return;
@@ -2076,6 +2078,7 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 
 				rows.push({
 					contract,
+					product: getHayTypeLabel(type),
 					shed: getShedLabel(shed, locationId),
 					bay: getBayDisplayNumberForLocation(shed, bayIndex, locationId),
 					bales,
@@ -2089,6 +2092,10 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 	});
 
 	rows.sort((a, b) => {
+		if (allProducts) {
+			const productDiff = (a.product || "").localeCompare(b.product || "", undefined, { sensitivity: "base" });
+			if (productDiff !== 0) return productDiff;
+		}
 		if (sortByGrade) {
 			const gradeDiff = getGradeSortIndex(a.grade) - getGradeSortIndex(b.grade);
 			if (gradeDiff !== 0) return gradeDiff;
@@ -2164,14 +2171,69 @@ function setReportProductColumnVisible(show, locationId = getCurrentLocation()) 
 	});
 }
 
-function syncReportPrintButton(enabled, locationId = getCurrentLocation()) {
-	const printBtn = getScopedElement("reportPrintPdf", locationId);
-	if (!printBtn) return;
-	printBtn.disabled = !enabled;
-	printBtn.setAttribute("aria-disabled", enabled ? "false" : "true");
-	printBtn.title = enabled
-		? "Export current report as PDF"
-		: "Select a product or search a contract to export a PDF report";
+function syncReportExportButtons(enabled, locationId = getCurrentLocation()) {
+	[
+		["reportPrintPdf", "PDF"],
+		["reportExportCsv", "CSV"],
+	].forEach(([id, label]) => {
+		const btn = getScopedElement(id, locationId);
+		if (!btn) return;
+		btn.disabled = !enabled;
+		btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+		btn.title = enabled
+			? `Export current report as ${label}`
+			: "Select a product or search a contract to export a report";
+	});
+}
+
+function getCurrentReportExport(locationId = getCurrentLocation()) {
+	const filterEl = getScopedElement("reportProductFilter", locationId);
+	const searchEl = getScopedElement("reportContractSearch", locationId);
+	const productId = filterEl?.value ?? "";
+	const contractQuery = searchEl?.value.trim() ?? "";
+	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+
+	if (contractQuery) {
+		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+		return {
+			ok: rows.length > 0,
+			emptyMessage: `No contracts matching “${contractQuery}” to export.`,
+			payload: {
+				productLabel: contractQuery,
+				headingLabel: `Contract search: ${contractQuery}`,
+				rows,
+				showGrade: false,
+				showProduct: true,
+				includeRejected,
+			},
+		};
+	}
+
+	if (!productId) {
+		return {
+			ok: false,
+			emptyMessage: "Select a product or search a contract to export a report.",
+			payload: null,
+		};
+	}
+
+	const allProducts = productId === "all";
+	const productLabel = allProducts ? "All products" : getHayTypeLabel(productId);
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
+
+	return {
+		ok: rows.length > 0,
+		emptyMessage: rows.length ? null : `No ${productLabel} to export.`,
+		payload: {
+			productLabel,
+			headingLabel: allProducts ? "All products" : null,
+			rows,
+			showGrade: !allProducts && isGradeEligibleType(productId),
+			showProduct: allProducts,
+			gradeFilter,
+			includeRejected,
+		},
+	};
 }
 
 function updateReportsTable(locationId = getCurrentLocation()) {
@@ -2202,7 +2264,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 			reportSummary.hidden = true;
 			reportTableWrap.hidden = true;
 			reportEmpty.hidden = false;
-			syncReportPrintButton(false, locationId);
+			syncReportExportButtons(false, locationId);
 			const rejectNote = includeRejected ? "" : " (rejected excluded)";
 			reportEmpty.textContent = `No contracts matching “${contractQuery}”${rejectNote}.`;
 			return;
@@ -2212,7 +2274,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		reportSummary.hidden = false;
 		reportSummary.textContent = `“${contractQuery}”: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
 		reportTableWrap.hidden = false;
-		syncReportPrintButton(true, locationId);
+		syncReportExportButtons(true, locationId);
 
 		rows.forEach((entry) => {
 			const row = createReportRow(entry, { showGrade: false, showProduct: true });
@@ -2221,9 +2283,10 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		return;
 	}
 
-	setReportProductColumnVisible(false, locationId);
+	const allProducts = productId === "all";
+	setReportProductColumnVisible(allProducts, locationId);
 	syncReportGradeFilterVisibility(productId, locationId);
-	const showGrade = isGradeEligibleType(productId);
+	const showGrade = !allProducts && isGradeEligibleType(productId);
 	setReportGradeColumnVisible(showGrade, locationId);
 
 	if (!productId) {
@@ -2231,19 +2294,19 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
 		reportEmpty.textContent = "Select a product or search a contract to view inventory locations.";
-		syncReportPrintButton(false, locationId);
+		syncReportExportButtons(false, locationId);
 		return;
 	}
 
 	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
-	const productLabel = getHayTypeLabel(productId);
-	syncReportPrintButton(true, locationId);
+	const productLabel = allProducts ? "All products" : getHayTypeLabel(productId);
 
 	if (rows.length === 0) {
 		reportSummary.hidden = true;
 		reportTableWrap.hidden = true;
 		reportEmpty.hidden = false;
+		syncReportExportButtons(false, locationId);
 		const gradeLabel = gradeFilter !== "all" ? getStackGradeLabel(gradeFilter) : "";
 		const filterNote = gradeLabel ? ` for ${gradeLabel}` : "";
 		const rejectNote = includeRejected ? "" : " (rejected excluded)";
@@ -2255,9 +2318,10 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 	reportSummary.hidden = false;
 	reportSummary.textContent = `${productLabel}: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
 	reportTableWrap.hidden = false;
+	syncReportExportButtons(true, locationId);
 
 	rows.forEach((entry) => {
-		const row = createReportRow(entry, { showGrade });
+		const row = createReportRow(entry, { showGrade, showProduct: allProducts });
 		if (row) reportBody.appendChild(row);
 	});
 }
@@ -2289,54 +2353,47 @@ async function printCurrentReportPdf(locationId = getCurrentLocation()) {
 	const previewWindow = openPdfPreviewPlaceholder();
 
 	try {
-		const filterEl = getScopedElement("reportProductFilter", locationId);
-		const searchEl = getScopedElement("reportContractSearch", locationId);
-		const productId = filterEl?.value ?? "";
-		const contractQuery = searchEl?.value.trim() ?? "";
-
-		const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
-		const { openReportPdf } = await import("./report-pdf.js");
-
-		if (contractQuery) {
-			const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
-			if (rows.length === 0) {
-				closePdfPreviewPlaceholder(previewWindow);
-				alert(`No contracts matching “${contractQuery}” to export.`);
-				return;
-			}
-			openReportPdf({
-				productLabel: contractQuery,
-				headingLabel: `Contract search: ${contractQuery}`,
-				rows,
-				showGrade: false,
-				showProduct: true,
-				includeRejected,
-				previewWindow,
-			});
-			return;
-		}
-
-		if (!productId) {
+		const { ok, emptyMessage, payload } = getCurrentReportExport(locationId);
+		if (!ok || !payload) {
 			closePdfPreviewPlaceholder(previewWindow);
-			alert("Select a product or search a contract to export a PDF report.");
+			alert(emptyMessage || "Nothing to export.");
+			return;
+		}
+		if (payload.rows.length === 0) {
+			closePdfPreviewPlaceholder(previewWindow);
+			alert(emptyMessage || `No ${payload.productLabel} to export.`);
 			return;
 		}
 
-		const productLabel = getHayTypeLabel(productId);
-		const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
-
+		const { openReportPdf } = await import("./report-pdf.js");
 		openReportPdf({
-			productLabel,
-			rows,
-			showGrade: isGradeEligibleType(productId),
-			gradeFilter,
-			includeRejected,
+			...payload,
 			previewWindow,
 		});
 	} catch (err) {
 		closePdfPreviewPlaceholder(previewWindow);
 		console.error("PDF export failed:", err);
 		alert("Could not create the PDF report. Please try again.");
+	}
+}
+
+async function exportCurrentReportCsv(locationId = getCurrentLocation()) {
+	try {
+		const { ok, emptyMessage, payload } = getCurrentReportExport(locationId);
+		if (!ok || !payload) {
+			alert(emptyMessage || "Nothing to export.");
+			return;
+		}
+		if (payload.rows.length === 0) {
+			alert(emptyMessage || `No ${payload.productLabel} to export.`);
+			return;
+		}
+
+		const { downloadReportCsv } = await import("./report-excel.js");
+		downloadReportCsv(payload);
+	} catch (err) {
+		console.error("CSV export failed:", err);
+		alert("Could not create the CSV report. Please try again.");
 	}
 }
 
@@ -2364,6 +2421,7 @@ function initReports(locationId = getCurrentLocation()) {
 	getScopedElement("reportGradeFilter", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportIncludeRejected", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));
+	getScopedElement("reportExportCsv", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
 	refresh();
 }
 

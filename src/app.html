@@ -371,6 +371,7 @@
 								<span class="log__filter-label">Product</span>
 								<select id="reportProductFilter" class="log__filter-input log__filter-input--select">
 									<option value="" selected disabled>Product</option>
+									<option value="all">All products</option>
 									<option value="alfalfa">Alfalfa Hay</option>
 									<option value="barley-straw">Barley Straw</option>
 									<option value="canola-straw">Canola Straw</option>
@@ -412,9 +413,14 @@
 									<span class="reports__include-reject-text">Include rejected</span>
 								</span>
 							</label>
-							<button type="button" id="reportPrintPdf" class="reports__print-btn" disabled>
-								Print PDF
-							</button>
+							<div class="reports__export">
+								<button type="button" id="reportPrintPdf" class="reports__print-btn" disabled>
+									PDF
+								</button>
+								<button type="button" id="reportExportCsv" class="reports__print-btn" disabled>
+									CSV
+								</button>
+							</div>
 						</div>
 						<p class="reports__summary" id="reportSummary" hidden></p>
 						<div class="log-table-wrap reports__table-wrap" id="reportTableWrap" hidden>
