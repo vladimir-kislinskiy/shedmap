@@ -204,17 +204,20 @@
 
 		.gate__submit {
 			height: 44px;
-			border: none;
+			border: 1px solid var(--primary);
 			border-radius: 8px;
 			background: var(--primary);
 			color: #fff;
 			font: inherit;
 			font-weight: 700;
 			cursor: pointer;
+			transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease;
 		}
 
 		.gate__submit:hover:not(:disabled) {
-			background: var(--primary-hover);
+			background: #ffffff;
+			color: var(--primary);
+			border-color: var(--primary);
 		}
 
 		.gate__submit:disabled {

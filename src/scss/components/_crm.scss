@@ -391,15 +391,22 @@
 	font-size: calc(var(--crm-sidebar-font-size) + 1px);
 }
 
-.theme-crm .crm-sidebar .inventory__field,
-.theme-crm .crm-sidebar .inventory__submit {
+.theme-crm .crm-sidebar .inventory__field {
 	font-size: var(--crm-sidebar-font-size);
 	transition: none;
+}
+
+.theme-crm .crm-sidebar .inventory__submit {
+	font-size: var(--crm-sidebar-font-size);
+	transition: var(--transition);
 }
 
 .theme-crm .crm-sidebar .inventory__submit:hover,
 .theme-crm .crm-sidebar .inventory__submit:active {
 	transform: none;
+	background: #ffffff;
+	color: var(--color-primary);
+	border-color: var(--color-primary);
 	box-shadow: 0 4px 6px var(--color-primary-shadow);
 }
 

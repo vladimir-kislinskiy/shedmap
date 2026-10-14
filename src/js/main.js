@@ -2172,14 +2172,11 @@ function setReportProductColumnVisible(show, locationId = getCurrentLocation()) 
 }
 
 function syncReportExportButtons(enabled, locationId = getCurrentLocation()) {
-	[
-		["reportPrintPdf", "PDF"],
-		["reportExportCsv", "CSV"],
-	].forEach(([id, label]) => {
-		const btn = getScopedElement(id, locationId);
-		if (!btn) return;
+	const root = getLocationPanel(locationId) || document;
+	root.querySelectorAll(".reports__export .reports__print-btn").forEach((btn) => {
 		btn.disabled = !enabled;
 		btn.setAttribute("aria-disabled", enabled ? "false" : "true");
+		const label = (btn.textContent || "").trim() || "report";
 		btn.title = enabled
 			? `Export current report as ${label}`
 			: "Select a product or search a contract to export a report";
@@ -2422,6 +2419,7 @@ function initReports(locationId = getCurrentLocation()) {
 	getScopedElement("reportIncludeRejected", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));
 	getScopedElement("reportExportCsv", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
+	getScopedElement("reportExportExcel", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
 	refresh();
 }
 
