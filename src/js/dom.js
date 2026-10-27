@@ -607,9 +607,9 @@ function scaleStackAreaBudgets(bayStackEl, scale) {
 }
 
 const MIN_FIT_STACK_PX = 18;
-const STACK_FONT_MAX_PX = 11.5;
-const STACK_FONT_MAX_FULL_PX = 11.5;
-const STACK_FONT_MIN_PX = 9.5;
+const STACK_FONT_MAX_PX = 12;
+const STACK_FONT_MAX_FULL_PX = 12;
+const STACK_FONT_MIN_PX = 10;
 const STACK_PAD_Y = 10;
 const STACK_LINE_GAP = 2;
 const STACK_LINE_HEIGHT = 1.2;
@@ -640,11 +640,11 @@ function countStackTextLines(stackEl) {
 
 function getStackFontSizeForBales(baleCount) {
 	const bales = Math.max(0, parseInt(baleCount, 10) || 0);
-	if (bales < 50) return 9.5;
-	if (bales <= 200) return 10;
-	if (bales <= 350) return 10.5;
-	if (bales <= 500) return 11;
-	return 11.5;
+	if (bales < 50) return 10;
+	if (bales <= 200) return 10.5;
+	if (bales <= 350) return 11;
+	if (bales <= 500) return 11.5;
+	return 12;
 }
 
 function getStackFontSizeForStack(stackEl) {

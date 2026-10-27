@@ -838,7 +838,7 @@ body.page--dragging .shed__bay-exit {
 }
 
 .hay-stack {
-	--stack-font-size: 11.5px;
+	--stack-font-size: 12px;
 	height: auto;
 	flex-shrink: 0;
 	padding: 5px 6px;
@@ -1886,6 +1886,7 @@ body.page--offline .inventory__form {
 	flex: 0 0 auto;
 	min-width: clamp(4.5rem, 14vw, 6.5rem);
 	text-align: center;
+	transition: none;
 }
 
 .location-tabs__btn:not(.location-tabs__btn--active):hover {
