@@ -9,7 +9,24 @@
 	<meta name="robots" content="noindex, nofollow">
 	<meta name="format-detection" content="telephone=no, email=no, address=no">
 	@include('partials/connected/favicon.html')
+	@include('partials/connected/fonts.html')
 	<style>
+		@font-face {
+			font-family: "Saira Semi Condensed";
+			src: url("fonts/SairaSemiCondensed-Regular.woff2") format("woff2");
+			font-weight: 400;
+			font-style: normal;
+			font-display: block;
+		}
+
+		@font-face {
+			font-family: "Saira Semi Condensed";
+			src: url("fonts/SairaSemiCondensed-Bold.woff2") format("woff2");
+			font-weight: 700;
+			font-style: normal;
+			font-display: block;
+		}
+
 		:root {
 			--bg: #eef1f5;
 			--surface: #ffffff;

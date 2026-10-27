@@ -12,7 +12,7 @@ export const LOCATIONS = {
 		label: "Olds",
 		sheds: ["west", "north", "east"],
 		bayCount: 12,
-		maxBalesPerBay: 1600,
+		maxBalesPerBay: 1650,
 		shedBayStart: {
 			west: 1,
 			north: 25,
