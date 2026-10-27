@@ -117,6 +117,9 @@ const LAYOUT = {
 	baleSegmentMax: MAX_BALES_PER_ISLE,
 };
 
+// Single-isle stacks are physically taller for the same bale count. Set to 1 to revert.
+const SINGLE_ISLE_HEIGHT_FACTOR = 2;
+
 function isMobileStackLayout() {
 	return window.matchMedia(`(max-width: ${LAYOUT.stackAreaMobileBreakpoint}px)`).matches;
 }
@@ -374,14 +377,21 @@ export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.s
 	const halfPercent = 50;
 	const maxTiers = getMaxScaleTiersForSegment(segmentMax);
 
+	let pct;
 	if (maxBales <= segmentMax || baleCount <= segmentMax) {
-		return percentForScaleTiers(getScaleTiers(baleCount), maxTiers, halfPercent, areaBudget);
+		pct = percentForScaleTiers(getScaleTiers(baleCount), maxTiers, halfPercent, areaBudget);
+	} else {
+		const secondOffset = baleCount - segmentMax;
+		const secondMaxTiers = Math.max(1, Math.ceil(segmentMax / LAYOUT.baleStep));
+		const secondTier = Math.min(Math.ceil(secondOffset / LAYOUT.baleStep), secondMaxTiers);
+		pct = Math.round((halfPercent + (secondTier / secondMaxTiers) * halfPercent) * 100) / 100;
 	}
 
-	const secondOffset = baleCount - segmentMax;
-	const secondMaxTiers = Math.max(1, Math.ceil(segmentMax / LAYOUT.baleStep));
-	const secondTier = Math.min(Math.ceil(secondOffset / LAYOUT.baleStep), secondMaxTiers);
-	return Math.round((halfPercent + (secondTier / secondMaxTiers) * halfPercent) * 100) / 100;
+	if (maxBales < bayMax && SINGLE_ISLE_HEIGHT_FACTOR !== 1) {
+		pct = Math.round(pct * SINGLE_ISLE_HEIGHT_FACTOR * 100) / 100;
+	}
+
+	return pct;
 }
 
 export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
