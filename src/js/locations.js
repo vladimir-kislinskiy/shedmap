@@ -31,6 +31,7 @@ export const LOCATIONS = {
 		label: "Siksika",
 		sheds: ["south", "north"],
 		bayCount: 10,
+		maxBalesPerBay: 1500,
 		bayLabelSpan: 1,
 		shedBayStart: {
 			south: 1,
@@ -76,6 +77,5 @@ export function getMaxBalesPerBay(locationId = OLDS_LOCATION_ID) {
 }
 
 export function getMaxBalesPerIsle(isle, locationId = OLDS_LOCATION_ID) {
-	const bayMax = getMaxBalesPerBay(locationId);
-	return isle === "both" ? bayMax : bayMax / 2;
+	return getMaxBalesPerBay(locationId);
 }

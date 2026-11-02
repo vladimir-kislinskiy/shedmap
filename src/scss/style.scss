@@ -1073,8 +1073,8 @@ body.page--dragging #Sheds {
 	box-shadow:
 		0 2px 5px rgba(0, 0, 0, 0.1),
 		inset 0 2px 0 rgba(255, 255, 255, 0.2),
-		inset 0 0 0 2px rgba(255, 255, 255, 0.9),
-		inset 0 0 0 4px var(--color-primary);
+		0 0 0 1.5px rgba(255, 255, 255, 0.95),
+		0 0 0 3px var(--color-primary);
 }
 
 .hay-stack--dragging {

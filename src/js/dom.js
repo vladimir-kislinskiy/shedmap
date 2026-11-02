@@ -117,9 +117,6 @@ const LAYOUT = {
 	baleSegmentMax: MAX_BALES_PER_ISLE,
 };
 
-// Single-isle stacks are physically taller for the same bale count. Set to 1 to revert.
-const SINGLE_ISLE_HEIGHT_FACTOR = 2;
-
 function isMobileStackLayout() {
 	return window.matchMedia(`(max-width: ${LAYOUT.stackAreaMobileBreakpoint}px)`).matches;
 }
@@ -185,37 +182,53 @@ function measureIdealStacksBlockHeight(stacks, bayStackEl) {
 	return total;
 }
 
+function splitBayDirectStacks(bayStackEl) {
+	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const directStacks = getDirectStacks(bayStackEl);
+	const before = [];
+	const after = [];
+	const front = [];
+
+	directStacks.forEach((stack) => {
+		if (stack.classList.contains("hay-stack--bay-front")) {
+			front.push(stack);
+			return;
+		}
+		if (isStackBeforeIslesRow(stack, islesRow)) before.push(stack);
+		else after.push(stack);
+	});
+
+	return { before, after, front };
+}
+
+function sumBaySectionHeights(sectionHeights) {
+	let total = 0;
+	let sections = 0;
+	sectionHeights.forEach((height) => {
+		if (!(height > 0)) return;
+		if (sections) total += LAYOUT.stackGap;
+		total += height;
+		sections++;
+	});
+	return { total, sections };
+}
+
 function measureIdealBayContentHeight(bayStackEl) {
 	if (!bayStackEl) return 0;
 
-	const directStacks = getDirectStacks(bayStackEl);
-	const regularDirect = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
-	const frontDirect = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
+	const { before, after, front } = splitBayDirectStacks(bayStackEl);
 	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
 	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
 	const islesHeight = Math.max(
 		measureIdealStacksBlockHeight(isle1Stacks, bayStackEl),
 		measureIdealStacksBlockHeight(isle2Stacks, bayStackEl),
 	);
-	const regularHeight = measureIdealStacksBlockHeight(regularDirect, bayStackEl);
-	const frontHeight = measureIdealStacksBlockHeight(frontDirect, bayStackEl);
-
-	let total = 0;
-	let sections = 0;
-	if (regularHeight > 0) {
-		total += regularHeight;
-		sections++;
-	}
-	if (islesHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += islesHeight;
-		sections++;
-	}
-	if (frontHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += frontHeight;
-		sections++;
-	}
+	const { total, sections } = sumBaySectionHeights([
+		measureIdealStacksBlockHeight(before, bayStackEl),
+		islesHeight,
+		measureIdealStacksBlockHeight(after, bayStackEl),
+		measureIdealStacksBlockHeight(front, bayStackEl),
+	]);
 	if (!sections) return 0;
 
 	const { top, bottom } = getBayStackPadding(bayStackEl);
@@ -377,21 +390,14 @@ export function getStackHeightPercent(baleCount, maxBales, areaBudget = LAYOUT.s
 	const halfPercent = 50;
 	const maxTiers = getMaxScaleTiersForSegment(segmentMax);
 
-	let pct;
 	if (maxBales <= segmentMax || baleCount <= segmentMax) {
-		pct = percentForScaleTiers(getScaleTiers(baleCount), maxTiers, halfPercent, areaBudget);
-	} else {
-		const secondOffset = baleCount - segmentMax;
-		const secondMaxTiers = Math.max(1, Math.ceil(segmentMax / LAYOUT.baleStep));
-		const secondTier = Math.min(Math.ceil(secondOffset / LAYOUT.baleStep), secondMaxTiers);
-		pct = Math.round((halfPercent + (secondTier / secondMaxTiers) * halfPercent) * 100) / 100;
+		return percentForScaleTiers(getScaleTiers(baleCount), maxTiers, halfPercent, areaBudget);
 	}
 
-	if (maxBales < bayMax && SINGLE_ISLE_HEIGHT_FACTOR !== 1) {
-		pct = Math.round(pct * SINGLE_ISLE_HEIGHT_FACTOR * 100) / 100;
-	}
-
-	return pct;
+	const secondOffset = baleCount - segmentMax;
+	const secondMaxTiers = Math.max(1, Math.ceil(segmentMax / LAYOUT.baleStep));
+	const secondTier = Math.min(Math.ceil(secondOffset / LAYOUT.baleStep), secondMaxTiers);
+	return Math.round((halfPercent + (secondTier / secondMaxTiers) * halfPercent) * 100) / 100;
 }
 
 export function getStackHeightPx(baleCount, maxBales, areaBudget = LAYOUT.stackAreaDesktop, bayMax = MAX_BALES_PER_BAY) {
@@ -461,24 +467,6 @@ function getVerticalStackGaps(stackCount) {
 	return Math.max(0, stackCount - 1) * LAYOUT.stackGap;
 }
 
-function sumStackHeightPercents(stacks, bayStackEl, areaBudget) {
-	const locationId = getBayStackLocationId(bayStackEl);
-	const bayMax = getMaxBalesPerBay(locationId);
-
-	return stacks.reduce((total, stack) => {
-		if (isStackFill(stack)) return total;
-		const bales = parseInt(stack.dataset.bales, 10) || 0;
-		const isle = stack.dataset.isle || "both";
-		return total + getStackHeightPercent(bales, getIsleMaxBales(isle, locationId), areaBudget, bayMax);
-	}, 0);
-}
-
-function areaBudgetToFitPercents(usable, pctSum) {
-	if (usable <= 0) return LAYOUT.minStack;
-	if (pctSum <= 0) return usable;
-	return Math.max(LAYOUT.minStack, Math.min(usable, (usable * 100) / pctSum));
-}
-
 function applyBayStackAreaBudget(bayStackEl, { fitToBay = true } = {}) {
 	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
 
@@ -492,78 +480,16 @@ function applyBayStackAreaBudget(bayStackEl, { fitToBay = true } = {}) {
 		return;
 	}
 
+	// Stable 100% reference = bay inner height. Do not shrink this when stacks are added.
 	const { top, bottom } = getBayStackPadding(bayStackEl);
 	const inner = Math.max(LAYOUT.minStack, bayStackEl.clientHeight - top - bottom);
-
-	const fullStacks = getDirectStacks(bayStackEl);
-	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
-	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
-	const hasIsleStacks = isle1Stacks.length > 0 || isle2Stacks.length > 0;
-
-	if (fullStacks.length && hasIsleStacks) {
-		const fullGaps = getVerticalStackGaps(fullStacks.length);
-		const isleGaps = Math.max(getVerticalStackGaps(isle1Stacks.length), getVerticalStackGaps(isle2Stacks.length));
-		const sectionGap = LAYOUT.stackGap;
-		const usable = Math.max(LAYOUT.minStack, inner - fullGaps - sectionGap - isleGaps);
-
-		const fullPctSum = sumStackHeightPercents(fullStacks, bayStackEl, base);
-		const islePctSum = Math.max(
-			sumStackHeightPercents(isle1Stacks, bayStackEl, base),
-			sumStackHeightPercents(isle2Stacks, bayStackEl, base),
-		);
-		const pctSum = fullPctSum + islePctSum;
-		const sharedArea = areaBudgetToFitPercents(usable, pctSum);
-
-		if (pctSum > 0) {
-			const fullShare = fullPctSum > 0 ? (fullPctSum / pctSum) * usable : 0;
-			const isleShare = islePctSum > 0 ? (islePctSum / pctSum) * usable : 0;
-			const fullArea = areaBudgetToFitPercents(Math.max(LAYOUT.minStack, fullShare), fullPctSum);
-			const isleArea = areaBudgetToFitPercents(Math.max(LAYOUT.minStack, isleShare), islePctSum);
-
-			bayStackEl.style.setProperty("--stack-area-height", `${fullArea}px`);
-			[...isle1Stacks, ...isle2Stacks].forEach((stack) => {
-				stack.style.setProperty("--stack-area-height", `${Math.max(LAYOUT.minStack, isleArea)}px`);
-			});
-			return;
-		}
-
-		bayStackEl.style.setProperty("--stack-area-height", `${sharedArea}px`);
-		return;
-	}
-
-	if (fullStacks.length && !hasIsleStacks) {
-		const gaps = getVerticalStackGaps(fullStacks.length);
-		const usable = Math.max(LAYOUT.minStack, inner - gaps);
-		const pctSum = sumStackHeightPercents(fullStacks, bayStackEl, base);
-		bayStackEl.style.setProperty("--stack-area-height", `${areaBudgetToFitPercents(usable, pctSum)}px`);
-		return;
-	}
-
-	if (hasIsleStacks && !fullStacks.length) {
-		const gaps = Math.max(getVerticalStackGaps(isle1Stacks.length), getVerticalStackGaps(isle2Stacks.length));
-		const usable = Math.max(LAYOUT.minStack, inner - gaps);
-		const pctSum = Math.max(
-			sumStackHeightPercents(isle1Stacks, bayStackEl, base),
-			sumStackHeightPercents(isle2Stacks, bayStackEl, base),
-		);
-		const area = areaBudgetToFitPercents(usable, pctSum);
-		bayStackEl.style.setProperty("--stack-area-height", `${area}px`);
-		[...isle1Stacks, ...isle2Stacks].forEach((stack) => {
-			stack.style.setProperty("--stack-area-height", `${area}px`);
-		});
-		return;
-	}
-
 	bayStackEl.style.setProperty("--stack-area-height", `${inner}px`);
 }
 
 function measureBayContentHeightRaw(bayStackEl) {
 	if (!bayStackEl) return 0;
 
-	const directStacks = getDirectStacks(bayStackEl);
-	const regularDirect = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
-	const frontDirect = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
-
+	const { before, after, front } = splitBayDirectStacks(bayStackEl);
 	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
 	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
 	const islesHeight = Math.max(
@@ -571,27 +497,12 @@ function measureBayContentHeightRaw(bayStackEl) {
 		measureStacksBlockHeight(isle2Stacks, bayStackEl),
 	);
 
-	const regularHeight = measureStacksBlockHeight(regularDirect, bayStackEl);
-	const frontHeight = measureStacksBlockHeight(frontDirect, bayStackEl);
-
-	let total = 0;
-	let sections = 0;
-
-	if (regularHeight > 0) {
-		total += regularHeight;
-		sections++;
-	}
-	if (islesHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += islesHeight;
-		sections++;
-	}
-	if (frontHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += frontHeight;
-		sections++;
-	}
-
+	const { total, sections } = sumBaySectionHeights([
+		measureStacksBlockHeight(before, bayStackEl),
+		islesHeight,
+		measureStacksBlockHeight(after, bayStackEl),
+		measureStacksBlockHeight(front, bayStackEl),
+	]);
 	if (!sections) return 0;
 
 	const { top, bottom } = getBayStackPadding(bayStackEl);
@@ -745,26 +656,6 @@ function softenFillStackMinimums(bayStackEl) {
 	});
 }
 
-function scaleNonFillStacksToFit(bayStackEl, available) {
-	const stacks = [...getBayStacks(bayStackEl)].filter((stack) => !isStackFill(stack));
-	if (!stacks.length) return false;
-
-	const heights = stacks.map(
-		(stack) => parseFloat(stack.style.height) || stack.offsetHeight || MIN_FIT_STACK_PX,
-	);
-	const sum = heights.reduce((total, h) => total + h, 0);
-	if (sum <= 0) return false;
-
-	const needed = measureBayContentHeightRaw(bayStackEl);
-	if (needed <= available + 1) return false;
-
-	const scale = Math.max(0.05, available / needed);
-	stacks.forEach((stack, index) => {
-		applyStackBoxHeight(stack, heights[index] * scale);
-	});
-	return true;
-}
-
 function stackTextOverflowsBox(stackEl) {
 	const desc = stackEl.querySelector(".hay-stack__desc");
 	const comment = stackEl.querySelector(".hay-stack__comment");
@@ -838,48 +729,26 @@ function fitAllStackFontsInBay(bayStackEl) {
 }
 
 function ensureBayStackTextFits(bayStackEl) {
-	let grew = false;
 	[...getBayStacks(bayStackEl)].forEach((stack) => {
-		if (growStackToFitText(stack)) grew = true;
+		growStackToFitText(stack);
 	});
-
-	const fitViewport = isFittingColumnsToViewport();
-	const reflowIfNeeded = () => {
-		if (!fitViewport) return;
-		if (measureBayContentHeightRaw(bayStackEl) <= bayStackEl.clientHeight + 1) return;
-		compressBayStacksToFit(bayStackEl);
-		expandFillStacksToFreeSpace(bayStackEl);
-		fitAllStackFontsInBay(bayStackEl);
-	};
-
-	if (grew) reflowIfNeeded();
 
 	[...getBayStacks(bayStackEl)].forEach((stack) => {
 		fitStackFontToBox(stack);
-		if (stackTextOverflowsBox(stack) && growStackToFitText(stack)) grew = true;
+		if (stackTextOverflowsBox(stack)) growStackToFitText(stack);
 	});
 
-	if (grew) reflowIfNeeded();
+	if (isFittingColumnsToViewport()) {
+		expandFillStacksToFreeSpace(bayStackEl);
+		fitAllStackFontsInBay(bayStackEl);
+	}
 }
 
 function compressBayStacksToFit(bayStackEl) {
 	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
-
-	const hasFill = [...getBayStacks(bayStackEl)].some(isStackFill);
-	const available = bayStackEl.clientHeight;
-
-	if (hasFill) softenFillStackMinimums(bayStackEl);
-
-	let needed = measureBayContentHeightRaw(bayStackEl);
-	if (needed <= available + 1) return;
-
-	for (let pass = 0; pass < 4; pass++) {
-		needed = measureBayContentHeightRaw(bayStackEl);
-		if (needed <= available + 1) return;
-
-		if (hasFill) softenFillStackMinimums(bayStackEl);
-		const scaled = scaleNonFillStacksToFit(bayStackEl, available);
-		if (!scaled) break;
+	// Never shrink non-fill neighbors; only release fill stacks to min before they reclaim free space.
+	if ([...getBayStacks(bayStackEl)].some(isStackFill)) {
+		softenFillStackMinimums(bayStackEl);
 	}
 }
 
@@ -1019,10 +888,7 @@ function measureStacksBlockHeight(stacks, bayStackEl) {
 export function measureBayStackContent(bayStackEl) {
 	if (!bayStackEl) return 0;
 
-	const directStacks = getDirectStacks(bayStackEl);
-	const regularDirect = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
-	const frontDirect = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
-
+	const { before, after, front } = splitBayDirectStacks(bayStackEl);
 	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
 	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
 	const islesHeight = Math.max(
@@ -1030,26 +896,12 @@ export function measureBayStackContent(bayStackEl) {
 		measureStacksBlockHeight(isle2Stacks, bayStackEl),
 	);
 
-	const regularHeight = measureStacksBlockHeight(regularDirect, bayStackEl);
-	const frontHeight = measureStacksBlockHeight(frontDirect, bayStackEl);
-
-	let total = 0;
-	let sections = 0;
-
-	if (regularHeight > 0) {
-		total += regularHeight;
-		sections++;
-	}
-	if (islesHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += islesHeight;
-		sections++;
-	}
-	if (frontHeight > 0) {
-		if (sections) total += LAYOUT.stackGap;
-		total += frontHeight;
-		sections++;
-	}
+	const { total, sections } = sumBaySectionHeights([
+		measureStacksBlockHeight(before, bayStackEl),
+		islesHeight,
+		measureStacksBlockHeight(after, bayStackEl),
+		measureStacksBlockHeight(front, bayStackEl),
+	]);
 
 	if (!sections) return 0;
 
@@ -1229,20 +1081,47 @@ export function setStackHeight(stackEl, baleCount, maxBales) {
 	stackEl.style.minHeight = `${locked}px`;
 }
 
+function placeBothStackInBay(stackEl, bayStackEl) {
+	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
+
+	if (!isleHasStacks) {
+		bayStackEl.insertBefore(stackEl, islesRow);
+		return;
+	}
+
+	// Keep addition order: after existing isle stacks, before Front stacks.
+	const firstFront = [...bayStackEl.children].find((el) =>
+		el.classList?.contains("hay-stack--bay-front"),
+	);
+	if (firstFront) {
+		bayStackEl.insertBefore(stackEl, firstFront);
+	} else {
+		bayStackEl.appendChild(stackEl);
+	}
+}
+
 export function applyIsleLayout(stackEl, isle, bayStackEl) {
 	stackEl.dataset.isle = isle;
 	stackEl.classList.remove("hay-stack--full", "hay-stack--isle-1", "hay-stack--isle-2");
 
 	if (isle === "both") {
 		stackEl.classList.add("hay-stack--full");
-		const islesRow = bayStackEl.querySelector(".shed__isles");
-		bayStackEl.insertBefore(stackEl, islesRow);
+		placeBothStackInBay(stackEl, bayStackEl);
 		return;
 	}
 
 	stackEl.classList.add(`hay-stack--isle-${isle}`);
 	const isleEl = bayStackEl.querySelector(`.shed__isle--${isle}`);
 	isleEl?.appendChild(stackEl);
+}
+
+function isStackBeforeIslesRow(stackEl, islesRow) {
+	if (!islesRow || !stackEl) return true;
+	const pos = stackEl.compareDocumentPosition(islesRow);
+	if (pos & Node.DOCUMENT_POSITION_FOLLOWING) return true;
+	if (pos & Node.DOCUMENT_POSITION_PRECEDING) return false;
+	return true;
 }
 
 function getStackIsle(stackEl) {
@@ -1372,8 +1251,15 @@ function orderFrontStacksLast(container) {
 
 	if (isBayStack) {
 		const islesRow = container.querySelector(".shed__isles");
+		const regularBefore = [];
+		const regularAfter = [];
 
 		regular.forEach((stack) => {
+			if (isStackBeforeIslesRow(stack, islesRow)) regularBefore.push(stack);
+			else regularAfter.push(stack);
+		});
+
+		regularBefore.forEach((stack) => {
 			container.insertBefore(stack, islesRow ?? container.firstChild);
 		});
 
@@ -1388,12 +1274,16 @@ function orderFrontStacksLast(container) {
 
 		const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
 		const hasFill = stacks.some(isStackFill);
-		if (ahead.length && regular.length && !isleHasStacks && !hasFill) {
+		if (ahead.length && regularBefore.length && !regularAfter.length && !isleHasStacks && !hasFill) {
 			const spacer = document.createElement("div");
 			spacer.className = "shed__stack-spacer";
 			spacer.setAttribute("aria-hidden", "true");
 			container.appendChild(spacer);
 		}
+
+		regularAfter.forEach((stack) => {
+			container.appendChild(stack);
+		});
 
 		ahead.forEach((stack) => {
 			container.appendChild(stack);
@@ -1464,16 +1354,30 @@ export function repairBayLayout(bayStackEl) {
 	if (!islesRow) return;
 
 	const ordered = [...bayStackEl.querySelectorAll(".hay-stack")];
-	const groups = { both: [], "1": [], "2": [] };
+	const bothBefore = [];
+	const bothAfter = [];
+	const groups = { "1": [], "2": [] };
+	let seenIsle = false;
 
 	ordered.forEach((stack) => {
-		groups[getStackIsle(stack)].push(stack);
+		const isle = getStackIsle(stack);
+		if (isle === "1" || isle === "2") {
+			seenIsle = true;
+			groups[isle].push(stack);
+			return;
+		}
+		if (seenIsle) bothAfter.push(stack);
+		else bothBefore.push(stack);
 	});
 
-	groups.both.forEach((stack) => {
+	const markBoth = (stack) => {
 		stack.dataset.isle = "both";
 		stack.classList.remove("hay-stack--isle-1", "hay-stack--isle-2");
 		stack.classList.add("hay-stack--full");
+	};
+
+	bothBefore.forEach((stack) => {
+		markBoth(stack);
 		bayStackEl.insertBefore(stack, islesRow);
 	});
 
@@ -1487,6 +1391,11 @@ export function repairBayLayout(bayStackEl) {
 			stack.classList.add(`hay-stack--isle-${isleNum}`);
 			isleEl.appendChild(stack);
 		});
+	});
+
+	bothAfter.forEach((stack) => {
+		markBoth(stack);
+		bayStackEl.appendChild(stack);
 	});
 
 	orderFrontStacksLast(bayStackEl);
