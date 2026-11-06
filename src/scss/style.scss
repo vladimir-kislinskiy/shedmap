@@ -545,6 +545,7 @@ body.page--view-only .inventory__form {
 	min-width: 0;
 	text-align: center;
 	font-size: calc(var(--ctrl-font-size) - 1px);
+	transition: none;
 }
 
 .shed-tabs__btn:not(.shed-tabs__btn--active):hover {
@@ -831,6 +832,18 @@ body.page--dragging .shed__bay-exit {
 	#location-simply .shed__columns {
 		gap: clamp(4px, 0.7vw, 8px);
 	}
+}
+
+#location-simply .shed__columns {
+	align-items: flex-start;
+}
+
+#location-simply .shed__bay {
+	flex: 0 0 150px;
+	width: 150px;
+	min-width: 150px;
+	max-width: 150px;
+	align-self: flex-start;
 }
 
 #location-simply .shed__bay-stack {

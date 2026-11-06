@@ -697,6 +697,13 @@
 		flex: 1 1 0;
 		min-width: 0;
 	}
+
+	.theme-crm.crm-collapsed #location-simply .shed__bay {
+		flex: 0 0 150px;
+		width: 150px;
+		min-width: 150px;
+		max-width: 150px;
+	}
 }
 
 .theme-crm .page__footer {

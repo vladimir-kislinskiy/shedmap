@@ -467,6 +467,21 @@ function getVerticalStackGaps(stackCount) {
 	return Math.max(0, stackCount - 1) * LAYOUT.stackGap;
 }
 
+function measureBayGapReserve(bayStackEl) {
+	const { before, after, front } = splitBayDirectStacks(bayStackEl);
+	const isle1 = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
+	const isle2 = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
+	const blocks = [before.length, Math.max(isle1.length, isle2.length), after.length, front.length];
+
+	let gaps = 0;
+	blocks.forEach((count) => {
+		if (count > 1) gaps += count - 1;
+	});
+	const sections = blocks.filter((count) => count > 0).length;
+	if (sections > 1) gaps += sections - 1;
+	return gaps * LAYOUT.stackGap;
+}
+
 function applyBayStackAreaBudget(bayStackEl, { fitToBay = true } = {}) {
 	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
 
@@ -480,10 +495,48 @@ function applyBayStackAreaBudget(bayStackEl, { fitToBay = true } = {}) {
 		return;
 	}
 
-	// Stable 100% reference = bay inner height. Do not shrink this when stacks are added.
+	// Stable 100% reference = bay inner height minus flex gaps so stacks are not clipped.
 	const { top, bottom } = getBayStackPadding(bayStackEl);
-	const inner = Math.max(LAYOUT.minStack, bayStackEl.clientHeight - top - bottom);
+	const gapReserve = measureBayGapReserve(bayStackEl);
+	const inner = Math.max(
+		LAYOUT.minStack,
+		bayStackEl.clientHeight - top - bottom - gapReserve,
+	);
 	bayStackEl.style.setProperty("--stack-area-height", `${inner}px`);
+}
+
+function bayStackContentOverflows(bayStackEl) {
+	if (!bayStackEl || bayStackEl.clientHeight <= 0) return false;
+	return measureBayContentHeightRaw(bayStackEl) > bayStackEl.clientHeight + 1;
+}
+
+function fitBayContentToHeight(bayStackEl) {
+	if (!bayStackEl || bayStackEl.clientHeight <= 0) return false;
+	if (!bayStackContentOverflows(bayStackEl)) return false;
+
+	const stacks = [...getBayStacks(bayStackEl)].filter((stack) => !isStackFill(stack));
+	if (!stacks.length) {
+		softenFillStackMinimums(bayStackEl);
+		expandFillStacksToFreeSpace(bayStackEl);
+		return bayStackContentOverflows(bayStackEl);
+	}
+
+	const available = bayStackEl.clientHeight;
+	const needed = measureBayContentHeightRaw(bayStackEl);
+	const { top, bottom } = getBayStackPadding(bayStackEl);
+	const innerAvail = Math.max(LAYOUT.minStack, available - top - bottom);
+	const innerNeeded = Math.max(1, needed - top - bottom);
+	const scale = Math.max(0.05, Math.min(1, innerAvail / innerNeeded));
+
+	stacks.forEach((stack) => {
+		const h = stack.offsetHeight || parseFloat(stack.style.height) || MIN_FIT_STACK_PX;
+		applyStackBoxHeight(stack, Math.max(MIN_FIT_STACK_PX, h * scale));
+	});
+
+	softenFillStackMinimums(bayStackEl);
+	expandFillStacksToFreeSpace(bayStackEl);
+	fitAllStackFontsInBay(bayStackEl);
+	return true;
 }
 
 function measureBayContentHeightRaw(bayStackEl) {
@@ -694,6 +747,13 @@ function stackTextOverflowsBox(stackEl) {
 	return overflows;
 }
 
+function stackTextOverflowsWidth(stackEl) {
+	return getVisibleStackTextEls(stackEl).some((el) => {
+		if (el.classList.contains("hay-stack__comment")) return false;
+		return el.scrollWidth > el.clientWidth + 1;
+	});
+}
+
 function applyStackFontSize(stackEl, fontPx) {
 	const px = Math.round(fontPx * 10) / 10;
 	stackEl.style.setProperty("--stack-font-size", `${px}px`);
@@ -702,8 +762,14 @@ function applyStackFontSize(stackEl, fontPx) {
 }
 
 function fitStackFontToBox(stackEl) {
-	const fontPx = getStackFontSizeForStack(stackEl);
+	let fontPx = getStackFontSizeForStack(stackEl);
 	applyStackFontSize(stackEl, fontPx);
+
+	while (fontPx > STACK_FONT_MIN_PX && stackTextOverflowsWidth(stackEl)) {
+		fontPx = Math.round((fontPx - 0.5) * 10) / 10;
+		applyStackFontSize(stackEl, fontPx);
+	}
+
 	return fontPx;
 }
 
@@ -963,37 +1029,24 @@ function reconcileColumnsLayout(columns, bayStackCap = Infinity, columnsCap = In
 	return targetBay;
 }
 
-function syncShedColumnsLayout(columns) {
-	if (columns.offsetParent === null) return;
+function layoutShedColumnsFit(columns, chrome, minBay) {
+	const columnsCap = getAvailableColumnsHeight(columns);
+	const bayStackCap = Math.max(minBay, columnsCap - chrome - 12);
 
-	columns.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
+	columns.style.height = `${columnsCap}px`;
+	columns.style.removeProperty("min-height");
+	columns.offsetHeight;
 
-	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
+	applyUniformBayStackHeights(columns, bayStackCap);
+	columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
+		finalizeBayStackLayout(bayStack);
+	});
+	reconcileColumnsLayout(columns, bayStackCap, columnsCap);
 
-	const chrome = getBayChromeForColumns(columns);
-	const fitViewport = shouldFitColumnsToViewport(columns, chrome);
-	const minBay =
-		LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
+	return [...columns.querySelectorAll(".shed__bay-stack")].some(bayStackContentOverflows);
+}
 
-	document.body.classList.toggle("page--shed-scroll", !fitViewport);
-	reflectShedLayoutToggle(!fitViewport);
-
-	if (fitViewport) {
-		const columnsCap = getAvailableColumnsHeight(columns);
-		const bayStackCap = Math.max(minBay, columnsCap - chrome - 12);
-
-		columns.style.height = `${columnsCap}px`;
-		columns.style.removeProperty("min-height");
-		columns.offsetHeight;
-
-		applyUniformBayStackHeights(columns, bayStackCap);
-		columns.querySelectorAll(".shed__bay-stack").forEach((bayStack) => {
-			finalizeBayStackLayout(bayStack);
-		});
-		reconcileColumnsLayout(columns, bayStackCap, columnsCap);
-		return;
-	}
-
+function layoutShedColumnsScroll(columns, chrome, minBay) {
 	columns.style.removeProperty("height");
 	columns.style.removeProperty("max-height");
 
@@ -1019,6 +1072,40 @@ function syncShedColumnsLayout(columns) {
 	});
 	columns.style.height = "auto";
 	columns.style.minHeight = `${Math.ceil(finalBay + chrome + 12)}px`;
+}
+
+function syncShedColumnsLayout(columns) {
+	if (columns.offsetParent === null) return;
+
+	columns.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
+
+	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
+
+	const chrome = getBayChromeForColumns(columns);
+	let fitViewport = shouldFitColumnsToViewport(columns, chrome);
+	const minBay =
+		LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
+	const forceFit = allowShedScrollPref && shedScrollOverride === false;
+
+	document.body.classList.toggle("page--shed-scroll", !fitViewport);
+	reflectShedLayoutToggle(!fitViewport);
+
+	if (fitViewport) {
+		const overflows = layoutShedColumnsFit(columns, chrome, minBay);
+		if (overflows && !forceFit) {
+			fitViewport = false;
+			document.body.classList.add("page--shed-scroll");
+			reflectShedLayoutToggle(true);
+			layoutShedColumnsScroll(columns, chrome, minBay);
+			return;
+		}
+		if (overflows && forceFit) {
+			columns.querySelectorAll(".shed__bay-stack").forEach(fitBayContentToHeight);
+		}
+		return;
+	}
+
+	layoutShedColumnsScroll(columns, chrome, minBay);
 }
 
 export function refreshAllStackHeights() {
