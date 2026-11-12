@@ -91,7 +91,17 @@
 	--radius-md: 10px;
 	--radius-sm: 6px;
 
-	--transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease, opacity 0.2s ease;
+	--ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+	--ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+	--motion-fast: 0.16s;
+	--motion-base: 0.24s;
+	--motion-slow: 0.34s;
+	--transition:
+		background-color var(--motion-fast) var(--ease-out),
+		color var(--motion-fast) var(--ease-out),
+		border-color var(--motion-fast) var(--ease-out),
+		box-shadow var(--motion-fast) var(--ease-out),
+		opacity var(--motion-fast) var(--ease-out);
 
 	--scrollbar-size: 10px;
 	--scrollbar-track: transparent;

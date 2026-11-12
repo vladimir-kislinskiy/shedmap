@@ -472,16 +472,35 @@ function initGrabToScroll() {
 		if (!useGrabScroll) return;
 
 		let isDown = false;
-		let startX;
-		let scrollLeft;
+		let startX = 0;
+		let scrollLeft = 0;
 		let activePointerId = null;
+		let pendingX = null;
+		let rafId = 0;
 
 		const shouldSkip = (e) =>
 			e.target.closest(".hay-stack") ||
 			document.body.classList.contains("page--dragging");
 
+		const flushScroll = () => {
+			rafId = 0;
+			if (!isDown || pendingX == null) return;
+			slider.scrollLeft = scrollLeft - (pendingX - startX);
+			pendingX = null;
+		};
+
+		const queueScroll = (clientX) => {
+			pendingX = clientX - slider.offsetLeft;
+			if (!rafId) rafId = requestAnimationFrame(flushScroll);
+		};
+
 		const stopGrabMouse = () => {
 			isDown = false;
+			pendingX = null;
+			if (rafId) {
+				cancelAnimationFrame(rafId);
+				rafId = 0;
+			}
 			slider.classList.remove("shed__columns--grabbing");
 		};
 
@@ -499,8 +518,7 @@ function initGrabToScroll() {
 		slider.addEventListener("mousemove", (e) => {
 			if (!isDown) return;
 			e.preventDefault();
-			const x = e.pageX - slider.offsetLeft;
-			slider.scrollLeft = scrollLeft - (x - startX) * 2;
+			queueScroll(e.pageX);
 		});
 
 		slider.addEventListener("pointerdown", (e) => {
@@ -516,6 +534,11 @@ function initGrabToScroll() {
 			if (e.pointerId !== activePointerId) return;
 			isDown = false;
 			activePointerId = null;
+			pendingX = null;
+			if (rafId) {
+				cancelAnimationFrame(rafId);
+				rafId = 0;
+			}
 			slider.classList.remove("shed__columns--grabbing");
 		};
 
@@ -525,8 +548,7 @@ function initGrabToScroll() {
 		slider.addEventListener("pointermove", (e) => {
 			if (!isDown || e.pointerId !== activePointerId || e.pointerType === "touch") return;
 			e.preventDefault();
-			const x = e.pageX - slider.offsetLeft;
-			slider.scrollLeft = scrollLeft - (x - startX) * 2;
+			queueScroll(e.pageX);
 		});
 	});
 }
