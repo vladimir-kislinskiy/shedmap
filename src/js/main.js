@@ -2455,6 +2455,34 @@ function findStackForReportNav({ shedId, bayIndex, stackKey, rejected, isle, bal
 	);
 }
 
+function centerStackInShedView(stackEl) {
+	if (!stackEl) return;
+
+	const bayCol = stackEl.closest(".shed__bay") || stackEl.closest(".shed__bay-stack");
+	const columns = bayCol?.closest(".shed__columns");
+
+	if (columns && bayCol) {
+		const colRect = columns.getBoundingClientRect();
+		const bayRect = bayCol.getBoundingClientRect();
+		const bayCenter = bayRect.left + bayRect.width / 2;
+		const viewCenter = colRect.left + colRect.width / 2;
+		const maxLeft = Math.max(0, columns.scrollWidth - columns.clientWidth);
+		const nextLeft = Math.max(
+			0,
+			Math.min(maxLeft, columns.scrollLeft + (bayCenter - viewCenter)),
+		);
+		columns.scrollTo({ left: nextLeft, behavior: "smooth" });
+	}
+
+	const stackRect = stackEl.getBoundingClientRect();
+	const vh = window.innerHeight || document.documentElement.clientHeight || 0;
+	if (vh > 0) {
+		const stackCenter = stackRect.top + stackRect.height / 2;
+		const nextTop = Math.max(0, window.scrollY + (stackCenter - vh / 2));
+		window.scrollTo({ top: nextTop, behavior: "smooth" });
+	}
+}
+
 function navigateToReportStack(row, locationId = getCurrentLocation()) {
 	if (!row?.dataset?.shedId || row.dataset.bayIndex == null || !row.dataset.stackKey) return;
 
@@ -2494,12 +2522,10 @@ function navigateToReportStack(row, locationId = getCurrentLocation()) {
 	});
 	stack.classList.add("hay-stack--selected");
 
-	const bayStack = stack.closest(".shed__bay-stack");
-	const bayCol = bayStack?.closest(".shed__bay") || bayStack;
-
 	requestAnimationFrame(() => {
-		bayCol?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-		stack.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+		requestAnimationFrame(() => {
+			centerStackInShedView(stack);
+		});
 	});
 }
 
