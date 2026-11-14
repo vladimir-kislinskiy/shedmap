@@ -693,10 +693,11 @@ function syncInventoryActionFields(locationId = getCurrentLocation()) {
 }
 
 const GRADE_ELIGIBLE_TYPES = new Set(["alfalfa", "timothy"]);
+const GRADE_UI_ENABLED = false;
 const NO_TAGS_CONTRACT = "No Tags";
 
 function isGradeEligibleType(type) {
-	return GRADE_ELIGIBLE_TYPES.has(type);
+	return GRADE_UI_ENABLED && GRADE_ELIGIBLE_TYPES.has(type);
 }
 
 function syncNoTagsState(locationId = getCurrentLocation()) {
@@ -996,7 +997,7 @@ function openStackDetail(stackEl) {
 	const bales = parseInt(stackEl.dataset.bales, 10) || 0;
 	const rejected = stackEl.dataset.rejected === "true";
 	const fill = stackEl.dataset.fill === "true";
-	const grade = getStackGradeLabel(stackEl.dataset.grade || "");
+	const grade = GRADE_UI_ENABLED ? getStackGradeLabel(stackEl.dataset.grade || "") : "";
 	const comment = stackEl.dataset.comment || "";
 	const isle = stackEl.dataset.isle || "both";
 	const shed = bayStack.dataset.shed;
@@ -1192,7 +1193,7 @@ function handleHay() {
 	const stackComment = stripBayFrontCommentTokens(
 		normalizeStackComment(getScopedElement("stackComment", locationId)?.value || ""),
 	);
-	const stackGrade = rejected
+	const stackGrade = !GRADE_UI_ENABLED || rejected
 		? ""
 		: normalizeStackGrade(getScopedElement("stackGrade", locationId)?.value || "");
 
@@ -2108,6 +2109,10 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 					rejected,
 					shedOrder,
 					bayIndex,
+					shedId: shed,
+					stackKey: stack.dataset.stackKey || "",
+					isle: stack.dataset.isle || "both",
+					type,
 				});
 			});
 		}
@@ -2172,6 +2177,10 @@ function collectContractReport(query, { includeRejected = false } = {}, location
 					rejected,
 					shedOrder,
 					bayIndex,
+					shedId: shed,
+					stackKey: stack.dataset.stackKey || "",
+					isle: stack.dataset.isle || "both",
+					type,
 				});
 			});
 		}
@@ -2416,11 +2425,90 @@ async function exportCurrentReportCsv(locationId = getCurrentLocation()) {
 	}
 }
 
+function findStackForReportNav({ shedId, bayIndex, stackKey, rejected, isle, bales }, locationId) {
+	const bayEl = getBayColumnEl(shedId, bayIndex, locationId);
+	if (!bayEl || !stackKey) return null;
+
+	const wantRejected = rejected === true || rejected === "true";
+	const wantIsle = isle || "both";
+	const wantBales = String(parseInt(bales, 10) || 0);
+
+	const matches = getBayStacks(bayEl).filter((stack) => {
+		if (stack.dataset.stackKey !== stackKey) return false;
+		if ((stack.dataset.rejected === "true") !== wantRejected) return false;
+		return (stack.dataset.isle || "both") === wantIsle;
+	});
+
+	if (!matches.length) {
+		return (
+			getBayStacks(bayEl).find((stack) => {
+				if (stack.dataset.stackKey !== stackKey) return false;
+				return (stack.dataset.rejected === "true") === wantRejected;
+			}) || null
+		);
+	}
+
+	if (matches.length === 1) return matches[0];
+	return (
+		matches.find((stack) => String(parseInt(stack.dataset.bales, 10) || 0) === wantBales)
+		|| matches[0]
+	);
+}
+
+function navigateToReportStack(row, locationId = getCurrentLocation()) {
+	if (!row?.dataset?.shedId || row.dataset.bayIndex == null || !row.dataset.stackKey) return;
+
+	const shedId = row.dataset.shedId;
+	const bayIndex = Number(row.dataset.bayIndex);
+	if (!Number.isFinite(bayIndex)) return;
+
+	setActiveTab("Sheds");
+
+	const tabBtn = locQuery(`.shed-tabs__btn[data-subtab$="${shedId}-shed-tab"]`, locationId);
+	if (tabBtn) {
+		setActiveShedTab(
+			tabBtn.dataset.subtab || scopedId(`${shedId}-shed-tab`, locationId),
+			tabBtn,
+			{ bay: bayIndex },
+			locationId,
+		);
+	} else {
+		updateBaySelectForShed(shedId, bayIndex, locationId);
+	}
+
+	const stack = findStackForReportNav(
+		{
+			shedId,
+			bayIndex,
+			stackKey: row.dataset.stackKey,
+			rejected: row.dataset.rejected,
+			isle: row.dataset.isle,
+			bales: row.dataset.bales,
+		},
+		locationId,
+	);
+	if (!stack) return;
+
+	document.querySelectorAll(".hay-stack--selected").forEach((el) => {
+		el.classList.remove("hay-stack--selected");
+	});
+	stack.classList.add("hay-stack--selected");
+
+	const bayStack = stack.closest(".shed__bay-stack");
+	const bayCol = bayStack?.closest(".shed__bay") || bayStack;
+
+	requestAnimationFrame(() => {
+		bayCol?.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+		stack.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "nearest" });
+	});
+}
+
 function initReports(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
 	if (!filterEl) return;
 
 	const searchEl = getScopedElement("reportContractSearch", locationId);
+	const reportBody = getScopedElement("reportBody", locationId);
 	const refresh = () => updateReportsTable(locationId);
 
 	filterEl.addEventListener("change", () => {
@@ -2442,6 +2530,21 @@ function initReports(locationId = getCurrentLocation()) {
 	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));
 	getScopedElement("reportExportCsv", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
 	getScopedElement("reportExportExcel", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
+
+	reportBody?.addEventListener("click", (e) => {
+		const row = e.target.closest(".log-table__row--report-link");
+		if (!row || !reportBody.contains(row)) return;
+		navigateToReportStack(row, locationId);
+	});
+
+	reportBody?.addEventListener("keydown", (e) => {
+		if (e.key !== "Enter" && e.key !== " ") return;
+		const row = e.target.closest(".log-table__row--report-link");
+		if (!row || !reportBody.contains(row)) return;
+		e.preventDefault();
+		navigateToReportStack(row, locationId);
+	});
+
 	refresh();
 }
 

@@ -1584,9 +1584,8 @@ export function applyStackGrade(stackEl, gradeId = "") {
 
 	const gradeEl = stackEl.querySelector(".hay-stack__grade");
 	if (gradeEl) {
-		const label = getStackGradeLabel(normalizedGrade);
-		gradeEl.textContent = label;
-		gradeEl.hidden = !label;
+		gradeEl.textContent = "";
+		gradeEl.hidden = true;
 	}
 
 	const bayStack = stackEl.closest(".shed__bay-stack");
@@ -1943,6 +1942,19 @@ export function createReportRow(entry, { showGrade = false, showProduct = false 
 
 	if (entry.rejected) {
 		row.classList.add("log-table__row--rejected");
+	}
+
+	if (entry.shedId != null && entry.bayIndex != null && entry.stackKey) {
+		row.classList.add("log-table__row--report-link");
+		row.dataset.shedId = entry.shedId;
+		row.dataset.bayIndex = String(entry.bayIndex);
+		row.dataset.stackKey = entry.stackKey;
+		row.dataset.rejected = entry.rejected ? "true" : "false";
+		row.dataset.isle = entry.isle || "both";
+		row.dataset.bales = String(entry.bales || 0);
+		row.tabIndex = 0;
+		row.setAttribute("role", "link");
+		row.title = "Open stack in shed";
 	}
 
 	return row;

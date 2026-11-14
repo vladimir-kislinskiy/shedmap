@@ -400,6 +400,14 @@ body.page--view-only .inventory__form {
 	width: 100px;
 }
 
+.inventory__field--grade,
+.reports__filter--grade,
+.reports__col-grade,
+.hay-stack__grade,
+#stackDetailGradeRow {
+	display: none !important;
+}
+
 .inventory__field--grade {
 	width: clamp(120px, 16vw, 150px);
 }
@@ -1704,6 +1712,22 @@ body.page--offline .inventory__form {
 
 .log-table__body .log-table__row:hover .log-table__cell {
 	background-color: var(--color-row-hover);
+}
+
+.log-table__body .log-table__row--report-link {
+	cursor: pointer;
+}
+
+.log-table__body .log-table__row--report-link:focus-visible .log-table__cell {
+	background-color: var(--color-row-hover);
+	outline: none;
+}
+
+.log-table__body .log-table__row--report-link [data-field="contract"] {
+	color: var(--color-primary);
+	text-decoration: underline;
+	text-underline-offset: 2px;
+	font-weight: 600;
 }
 
 .log-table__body .log-table__row--rejected .log-table__cell {
