@@ -705,15 +705,15 @@
 
 @media (min-width: 769px) {
 	.theme-crm:not(.crm-collapsed) .shed__columns {
-		align-items: flex-start;
+		align-items: stretch;
 	}
 
 	.theme-crm:not(.crm-collapsed) .shed__bay {
-		flex: 0 0 150px;
-		width: 150px;
+		flex: 1 1 150px;
+		width: auto;
 		min-width: 150px;
-		max-width: 150px;
-		align-self: flex-start;
+		max-width: none;
+		align-self: stretch;
 		overflow: hidden;
 	}
 }
@@ -721,14 +721,9 @@
 @media (min-width: 1601px) {
 	.theme-crm.crm-collapsed .shed__bay {
 		flex: 1 1 0;
+		width: auto;
 		min-width: 0;
-	}
-
-	.theme-crm.crm-collapsed #location-simply .shed__bay {
-		flex: 0 0 150px;
-		width: 150px;
-		min-width: 150px;
-		max-width: 150px;
+		max-width: none;
 	}
 }
 

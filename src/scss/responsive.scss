@@ -6,17 +6,17 @@
 
 @media (max-width: 1600px) {
 	.shed__columns {
-		align-items: flex-start;
+		align-items: stretch;
 	}
 
 	.shed__bay,
 	.theme-crm .shed__bay {
-		flex: 0 0 clamp(150px, 18vw, 170px);
-		width: clamp(150px, 18vw, 170px);
+		flex: 1 1 150px;
+		width: auto;
 		min-width: 150px;
-		max-width: clamp(150px, 18vw, 170px);
+		max-width: none;
 		height: auto;
-		align-self: flex-start;
+		align-self: stretch;
 		overflow: hidden;
 	}
 }
@@ -27,17 +27,17 @@
 	}
 
 	.shed__columns {
-		align-items: flex-start;
+		align-items: stretch;
 	}
 
 	.shed__bay,
 	.theme-crm .shed__bay {
-		flex: 0 0 clamp(150px, 20vw, 170px);
-		width: clamp(150px, 20vw, 170px);
+		flex: 1 1 150px;
+		width: auto;
 		min-width: 150px;
-		max-width: clamp(150px, 20vw, 170px);
+		max-width: none;
 		height: auto;
-		align-self: flex-start;
+		align-self: stretch;
 		overflow: hidden;
 	}
 
@@ -131,12 +131,12 @@
 	}
 
 	.shed__bay {
-		flex: 0 0 clamp(150px, 25vw, 170px);
-		width: clamp(150px, 25vw, 170px);
+		flex: 1 1 150px;
+		width: auto;
 		min-width: 150px;
-		max-width: clamp(150px, 25vw, 170px);
+		max-width: none;
 		height: auto;
-		align-self: flex-start;
+		align-self: stretch;
 		overflow: hidden;
 	}
 
