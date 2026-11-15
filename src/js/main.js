@@ -11,6 +11,7 @@ import {
 } from "./auth.js";
 import { clearSessionToken, setSessionToken, LOGIN_PATH } from "./session.js";
 import { bindStackDrag } from "./drag-drop.js";
+import { createRangePicker, formatRangeLabel } from "./log-range-picker.js";
 import { initPwa } from "./pwa.js";
 import { getFirebaseConfig } from "./firebase-config.js";
 import {
@@ -32,6 +33,8 @@ import {
 	getLocationPanel,
 	getBayColumnEl,
 	getBayDisplayNumberForLocation,
+	formatBayLabel,
+	formatBayRef,
 	getShedLabel,
 	scopedId,
 } from "./location-ui.js";
@@ -1002,9 +1005,9 @@ function openStackDetail(stackEl) {
 	const isle = stackEl.dataset.isle || "both";
 	const shed = bayStack.dataset.shed;
 	const bay = bayStack.dataset.bay;
-	const bayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
+	const bayLabel = formatBayLabel(shed, bay, locationId);
 	const shedLabel = getShedLabel(shed, locationId);
-	const locationParts = [`${shedLabel}`, `Bay ${bayLabel}`];
+	const locationParts = [`${shedLabel}`, bayLabel];
 	if (isle && isle !== "both") locationParts.push(formatIsleLabel(isle));
 	const locationLine = locationParts.join(" · ");
 	const flags = [
@@ -1499,10 +1502,11 @@ function handleHay() {
 
 		const sourceBayLabel = getBayDisplayNumberForLocation(sourceShed, sourceBay, locationId);
 		const destBayLabel = getBayDisplayNumberForLocation(shed, bay, locationId);
+		const sourceBayRef = formatBayRef(sourceShed, sourceBay, locationId);
 		const transferNotes = [
 			isSplitInPlace
-				? `Split in ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`
-				: `From ${capitalize(sourceShed)} bay ${sourceBayLabel} (${formatIsleLabel(sourceIsle)})`,
+				? `Split in ${capitalize(sourceShed)} ${sourceBayRef} (${formatIsleLabel(sourceIsle)})`
+				: `From ${capitalize(sourceShed)} ${sourceBayRef} (${formatIsleLabel(sourceIsle)})`,
 		];
 		if (rejected) transferNotes.push("Rejected");
 		if (fill) transferNotes.push("Full");
@@ -1896,26 +1900,41 @@ function parseLogTimestamp(entry) {
 	return new Date(year, month - 1, day).getTime();
 }
 
-function getLogEntryDateParts(entry) {
-	const timestamp = parseLogTimestamp(entry);
-	if (!timestamp) return null;
+const LOG_START_YEAR = 2026;
 
-	const d = new Date(timestamp);
+function getLogYearRange() {
+	const currentYear = new Date().getFullYear();
+	return { start: LOG_START_YEAR, end: Math.max(LOG_START_YEAR, currentYear) };
+}
+
+const logRangePickers = new Map();
+
+function getLogDateRange(locationId = getCurrentLocation()) {
+	return logRangePickers.get(locationId)?.getRange() ?? null;
+}
+
+function getCurrentMonthRange() {
+	const now = new Date();
 	return {
-		year: d.getFullYear(),
-		month: d.getMonth() + 1,
-		day: d.getDate(),
+		from: new Date(now.getFullYear(), now.getMonth(), 1),
+		to: new Date(now.getFullYear(), now.getMonth() + 1, 0),
 	};
 }
 
+function isTimestampInRange(timestamp, range) {
+	if (!timestamp) return false;
+	const to = new Date(range.to.getFullYear(), range.to.getMonth(), range.to.getDate() + 1).getTime();
+	return timestamp >= range.from.getTime() && timestamp < to;
+}
+
 function getLogFilterValues(locationId = getCurrentLocation()) {
-	const monthVal = getScopedElement("logFilterMonth", locationId)?.value ?? "";
-	const dayVal = getScopedElement("logFilterDay", locationId)?.value ?? "";
+	const productVal = getScopedElement("logFilterProduct", locationId)?.value ?? "all";
+	const reportedByVal = getScopedElement("logFilterReportedBy", locationId)?.value ?? "all";
 
 	return {
-		year: Number(getScopedElement("logFilterYear", locationId)?.value) || null,
-		month: monthVal === "all" ? null : Number(monthVal),
-		day: dayVal === "all" ? null : Number(dayVal),
+		product: productVal === "all" ? "" : productVal,
+		reportedBy: reportedByVal === "all" ? "" : reportedByVal,
+		range: getLogDateRange(locationId),
 		contractQuery: getScopedElement("logContractSearch", locationId)?.value.trim().toLowerCase() ?? "",
 	};
 }
@@ -1927,12 +1946,10 @@ function matchesLogFilter(entry, filters) {
 		if (!contract.includes(contractQuery)) return false;
 	}
 
-	const parts = getLogEntryDateParts(entry);
-	if (!parts || !filters.year) return false;
+	if (filters.product && getHayTypeIdFromLabel(entry.type) !== filters.product) return false;
+	if (filters.reportedBy && entry.reportedBy !== filters.reportedBy) return false;
 
-	if (parts.year !== filters.year) return false;
-	if (filters.month !== null && parts.month !== filters.month) return false;
-	if (filters.day !== null && parts.day !== filters.day) return false;
+	if (filters.range) return isTimestampInRange(parseLogTimestamp(entry), filters.range);
 
 	return true;
 }
@@ -1954,92 +1971,38 @@ function updateLogTable(locationId = getCurrentLocation()) {
 	}
 }
 
-const LOG_START_YEAR = 2026;
+function fillLogSelectOptions(selectEl, allLabel, sourceSelect) {
+	if (!selectEl) return;
 
-function getLogYearRange() {
-	const currentYear = new Date().getFullYear();
-	const endYear = Math.max(LOG_START_YEAR, currentYear);
-	return { start: LOG_START_YEAR, end: endYear };
-}
-
-function cloneLogFilterYearOption(year) {
-	const tpl = document.getElementById("logFilterYearOptionTemplate");
-	if (!tpl) return null;
-	const option = tpl.content.firstElementChild.cloneNode(true);
-	option.value = String(year);
-	option.textContent = String(year);
-	return option;
-}
-
-function updateLogDayOptions(locationId = getCurrentLocation()) {
-	const yearEl = getScopedElement("logFilterYear", locationId);
-	const monthEl = getScopedElement("logFilterMonth", locationId);
-	const dayEl = getScopedElement("logFilterDay", locationId);
-	if (!yearEl || !monthEl || !dayEl) return;
-
-	const monthVal = monthEl.value;
-	const prevDay = dayEl.value;
-
-	if (monthVal === "all") {
-		dayEl.value = "all";
-		dayEl.disabled = true;
-		for (const option of dayEl.options) {
-			if (option.value === "all") continue;
-			option.hidden = false;
+	const options = [new Option(allLabel, "all")];
+	if (sourceSelect) {
+		for (const source of sourceSelect.options) {
+			if (!source.value || source.disabled) continue;
+			options.push(new Option(source.textContent.trim(), source.value));
 		}
-		return;
 	}
-
-	dayEl.disabled = false;
-	const year = Number(yearEl.value);
-	const month = Number(monthVal);
-	const maxDay = new Date(year, month, 0).getDate();
-
-	for (const option of dayEl.options) {
-		if (option.value === "all") continue;
-		const day = Number(option.value);
-		option.hidden = day > maxDay;
-	}
-
-	if (prevDay === "all") {
-		dayEl.value = "all";
-	} else {
-		const prev = Number(prevDay) || 1;
-		dayEl.value = String(Math.min(prev, maxDay));
-	}
+	selectEl.replaceChildren(...options);
 }
 
 function populateLogFilterOptions(locationId = getCurrentLocation()) {
-	const yearEl = getScopedElement("logFilterYear", locationId);
-	if (!yearEl) return;
-
-	const tpl = document.getElementById("logFilterYearOptionTemplate");
-	if (!tpl) return;
-
-	const { start, end } = getLogYearRange();
-	yearEl.replaceChildren();
-	for (let year = start; year <= end; year++) {
-		const option = cloneLogFilterYearOption(year);
-		if (option) yearEl.append(option);
-	}
+	fillLogSelectOptions(
+		getScopedElement("logFilterProduct", locationId),
+		"All products",
+		getScopedElement("hayType", locationId),
+	);
+	fillLogSelectOptions(
+		getScopedElement("logFilterReportedBy", locationId),
+		"All reporters",
+		getScopedElement("reportedBy", locationId),
+	);
 }
 
 function resetLogFilters(locationId = getCurrentLocation()) {
-	const now = new Date();
-	const yearEl = getScopedElement("logFilterYear", locationId);
-	const monthEl = getScopedElement("logFilterMonth", locationId);
-	const dayEl = getScopedElement("logFilterDay", locationId);
 	const contractEl = getScopedElement("logContractSearch", locationId);
-	if (!yearEl || !monthEl || !dayEl) return;
 
 	populateLogFilterOptions(locationId);
-
-	const year = Math.min(Math.max(now.getFullYear(), LOG_START_YEAR), getLogYearRange().end);
-	yearEl.value = String(year);
-	monthEl.value = String(now.getMonth() + 1);
-	updateLogDayOptions(locationId);
-	dayEl.value = "all";
 	if (contractEl) contractEl.value = "";
+	logRangePickers.get(locationId)?.setRange(getCurrentMonthRange());
 }
 
 function getGradeSortIndex(gradeId = "") {
@@ -2048,10 +2011,16 @@ function getGradeSortIndex(gradeId = "") {
 	return index === -1 ? STACK_GRADES.length : index;
 }
 
+const reportRangePickers = new Map();
+
 function getReportFilterOptions(locationId = getCurrentLocation()) {
+	const rejectsOnly = getScopedElement("reportRejectsOnly", locationId)?.checked ?? false;
+
 	return {
 		gradeFilter: getScopedElement("reportGradeFilter", locationId)?.value || "all",
-		includeRejected: getScopedElement("reportIncludeRejected", locationId)?.checked ?? false,
+		includeRejected: rejectsOnly || (getScopedElement("reportIncludeRejected", locationId)?.checked ?? false),
+		rejectsOnly,
+		dateRange: reportRangePickers.get(locationId)?.getRange() ?? null,
 	};
 }
 
@@ -2074,7 +2043,41 @@ function setReportGradeColumnVisible(show, locationId = getCurrentLocation()) {
 	});
 }
 
-function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false } = {}, locationId = getCurrentLocation()) {
+const STACK_ACTIVITY_ACTIONS = new Set(["Add", "Update", "Transfer"]);
+
+function getStackActivityKey(shedLabel, bay, contract, typeLabel) {
+	return `${shedLabel}|${bay}|${contract}|${typeLabel}`;
+}
+
+function buildStackActivityIndex(locationId = getCurrentLocation()) {
+	const index = new Map();
+
+	for (const entry of getLocationChangeLog(locationId)) {
+		if (!STACK_ACTIVITY_ACTIONS.has(entry.action)) continue;
+
+		const timestamp = parseLogTimestamp(entry);
+		if (!timestamp) continue;
+
+		const bay = String(entry.bay ?? "").split("→").pop().trim();
+		const key = getStackActivityKey(entry.shed, bay, entry.contract, entry.type);
+		if (timestamp > (index.get(key) ?? 0)) index.set(key, timestamp);
+	}
+
+	return index;
+}
+
+function createReportDateFilter(dateRange, locationId) {
+	if (!dateRange) return null;
+
+	const activity = buildStackActivityIndex(locationId);
+	return (row) => {
+		const key = getStackActivityKey(row.shed, String(row.bay), row.contract, row.product);
+		return isTimestampInRange(activity.get(key), dateRange);
+	};
+}
+
+function collectProductReport(typeId, { gradeFilter = "all", includeRejected = false, rejectsOnly = false, dateRange = null } = {}, locationId = getCurrentLocation()) {
+	const inDateRange = createReportDateFilter(dateRange, locationId);
 	const rows = [];
 	const allProducts = typeId === "all";
 	const sortByGrade = !allProducts && isGradeEligibleType(typeId);
@@ -2091,6 +2094,7 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 
 				const rejected = stack.dataset.rejected === "true";
 				if (!includeRejected && rejected) return;
+				if (rejectsOnly && !rejected) return;
 
 				const grade = stack.dataset.grade || "";
 				if (sortByGrade && gradeFilter !== "all" && grade !== gradeFilter) return;
@@ -2099,7 +2103,7 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 				const bales = parseInt(stack.dataset.bales, 10) || 0;
 				if (bales <= 0) return;
 
-				rows.push({
+				const row = {
 					contract,
 					product: getHayTypeLabel(type),
 					shed: getShedLabel(shed, locationId),
@@ -2113,7 +2117,9 @@ function collectProductReport(typeId, { gradeFilter = "all", includeRejected = f
 					stackKey: stack.dataset.stackKey || "",
 					isle: stack.dataset.isle || "both",
 					type,
-				});
+				};
+				if (inDateRange && !inDateRange(row)) return;
+				rows.push(row);
 			});
 		}
 	});
@@ -2145,10 +2151,11 @@ function formatContractSearch(raw) {
 	return out;
 }
 
-function collectContractReport(query, { includeRejected = false } = {}, locationId = getCurrentLocation()) {
+function collectContractReport(query, { includeRejected = false, rejectsOnly = false, dateRange = null } = {}, locationId = getCurrentLocation()) {
 	const needle = query.trim().toLowerCase();
 	if (!needle) return [];
 
+	const inDateRange = createReportDateFilter(dateRange, locationId);
 	const rows = [];
 	const locationConfig = getLocationConfig(locationId);
 
@@ -2160,6 +2167,7 @@ function collectContractReport(query, { includeRejected = false } = {}, location
 			getBayStacks(colEl).forEach((stack) => {
 				const rejected = stack.dataset.rejected === "true";
 				if (!includeRejected && rejected) return;
+				if (rejectsOnly && !rejected) return;
 
 				const { type, contract } = parseStackKey(stack.dataset.stackKey || "");
 				if (!contract.toLowerCase().includes(needle)) return;
@@ -2167,7 +2175,7 @@ function collectContractReport(query, { includeRejected = false } = {}, location
 				const bales = parseInt(stack.dataset.bales, 10) || 0;
 				if (bales <= 0) return;
 
-				rows.push({
+				const row = {
 					contract,
 					product: getHayTypeLabel(type),
 					shed: getShedLabel(shed, locationId),
@@ -2181,7 +2189,9 @@ function collectContractReport(query, { includeRejected = false } = {}, location
 					stackKey: stack.dataset.stackKey || "",
 					isle: stack.dataset.isle || "both",
 					type,
-				});
+				};
+				if (inDateRange && !inDateRange(row)) return;
+				rows.push(row);
 			});
 		}
 	});
@@ -2217,12 +2227,13 @@ function syncReportExportButtons(enabled, locationId = getCurrentLocation()) {
 function getCurrentReportExport(locationId = getCurrentLocation()) {
 	const filterEl = getScopedElement("reportProductFilter", locationId);
 	const searchEl = getScopedElement("reportContractSearch", locationId);
-	const productId = filterEl?.value ?? "";
+	const { gradeFilter, includeRejected, rejectsOnly, dateRange } = getReportFilterOptions(locationId);
+	const productId = filterEl?.value || (rejectsOnly ? "all" : "");
 	const contractQuery = searchEl?.value.trim() ?? "";
-	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+	const dateRangeLabel = dateRange ? formatRangeLabel(dateRange) : null;
 
 	if (contractQuery) {
-		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+		const rows = collectContractReport(contractQuery, { includeRejected, rejectsOnly, dateRange }, locationId);
 		return {
 			ok: rows.length > 0,
 			emptyMessage: `No contracts matching “${contractQuery}” to export.`,
@@ -2233,6 +2244,8 @@ function getCurrentReportExport(locationId = getCurrentLocation()) {
 				showGrade: false,
 				showProduct: true,
 				includeRejected,
+				rejectsOnly,
+				dateRangeLabel,
 			},
 		};
 	}
@@ -2247,7 +2260,7 @@ function getCurrentReportExport(locationId = getCurrentLocation()) {
 
 	const allProducts = productId === "all";
 	const productLabel = allProducts ? "All products" : getHayTypeLabel(productId);
-	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected, rejectsOnly, dateRange }, locationId);
 
 	return {
 		ok: rows.length > 0,
@@ -2260,6 +2273,8 @@ function getCurrentReportExport(locationId = getCurrentLocation()) {
 			showProduct: allProducts,
 			gradeFilter,
 			includeRejected,
+			rejectsOnly,
+			dateRangeLabel,
 		},
 	};
 }
@@ -2273,10 +2288,11 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 	const reportEmpty = getScopedElement("reportEmpty", locationId);
 	if (!filterEl || !reportBody || !reportSummary || !reportTableWrap || !reportEmpty) return;
 
-	const productId = filterEl.value ?? "";
+	const { gradeFilter, includeRejected, rejectsOnly, dateRange } = getReportFilterOptions(locationId);
+	const productId = filterEl.value || (rejectsOnly ? "all" : "");
 	const contractQuery = searchEl?.value.trim() ?? "";
 	const searchMode = contractQuery.length > 0;
-	const { gradeFilter, includeRejected } = getReportFilterOptions(locationId);
+	const dateNote = dateRange ? ` (${formatRangeLabel(dateRange)})` : "";
 
 	reportBody.replaceChildren();
 
@@ -2285,7 +2301,7 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		setReportGradeColumnVisible(false, locationId);
 		setReportProductColumnVisible(true, locationId);
 
-		const rows = collectContractReport(contractQuery, { includeRejected }, locationId);
+		const rows = collectContractReport(contractQuery, { includeRejected, rejectsOnly, dateRange }, locationId);
 		const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
 
 		if (rows.length === 0) {
@@ -2293,14 +2309,14 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 			reportTableWrap.hidden = true;
 			reportEmpty.hidden = false;
 			syncReportExportButtons(false, locationId);
-			const rejectNote = includeRejected ? "" : " (rejected excluded)";
-			reportEmpty.textContent = `No contracts matching “${contractQuery}”${rejectNote}.`;
+			const rejectNote = rejectsOnly ? " (rejected only)" : includeRejected ? "" : " (rejected excluded)";
+			reportEmpty.textContent = `No contracts matching “${contractQuery}”${rejectNote}${dateNote}.`;
 			return;
 		}
 
 		reportEmpty.hidden = true;
 		reportSummary.hidden = false;
-		reportSummary.textContent = `“${contractQuery}”: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
+		reportSummary.textContent = `“${contractQuery}”: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}${dateNote}`;
 		reportTableWrap.hidden = false;
 		syncReportExportButtons(true, locationId);
 
@@ -2326,9 +2342,10 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		return;
 	}
 
-	const rows = collectProductReport(productId, { gradeFilter, includeRejected }, locationId);
+	const rows = collectProductReport(productId, { gradeFilter, includeRejected, rejectsOnly, dateRange }, locationId);
 	const totalBales = rows.reduce((sum, row) => sum + row.bales, 0);
-	const productLabel = allProducts ? "All products" : getHayTypeLabel(productId);
+	const baseLabel = allProducts ? "All products" : getHayTypeLabel(productId);
+	const productLabel = rejectsOnly ? `Rejected, ${baseLabel}` : baseLabel;
 
 	if (rows.length === 0) {
 		reportSummary.hidden = true;
@@ -2338,13 +2355,13 @@ function updateReportsTable(locationId = getCurrentLocation()) {
 		const gradeLabel = gradeFilter !== "all" ? getStackGradeLabel(gradeFilter) : "";
 		const filterNote = gradeLabel ? ` for ${gradeLabel}` : "";
 		const rejectNote = includeRejected ? "" : " (rejected excluded)";
-		reportEmpty.textContent = `No ${productLabel} found${filterNote}${rejectNote}.`;
+		reportEmpty.textContent = `No ${productLabel} found${filterNote}${rejectNote}${dateNote}.`;
 		return;
 	}
 
 	reportEmpty.hidden = true;
 	reportSummary.hidden = false;
-	reportSummary.textContent = `${productLabel}: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}`;
+	reportSummary.textContent = `${productLabel}: ${totalBales.toLocaleString()} bales in ${rows.length} location${rows.length === 1 ? "" : "s"}${dateNote}`;
 	reportTableWrap.hidden = false;
 	syncReportExportButtons(true, locationId);
 
@@ -2537,6 +2554,22 @@ function initReports(locationId = getCurrentLocation()) {
 	const reportBody = getScopedElement("reportBody", locationId);
 	const refresh = () => updateReportsTable(locationId);
 
+	const rangeBtn = getScopedElement("reportRangeBtn", locationId);
+	const rangeLabel = getScopedElement("reportRangeLabel", locationId);
+	const rangePanel = getScopedElement("reportRangePanel", locationId);
+	if (rangeBtn && rangeLabel && rangePanel) {
+		reportRangePickers.set(
+			locationId,
+			createRangePicker({
+				button: rangeBtn,
+				label: rangeLabel,
+				panel: rangePanel,
+				years: getLogYearRange,
+				onChange: refresh,
+			}),
+		);
+	}
+
 	filterEl.addEventListener("change", () => {
 		if (filterEl.value && searchEl) searchEl.value = "";
 		refresh();
@@ -2553,6 +2586,18 @@ function initReports(locationId = getCurrentLocation()) {
 
 	getScopedElement("reportGradeFilter", locationId)?.addEventListener("change", refresh);
 	getScopedElement("reportIncludeRejected", locationId)?.addEventListener("change", refresh);
+	getScopedElement("reportRejectsOnly", locationId)?.addEventListener("change", (event) => {
+		const includeEl = getScopedElement("reportIncludeRejected", locationId);
+		if (includeEl && event.target.checked) {
+			includeEl.dataset.prev = includeEl.checked ? "1" : "0";
+			includeEl.checked = true;
+			includeEl.disabled = true;
+		} else if (includeEl) {
+			includeEl.checked = includeEl.dataset.prev === "1";
+			includeEl.disabled = false;
+		}
+		refresh();
+	});
 	getScopedElement("reportPrintPdf", locationId)?.addEventListener("click", () => printCurrentReportPdf(locationId));
 	getScopedElement("reportExportCsv", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
 	getScopedElement("reportExportExcel", locationId)?.addEventListener("click", () => exportCurrentReportCsv(locationId));
@@ -2575,30 +2620,33 @@ function initReports(locationId = getCurrentLocation()) {
 }
 
 function initLogFilters(locationId = getCurrentLocation()) {
-	populateLogFilterOptions(locationId);
-	resetLogFilters(locationId);
-
-	const yearEl = getScopedElement("logFilterYear", locationId);
-	const monthEl = getScopedElement("logFilterMonth", locationId);
-	const dayEl = getScopedElement("logFilterDay", locationId);
+	const productEl = getScopedElement("logFilterProduct", locationId);
+	const reportedByEl = getScopedElement("logFilterReportedBy", locationId);
 	const contractEl = getScopedElement("logContractSearch", locationId);
 	const resetBtn = getScopedElement("logFilterReset", locationId);
+	const rangeBtn = getScopedElement("logRangeBtn", locationId);
+	const rangeLabel = getScopedElement("logRangeLabel", locationId);
+	const rangePanel = getScopedElement("logRangePanel", locationId);
 
 	const refresh = () => updateLogTable(locationId);
 
-	yearEl?.addEventListener("change", () => {
-		updateLogDayOptions(locationId);
-		refresh();
-	});
+	if (rangeBtn && rangeLabel && rangePanel) {
+		logRangePickers.set(
+			locationId,
+			createRangePicker({
+				button: rangeBtn,
+				label: rangeLabel,
+				panel: rangePanel,
+				years: getLogYearRange,
+				onChange: refresh,
+			}),
+		);
+	}
 
-	monthEl?.addEventListener("change", () => {
-		updateLogDayOptions(locationId);
-		refresh();
-	});
+	resetLogFilters(locationId);
 
-	dayEl?.addEventListener("change", () => {
-		refresh();
-	});
+	productEl?.addEventListener("change", refresh);
+	reportedByEl?.addEventListener("change", refresh);
 
 	contractEl?.addEventListener("input", () => {
 		const formatted = formatContractSearch(contractEl.value);
@@ -3560,6 +3608,62 @@ function bindContractInput(input) {
 	input.addEventListener("input", applyFormat);
 }
 
+function syncHayTypeOptionsForShed(shed, locationId = getCurrentLocation()) {
+	const select = getScopedElement("hayType", locationId);
+	if (!select) return;
+
+	const allowed = getLocationConfig(locationId).shedProducts?.[shed];
+	const current = select.value;
+
+	Array.from(select.options).forEach((option) => {
+		if (!option.value) return;
+		const show = !allowed || allowed.includes(option.value);
+		option.hidden = !show;
+		option.disabled = !show;
+	});
+
+	if (current && allowed && !allowed.includes(current)) {
+		select.value = "";
+		syncGradeFieldVisibility("", locationId);
+	}
+}
+
+function syncDehyInventoryDefaults(shed, locationId = getCurrentLocation()) {
+	if (shed !== "dehy") return;
+	const rejectCheck = getScopedElement("rejectCheck", locationId);
+	if (rejectCheck) rejectCheck.checked = true;
+	syncDehyProductAndPad(locationId);
+	syncGradeFieldVisibility(getScopedElement("hayType", locationId)?.value || "", locationId);
+}
+
+function getDehyPadProducts(locationId = getCurrentLocation()) {
+	return getLocationConfig(locationId).shedBayProducts?.dehy || [];
+}
+
+function syncDehyProductAndPad(locationId = getCurrentLocation(), { fromProduct = false } = {}) {
+	if (getScopedElement("shedSelect", locationId)?.value !== "dehy") return;
+
+	const padProducts = getDehyPadProducts(locationId);
+	if (!padProducts.length) return;
+
+	const typeEl = getScopedElement("hayType", locationId);
+	const bayEl = getScopedElement("baySelect", locationId);
+	if (!typeEl || !bayEl) return;
+
+	if (fromProduct) {
+		const padIndex = padProducts.indexOf(typeEl.value);
+		if (padIndex >= 0) bayEl.value = String(padIndex);
+		return;
+	}
+
+	const bayIndex = Number(bayEl.value);
+	const padProduct = padProducts[bayIndex];
+	if (padProduct && typeEl.value !== padProduct) {
+		typeEl.value = padProduct;
+		syncGradeFieldVisibility(padProduct, locationId);
+	}
+}
+
 function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurrentLocation()) {
 	const select = getScopedElement("baySelect", locationId);
 	if (!select) return;
@@ -3575,7 +3679,7 @@ function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurren
 		option.value = String(index);
 		option.hidden = isDisabled;
 		option.disabled = isDisabled;
-		option.textContent = `Bay ${getBayDisplayNumberForLocation(shed, index, locationId)}`;
+		option.textContent = formatBayLabel(shed, index, locationId);
 	});
 
 	options
@@ -3595,6 +3699,9 @@ function updateBaySelectForShed(shed, selectedBay = null, locationId = getCurren
 		const firstVisible = options.find((option) => !option.hidden);
 		if (firstVisible) select.value = firstVisible.value;
 	}
+
+	syncHayTypeOptionsForShed(shed, locationId);
+	syncDehyInventoryDefaults(shed, locationId);
 }
 
 function bindStackCommentInput(input) {
@@ -3624,7 +3731,12 @@ function initInventoryForm(locationId = getCurrentLocation()) {
 	bindStackCommentInput(getScopedElement("stackComment", locationId));
 
 	getScopedElement("hayType", locationId)?.addEventListener("change", (e) => {
+		syncDehyProductAndPad(locationId, { fromProduct: true });
 		syncGradeFieldVisibility(e.target.value, locationId);
+	});
+
+	getScopedElement("baySelect", locationId)?.addEventListener("change", () => {
+		syncDehyProductAndPad(locationId);
 	});
 
 	getScopedElement("rejectCheck", locationId)?.addEventListener("change", () => {
@@ -3744,8 +3856,7 @@ function updateCrmStats() {
 	panel.querySelectorAll(".shed__bay:not(.shed__bay--disabled) .shed__bay-stack").forEach((bayStack) => {
 		bayColumns += 1;
 		const shedId = bayStack.dataset.shed || "other";
-		const bayTotal =
-			parseInt(bayStack.closest(".shed__bay")?.querySelector(".shed__bay-total-val")?.textContent, 10) || 0;
+		const bayTotal = sumBalesInContainer(bayStack);
 		total += bayTotal;
 		const entry = sheds.get(shedId) || { total: 0, count: 0 };
 		entry.total += bayTotal;
@@ -3770,7 +3881,7 @@ function updateCrmStats() {
 		const freeVal = Math.max(0, cap - entry.total);
 		const freePct = cap ? Math.round((freeVal / cap) * 100) : 0;
 		return {
-			name: shedId.charAt(0).toUpperCase() + shedId.slice(1),
+			name: getShedLabel(shedId, locationId).replace(/\s+Shed$/, "") || shedId,
 			freePct,
 			freeVal,
 			capacity: cap,

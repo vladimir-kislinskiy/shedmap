@@ -242,6 +242,7 @@
 								<option value="west">West Shed</option>
 								<option value="north">North Shed</option>
 								<option value="east">East Shed</option>
+								<option value="dehy">Dehy</option>
 							</select>
 
 							<select id="baySelect" class="inventory__field inventory__field--select">
@@ -328,7 +329,6 @@
 								<option value="Dehy">Dehy</option>
 								<option value="Harsh">Harsh</option>
 								<option value="Hay Plant">Hay Plant</option>
-								<option value="Jay">Jay</option>
 								<option value="Oscar">Oscar</option>
 							</select>
 
@@ -349,6 +349,7 @@
 							<button type="button" class="shed-tabs__btn" data-subtab="north-shed-tab">North
 								Shed</button>
 							<button type="button" class="shed-tabs__btn" data-subtab="east-shed-tab">East Shed</button>
+							<button type="button" class="shed-tabs__btn" data-subtab="dehy-shed-tab">Dehy</button>
 						</nav>
 
 						<div class="shed-tabs__panel shed-tabs__panel--active" id="west-shed-tab">
@@ -362,9 +363,13 @@
 						<div class="shed-tabs__panel" id="east-shed-tab">
 							@include('partials/shed-columns-east.html')
 						</div>
+
+						<div class="shed-tabs__panel" id="dehy-shed-tab">
+							@include('partials/shed-columns-dehy.html')
+						</div>
 					</div>
 
-					<section id="Reports" class="tabs__panel">
+					<section id="Reports" class="tabs__panel reports-panel">
 						<h2 class="log__title">Inventory Reports</h2>
 						<div class="log__filters reports__filters">
 							<label class="log__filter reports__filter--product">
@@ -392,6 +397,13 @@
 									class="log__filter-input reports__contract-search"
 									placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
 							</label>
+							<div class="log__filter log__range reports__filter--range">
+								<span class="log__filter-label">Date range</span>
+								<button type="button" id="reportRangeBtn" class="log__filter-input log__range-btn" aria-haspopup="dialog" aria-expanded="false">
+									<span id="reportRangeLabel" class="log__range-label">Any dates</span>
+								</button>
+								<div id="reportRangePanel" class="log__range-panel" role="dialog" aria-label="Date range" hidden></div>
+							</div>
 							<label class="log__filter reports__filter--grade" id="reportGradeFilterWrap" hidden>
 								<span class="log__filter-label">Grade</span>
 								<select id="reportGradeFilter" class="log__filter-input log__filter-input--select">
@@ -405,14 +417,19 @@
 									<option value="economy">Economy</option>
 								</select>
 							</label>
-							<label class="log__filter reports__filter--reject">
+							<div class="log__filter reports__filter--reject">
 								<span class="log__filter-label">Display</span>
-								<span class="reports__include-reject">
-									<input type="checkbox" id="reportIncludeRejected"
-										class="reports__include-reject-check">
-									<span class="reports__include-reject-text">Include rejected</span>
-								</span>
-							</label>
+								<div class="reports__display-options">
+									<label class="reports__include-reject">
+										<input type="checkbox" id="reportIncludeRejected" class="reports__include-reject-check">
+										<span class="reports__include-reject-text">Include rejected</span>
+									</label>
+									<label class="reports__include-reject">
+										<input type="checkbox" id="reportRejectsOnly" class="reports__include-reject-check">
+										<span class="reports__include-reject-text">Rejected only</span>
+									</label>
+								</div>
+							</div>
 							<div class="reports__export">
 								<button type="button" id="reportPrintPdf" class="reports__print-btn" disabled>
 									PDF
@@ -447,72 +464,34 @@
 						<h2 class="log__title">Change Log</h2>
 						<div class="log__filters">
 							<label class="log__filter">
-								<span class="log__filter-label">Year</span>
-								<select id="logFilterYear" class="log__filter-input log__filter-input--select"></select>
-							</label>
-							<label class="log__filter">
-								<span class="log__filter-label">Month</span>
-								<select id="logFilterMonth" class="log__filter-input log__filter-input--select">
-									<option value="all">All months</option>
-									<option value="1">January</option>
-									<option value="2">February</option>
-									<option value="3">March</option>
-									<option value="4">April</option>
-									<option value="5">May</option>
-									<option value="6">June</option>
-									<option value="7">July</option>
-									<option value="8">August</option>
-									<option value="9">September</option>
-									<option value="10">October</option>
-									<option value="11">November</option>
-									<option value="12">December</option>
+								<span class="log__filter-label">Product</span>
+								<select id="logFilterProduct" class="log__filter-input log__filter-input--select">
+									<option value="all">All products</option>
 								</select>
 							</label>
 							<label class="log__filter">
-								<span class="log__filter-label">Day</span>
-								<select id="logFilterDay" class="log__filter-input log__filter-input--select">
-									<option value="all">All days</option>
-									<option value="1">1</option>
-									<option value="2">2</option>
-									<option value="3">3</option>
-									<option value="4">4</option>
-									<option value="5">5</option>
-									<option value="6">6</option>
-									<option value="7">7</option>
-									<option value="8">8</option>
-									<option value="9">9</option>
-									<option value="10">10</option>
-									<option value="11">11</option>
-									<option value="12">12</option>
-									<option value="13">13</option>
-									<option value="14">14</option>
-									<option value="15">15</option>
-									<option value="16">16</option>
-									<option value="17">17</option>
-									<option value="18">18</option>
-									<option value="19">19</option>
-									<option value="20">20</option>
-									<option value="21">21</option>
-									<option value="22">22</option>
-									<option value="23">23</option>
-									<option value="24">24</option>
-									<option value="25">25</option>
-									<option value="26">26</option>
-									<option value="27">27</option>
-									<option value="28">28</option>
-									<option value="29">29</option>
-									<option value="30">30</option>
-									<option value="31">31</option>
+								<span class="log__filter-label">Reported by</span>
+								<select id="logFilterReportedBy" class="log__filter-input log__filter-input--select">
+									<option value="all">All reporters</option>
 								</select>
 							</label>
-							<span class="reports__filter-or" aria-hidden="true">or</span>
-							<label class="log__filter reports__filter--search">
-								<span class="log__filter-label">Contract #</span>
-								<input type="search" id="logContractSearch"
-									class="log__filter-input reports__contract-search"
-									placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
-							</label>
-							<button type="button" id="logFilterReset" class="log__filter-reset">Reset</button>
+							<div class="log__filter log__range">
+								<span class="log__filter-label">Date range</span>
+								<button type="button" id="logRangeBtn" class="log__filter-input log__range-btn" aria-haspopup="dialog" aria-expanded="false">
+									<span id="logRangeLabel" class="log__range-label">Any dates</span>
+								</button>
+								<div id="logRangePanel" class="log__range-panel" role="dialog" aria-label="Date range" hidden></div>
+							</div>
+							<div class="log__filters-search">
+								<span class="reports__filter-or" aria-hidden="true">or</span>
+								<label class="log__filter reports__filter--search">
+									<span class="log__filter-label">Contract #</span>
+									<input type="search" id="logContractSearch"
+										class="log__filter-input reports__contract-search"
+										placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
+								</label>
+								<button type="button" id="logFilterReset" class="log__filter-reset">Reset</button>
+							</div>
 						</div>
 						<div class="log-table-wrap">
 							<table class="log-table">
@@ -575,9 +554,6 @@
 		</div>
 	</template>
 
-	<template id="logFilterYearOptionTemplate">
-		<option label="Year" value=""></option>
-	</template>
 
 	<template id="reportRowTemplate">
 		<tr class="log-table__row">

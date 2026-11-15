@@ -101,7 +101,6 @@
 				<option value="Argentina">Argentina</option>
 				<option value="Harsh">Harsh</option>
 				<option value="Hay Plant">Hay Plant</option>
-				<option value="Jay">Jay</option>
 				<option value="Oscar">Oscar</option>
 				<option value="Simply">Simply</option>
 			</select>
@@ -132,7 +131,7 @@
 		</div>
 	</div>
 
-	<section id="simply-Reports" class="tabs__panel">
+	<section id="simply-Reports" class="tabs__panel reports-panel">
 		<h2 class="log__title">Inventory Reports</h2>
 		<div class="log__filters reports__filters">
 			<label class="log__filter reports__filter--product">
@@ -157,6 +156,13 @@
 					class="log__filter-input reports__contract-search"
 					placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
 			</label>
+			<div class="log__filter log__range reports__filter--range">
+				<span class="log__filter-label">Date range</span>
+				<button type="button" id="simply-reportRangeBtn" class="log__filter-input log__range-btn" aria-haspopup="dialog" aria-expanded="false">
+					<span id="simply-reportRangeLabel" class="log__range-label">Any dates</span>
+				</button>
+				<div id="simply-reportRangePanel" class="log__range-panel" role="dialog" aria-label="Date range" hidden></div>
+			</div>
 			<label class="log__filter reports__filter--grade" id="simply-reportGradeFilterWrap" hidden>
 				<span class="log__filter-label">Grade</span>
 				<select id="simply-reportGradeFilter" class="log__filter-input log__filter-input--select">
@@ -170,13 +176,19 @@
 					<option value="economy">Economy</option>
 				</select>
 			</label>
-			<label class="log__filter reports__filter--reject">
+			<div class="log__filter reports__filter--reject">
 				<span class="log__filter-label">Display</span>
-				<span class="reports__include-reject">
-					<input type="checkbox" id="simply-reportIncludeRejected" class="reports__include-reject-check">
-					<span class="reports__include-reject-text">Include rejected</span>
-				</span>
-			</label>
+				<div class="reports__display-options">
+					<label class="reports__include-reject">
+						<input type="checkbox" id="simply-reportIncludeRejected" class="reports__include-reject-check">
+						<span class="reports__include-reject-text">Include rejected</span>
+					</label>
+					<label class="reports__include-reject">
+						<input type="checkbox" id="simply-reportRejectsOnly" class="reports__include-reject-check">
+						<span class="reports__include-reject-text">Rejected only</span>
+					</label>
+				</div>
+			</div>
 			<div class="reports__export">
 				<button type="button" id="simply-reportPrintPdf" class="reports__print-btn" disabled>
 					PDF
@@ -209,72 +221,34 @@
 		<h2 class="log__title">Change Log</h2>
 		<div class="log__filters">
 			<label class="log__filter">
-				<span class="log__filter-label">Year</span>
-				<select id="simply-logFilterYear" class="log__filter-input log__filter-input--select"></select>
-			</label>
-			<label class="log__filter">
-				<span class="log__filter-label">Month</span>
-				<select id="simply-logFilterMonth" class="log__filter-input log__filter-input--select">
-					<option value="all">All months</option>
-					<option value="1">January</option>
-					<option value="2">February</option>
-					<option value="3">March</option>
-					<option value="4">April</option>
-					<option value="5">May</option>
-					<option value="6">June</option>
-					<option value="7">July</option>
-					<option value="8">August</option>
-					<option value="9">September</option>
-					<option value="10">October</option>
-					<option value="11">November</option>
-					<option value="12">December</option>
+				<span class="log__filter-label">Product</span>
+				<select id="simply-logFilterProduct" class="log__filter-input log__filter-input--select">
+					<option value="all">All products</option>
 				</select>
 			</label>
 			<label class="log__filter">
-				<span class="log__filter-label">Day</span>
-				<select id="simply-logFilterDay" class="log__filter-input log__filter-input--select">
-					<option value="all">All days</option>
-					<option value="1">1</option>
-					<option value="2">2</option>
-					<option value="3">3</option>
-					<option value="4">4</option>
-					<option value="5">5</option>
-					<option value="6">6</option>
-					<option value="7">7</option>
-					<option value="8">8</option>
-					<option value="9">9</option>
-					<option value="10">10</option>
-					<option value="11">11</option>
-					<option value="12">12</option>
-					<option value="13">13</option>
-					<option value="14">14</option>
-					<option value="15">15</option>
-					<option value="16">16</option>
-					<option value="17">17</option>
-					<option value="18">18</option>
-					<option value="19">19</option>
-					<option value="20">20</option>
-					<option value="21">21</option>
-					<option value="22">22</option>
-					<option value="23">23</option>
-					<option value="24">24</option>
-					<option value="25">25</option>
-					<option value="26">26</option>
-					<option value="27">27</option>
-					<option value="28">28</option>
-					<option value="29">29</option>
-					<option value="30">30</option>
-					<option value="31">31</option>
+				<span class="log__filter-label">Reported by</span>
+				<select id="simply-logFilterReportedBy" class="log__filter-input log__filter-input--select">
+					<option value="all">All reporters</option>
 				</select>
 			</label>
-			<span class="reports__filter-or" aria-hidden="true">or</span>
-			<label class="log__filter reports__filter--search">
-				<span class="log__filter-label">Contract #</span>
-				<input type="search" id="simply-logContractSearch"
-					class="log__filter-input reports__contract-search"
-					placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
-			</label>
-			<button type="button" id="simply-logFilterReset" class="log__filter-reset">Reset</button>
+			<div class="log__filter log__range">
+				<span class="log__filter-label">Date range</span>
+				<button type="button" id="simply-logRangeBtn" class="log__filter-input log__range-btn" aria-haspopup="dialog" aria-expanded="false">
+					<span id="simply-logRangeLabel" class="log__range-label">Any dates</span>
+				</button>
+				<div id="simply-logRangePanel" class="log__range-panel" role="dialog" aria-label="Date range" hidden></div>
+			</div>
+			<div class="log__filters-search">
+				<span class="reports__filter-or" aria-hidden="true">or</span>
+				<label class="log__filter reports__filter--search">
+					<span class="log__filter-label">Contract #</span>
+					<input type="search" id="simply-logContractSearch"
+						class="log__filter-input reports__contract-search"
+						placeholder="e.g. 25-xxxx" autocomplete="off" inputmode="search" maxlength="8">
+				</label>
+				<button type="button" id="simply-logFilterReset" class="log__filter-reset">Reset</button>
+			</div>
 		</div>
 		<div class="log-table-wrap">
 			<table class="log-table">

@@ -47,6 +47,11 @@ export function getBayColumnEl(shed, bayIndex, locationId = currentLocationId) {
 export function getBayDisplayNumberForLocation(shed, bayIndex, locationId = currentLocationId) {
 	const config = getLocationConfig(locationId);
 	const colIndex = parseInt(bayIndex, 10);
+	const customLabels = config.shedBayLabels?.[shed];
+	if (Array.isArray(customLabels) && customLabels[colIndex] != null) {
+		return customLabels[colIndex];
+	}
+
 	const span = config.bayLabelSpan ?? 2;
 	const reversed = !!config.reverseSheds?.includes(shed);
 	const effectiveIndex = reversed ? config.bayCount - 1 - colIndex : colIndex;
@@ -57,6 +62,18 @@ export function getBayDisplayNumberForLocation(shed, bayIndex, locationId = curr
 	}
 
 	return `${start}-${start + 1}`;
+}
+
+export function formatBayLabel(shed, bayIndex, locationId = currentLocationId) {
+	const display = getBayDisplayNumberForLocation(shed, bayIndex, locationId);
+	if (getLocationConfig(locationId).shedBayLabels?.[shed]) return display;
+	return `Bay ${display}`;
+}
+
+export function formatBayRef(shed, bayIndex, locationId = currentLocationId) {
+	const display = getBayDisplayNumberForLocation(shed, bayIndex, locationId);
+	if (getLocationConfig(locationId).shedBayLabels?.[shed]) return display;
+	return `bay ${display}`;
 }
 
 export function getShedLabel(shedId, locationId = currentLocationId) {

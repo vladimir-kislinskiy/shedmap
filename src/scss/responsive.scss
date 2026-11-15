@@ -197,27 +197,14 @@
 		max-width: 100%;
 	}
 
+	.log__filters-search {
+		gap: 6px 8px;
+	}
+
 	.log__filter {
 		gap: 2px;
 		min-width: 0;
 		flex-shrink: 0;
-	}
-
-	.log__filters.reports__filters {
-		--reports-gap: 25px;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-		grid-template-areas:
-			"product or contract"
-			"reject . print";
-		gap: var(--reports-gap);
-	}
-
-	.log__filters.reports__filters:has(.reports__filter--grade:not([hidden])) {
-		grid-template-areas:
-			"product or contract"
-			"grade grade grade"
-			"reject . print";
 	}
 
 	.log__filters .log__filter-reset {
@@ -242,19 +229,6 @@
 		padding-right: 22px;
 		background-position: right 5px center;
 		background-size: 11px;
-	}
-
-	#logFilterMonth.log__filter-input--select {
-		padding-right: 24px;
-		background-position: right 5px center;
-	}
-
-	#logFilterYear,
-	#logFilterMonth,
-	#logFilterDay {
-		width: auto;
-		min-width: 0;
-		flex-shrink: 0;
 	}
 
 	.log__filter-reset {
@@ -284,7 +258,8 @@
 	}
 
 	.reports__include-reject {
-		width: 100%;
+		width: auto;
+		flex: 1 1 auto;
 		min-width: 0;
 		justify-content: flex-start;
 		height: 32px;
@@ -337,6 +312,10 @@
 		gap: 5px 6px;
 	}
 
+	.log__filters-search {
+		gap: 5px 6px;
+	}
+
 	.log__filters.reports__filters {
 		--reports-gap: 25px;
 		display: grid;
@@ -359,11 +338,6 @@
 		padding-right: 20px;
 		background-position: right 4px center;
 		background-size: 10px;
-	}
-
-	#logFilterMonth.log__filter-input--select {
-		padding-right: 22px;
-		background-position: right 4px center;
 	}
 
 	.log__filter-reset {
@@ -389,4 +363,18 @@
 	.reports__include-reject-text {
 		font-size: 12px;
 	}
+}
+
+.dehy-pad,
+.theme-crm .dehy-pad {
+	flex: none;
+	width: auto;
+	min-width: 0;
+	max-width: none;
+	overflow: visible;
+}
+
+.dehy-yard,
+.dehy-yard__pads.shed__columns {
+	overflow: visible;
 }

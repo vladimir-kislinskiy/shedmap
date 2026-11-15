@@ -32,6 +32,8 @@ export function downloadReportCsv({
 	headingLabel = null,
 	gradeFilter = "all",
 	includeRejected = false,
+	rejectsOnly = false,
+	dateRangeLabel = null,
 	generatedAt = new Date(),
 }) {
 	let head;
@@ -64,7 +66,11 @@ export function downloadReportCsv({
 		lines.push(csvLine([`Grade: ${getStackGradeLabel(gradeFilter)}`]));
 	}
 
-	lines.push(csvLine([`Include rejected: ${includeRejected ? "Yes" : "No"}`]));
+	if (dateRangeLabel) {
+		lines.push(csvLine([`Date range: ${dateRangeLabel}`]));
+	}
+
+	lines.push(csvLine([rejectsOnly ? "Rejected only: Yes" : `Include rejected: ${includeRejected ? "Yes" : "No"}`]));
 	lines.push(csvLine([`Generated: ${generatedAt.toLocaleString()}`]));
 
 	if (rows.length) {

@@ -123,7 +123,6 @@ function isMobileStackLayout() {
 
 const SHED_SCROLL_PREF_KEY = "hayshed.shedScrollLayout";
 let allowShedScrollPref = false;
-/** null = auto, true = force scroll, false = force fit (ops toggle only). */
 let shedScrollOverride = null;
 
 export function isShedScrollLayoutPreferred() {
@@ -347,14 +346,15 @@ function measureBayChromeForColumns(columns) {
 
 	columns?.querySelectorAll(".shed__bay").forEach((bay) => {
 		const label = bay.querySelector(".shed__bay-label");
-		const stats = bay.querySelector(".shed__bay-stats");
-		if (!label || !stats) return;
+		if (!label) return;
 
+		const stats = bay.querySelector(".shed__bay-stats");
 		const labelStyle = window.getComputedStyle(label);
 		const marginBottom = parseFloat(labelStyle.marginBottom) || 0;
 		const exit = bay.querySelector(".shed__bay-exit");
 		const exitHeight = exit ? exit.offsetHeight : 0;
-		const chrome = label.offsetHeight + marginBottom + exitHeight + stats.offsetHeight;
+		const statsHeight = stats ? stats.offsetHeight : 0;
+		const chrome = label.offsetHeight + marginBottom + exitHeight + statsHeight;
 
 		if (chrome > maxChrome) maxChrome = chrome;
 	});
@@ -495,7 +495,6 @@ function applyBayStackAreaBudget(bayStackEl, { fitToBay = true } = {}) {
 		return;
 	}
 
-	// Stable 100% reference = bay inner height minus flex gaps so stacks are not clipped.
 	const { top, bottom } = getBayStackPadding(bayStackEl);
 	const gapReserve = measureBayGapReserve(bayStackEl);
 	const inner = Math.max(
@@ -603,7 +602,6 @@ function countStackTextLines(stackEl) {
 			const words = [...el.querySelectorAll(".hay-stack__comment-word")].filter(
 				(word) => !word.hidden && !word.hasAttribute("hidden") && String(word.textContent || "").trim(),
 			);
-			// Narrow stacks wrap multi-word comments onto a 2nd line.
 			lines += words.length <= 1 ? 1 : 2;
 			return;
 		}
@@ -812,7 +810,6 @@ function ensureBayStackTextFits(bayStackEl) {
 
 function compressBayStacksToFit(bayStackEl) {
 	if (!bayStackEl || bayStackEl.clientHeight <= 0) return;
-	// Never shrink non-fill neighbors; only release fill stacks to min before they reclaim free space.
 	if ([...getBayStacks(bayStackEl)].some(isStackFill)) {
 		softenFillStackMinimums(bayStackEl);
 	}
@@ -1074,8 +1071,27 @@ function layoutShedColumnsScroll(columns, chrome, minBay) {
 	columns.style.minHeight = `${Math.ceil(finalBay + chrome + 12)}px`;
 }
 
+function layoutDehyYardPads(columns) {
+	columns.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
+	columns.dataset.bayChrome = String(measureBayChromeForColumns(columns));
+
+	const chrome = getBayChromeForColumns(columns);
+	const minBay =
+		LAYOUT.minStack + LAYOUT.stackPaddingTop + LAYOUT.stackPaddingBottom;
+
+	layoutShedColumnsScroll(columns, chrome, minBay);
+	columns.style.height = "auto";
+	columns.style.removeProperty("min-height");
+	columns.style.removeProperty("max-height");
+}
+
 function syncShedColumnsLayout(columns) {
 	if (columns.offsetParent === null) return;
+
+	if (columns.classList.contains("dehy-yard__pads")) {
+		layoutDehyYardPads(columns);
+		return;
+	}
 
 	columns.querySelectorAll(".shed__bay-stack").forEach(repairBayLayout);
 
@@ -1177,7 +1193,6 @@ function placeBothStackInBay(stackEl, bayStackEl) {
 		return;
 	}
 
-	// Keep addition order: after existing isle stacks, before Front stacks.
 	const firstFront = [...bayStackEl.children].find((el) =>
 		el.classList?.contains("hay-stack--bay-front"),
 	);
@@ -1644,11 +1659,13 @@ export function sanitizeCommentInput(value = "") {
 	const trailingSpace =
 		v.endsWith(" ") && parts.length > words.length && words.length < 3;
 
-	if (trailingSpace) {
-		return stripBayFrontCommentTokens(`${words.join(" ")} `.slice(0, 24));
-	}
+	const cleaned = stripBayFrontCommentTokens(words.join(" "));
+	if (!cleaned) return "";
 
-	return stripBayFrontCommentTokens(words.join(" ").slice(0, 24));
+	const cleanedWords = cleaned.split(/\s+/).filter(Boolean).slice(0, 3);
+	let out = cleanedWords.join(" ");
+	if (trailingSpace && cleanedWords.length < 3) out += " ";
+	return out.slice(0, 24);
 }
 
 function renderStackCommentElement(commentEl, normalizedComment) {

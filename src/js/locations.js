@@ -10,20 +10,34 @@ export const LOCATIONS = {
 	[OLDS_LOCATION_ID]: {
 		id: OLDS_LOCATION_ID,
 		label: "Olds",
-		sheds: ["west", "north", "east"],
+		sheds: ["west", "north", "east", "dehy"],
 		bayCount: 12,
 		maxBalesPerBay: 1650,
 		shedBayStart: {
 			west: 1,
 			north: 25,
 			east: 49,
+			dehy: 1,
 		},
 		shedLabels: {
 			west: "West Shed",
 			north: "North Shed",
 			east: "East Shed",
+			dehy: "Dehy",
 		},
-		disabledBays: { east: [8, 9, 10, 11] },
+		shedBayLabels: {
+			dehy: ["Alfalfa", "Timothy"],
+		},
+		shedBayProducts: {
+			dehy: ["alfalfa", "timothy"],
+		},
+		shedProducts: {
+			dehy: ["alfalfa", "timothy"],
+		},
+		disabledBays: {
+			east: [8, 9, 10, 11],
+			dehy: [2, 3, 4, 5, 6, 7, 8, 9, 10, 11],
+		},
 		defaultShed: "west",
 	},
 	[SIKSIKA_LOCATION_ID]: {

@@ -18,6 +18,7 @@
 
 html {
 	scroll-behavior: auto;
+	overscroll-behavior: none;
 
 	&.lock {
 		overflow: hidden;

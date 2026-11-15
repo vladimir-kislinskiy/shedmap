@@ -47,6 +47,8 @@ export function openReportPdf({
 	headingLabel = null,
 	gradeFilter = "all",
 	includeRejected = false,
+	rejectsOnly = false,
+	dateRangeLabel = null,
 	generatedAt = new Date(),
 	previewWindow = null,
 }) {
@@ -74,7 +76,16 @@ export function openReportPdf({
 		cursorY += 16;
 	}
 
-	doc.text(`Include rejected: ${includeRejected ? "Yes" : "No"}`, marginX, cursorY);
+	if (dateRangeLabel) {
+		doc.text(`Date range: ${dateRangeLabel}`, marginX, cursorY);
+		cursorY += 16;
+	}
+
+	doc.text(
+		rejectsOnly ? "Rejected only: Yes" : `Include rejected: ${includeRejected ? "Yes" : "No"}`,
+		marginX,
+		cursorY,
+	);
 
 	cursorY += 16;
 	doc.text(`Generated: ${generatedAt.toLocaleString()}`, marginX, cursorY);
