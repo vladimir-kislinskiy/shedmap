@@ -252,11 +252,6 @@
 		max-width: 100%;
 	}
 
-	.reports__filter-or {
-		height: 32px;
-		font-size: 0.65rem;
-	}
-
 	.reports__include-reject {
 		width: auto;
 		flex: 1 1 auto;
@@ -314,13 +309,6 @@
 
 	.log__filters-search {
 		gap: 5px 6px;
-	}
-
-	.log__filters.reports__filters {
-		--reports-gap: 25px;
-		display: grid;
-		grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
-		gap: var(--reports-gap);
 	}
 
 	.log__filters .log__filter-reset {
