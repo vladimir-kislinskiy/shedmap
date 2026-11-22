@@ -40,6 +40,12 @@ export function getHayTypeIdFromLabel(label = "") {
 	return loose?.id ?? null;
 }
 
+export function isStackAfterBoth(stackEl) {
+	if (!stackEl) return false;
+	if (stackEl.dataset.afterBoth === "true") return true;
+	return Boolean(stackEl.closest(".shed__bay-stack-tail"));
+}
+
 export function captureStackSnapshot(stackEl) {
 	if (!stackEl?.isConnected) return null;
 
@@ -57,6 +63,7 @@ export function captureStackSnapshot(stackEl) {
 	if (isStackFront(stackEl) && stackEl.dataset.frontRank) {
 		snap.frontRank = Number(stackEl.dataset.frontRank) || 1;
 	}
+	if (isStackAfterBoth(stackEl)) snap.afterBoth = true;
 	return snap;
 }
 
@@ -182,7 +189,7 @@ function measureIdealStacksBlockHeight(stacks, bayStackEl) {
 }
 
 function splitBayDirectStacks(bayStackEl) {
-	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
 	const directStacks = getDirectStacks(bayStackEl);
 	const before = [];
 	const after = [];
@@ -212,21 +219,33 @@ function sumBaySectionHeights(sectionHeights) {
 	return { total, sections };
 }
 
+function measureIslePairHeight(bayStackEl, rowEl, measureFn) {
+	if (!rowEl) return 0;
+	const isle1Stacks = getDirectStacks(rowEl.querySelector(":scope > .shed__isle--1"));
+	const isle2Stacks = getDirectStacks(rowEl.querySelector(":scope > .shed__isle--2"));
+	return Math.max(measureFn(isle1Stacks, bayStackEl), measureFn(isle2Stacks, bayStackEl));
+}
+
 function measureIdealBayContentHeight(bayStackEl) {
 	if (!bayStackEl) return 0;
 
 	const { before, after, front } = splitBayDirectStacks(bayStackEl);
-	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
-	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
-	const islesHeight = Math.max(
-		measureIdealStacksBlockHeight(isle1Stacks, bayStackEl),
-		measureIdealStacksBlockHeight(isle2Stacks, bayStackEl),
+	const islesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__isles"),
+		measureIdealStacksBlockHeight,
+	);
+	const frontIslesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__bay-stack-tail"),
+		measureIdealStacksBlockHeight,
 	);
 	const { total, sections } = sumBaySectionHeights([
 		measureIdealStacksBlockHeight(before, bayStackEl),
 		islesHeight,
 		measureIdealStacksBlockHeight(after, bayStackEl),
 		measureIdealStacksBlockHeight(front, bayStackEl),
+		frontIslesHeight,
 	]);
 	if (!sections) return 0;
 
@@ -426,9 +445,14 @@ function applyAllStackHeights(bayStackEl) {
 	});
 
 	["1", "2"].forEach((isleNum) => {
-		getDirectStacks(bayStackEl.querySelector(`.shed__isle--${isleNum}`)).forEach((stack) => {
-			const bales = parseInt(stack.dataset.bales, 10) || 0;
-			setStackHeight(stack, bales, getIsleMaxBales(isleNum, locationId));
+		[
+			getMainIsleContainer(bayStackEl, isleNum),
+			bayStackEl.querySelector(`:scope > .shed__bay-stack-tail > .shed__isle--${isleNum}`),
+		].forEach((isleEl) => {
+			getDirectStacks(isleEl).forEach((stack) => {
+				const bales = parseInt(stack.dataset.bales, 10) || 0;
+				setStackHeight(stack, bales, getIsleMaxBales(isleNum, locationId));
+			});
 		});
 	});
 }
@@ -469,9 +493,19 @@ function getVerticalStackGaps(stackCount) {
 
 function measureBayGapReserve(bayStackEl) {
 	const { before, after, front } = splitBayDirectStacks(bayStackEl);
-	const isle1 = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
-	const isle2 = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
-	const blocks = [before.length, Math.max(isle1.length, isle2.length), after.length, front.length];
+	const mainIsles = bayStackEl.querySelector(":scope > .shed__isles");
+	const frontIsles = bayStackEl.querySelector(":scope > .shed__bay-stack-tail");
+	const isle1 = getDirectStacks(mainIsles?.querySelector(":scope > .shed__isle--1"));
+	const isle2 = getDirectStacks(mainIsles?.querySelector(":scope > .shed__isle--2"));
+	const front1 = getDirectStacks(frontIsles?.querySelector(":scope > .shed__isle--1"));
+	const front2 = getDirectStacks(frontIsles?.querySelector(":scope > .shed__isle--2"));
+	const blocks = [
+		before.length,
+		Math.max(isle1.length, isle2.length),
+		after.length,
+		front.length,
+		Math.max(front1.length, front2.length),
+	];
 
 	let gaps = 0;
 	blocks.forEach((count) => {
@@ -542,11 +576,15 @@ function measureBayContentHeightRaw(bayStackEl) {
 	if (!bayStackEl) return 0;
 
 	const { before, after, front } = splitBayDirectStacks(bayStackEl);
-	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
-	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
-	const islesHeight = Math.max(
-		measureStacksBlockHeight(isle1Stacks, bayStackEl),
-		measureStacksBlockHeight(isle2Stacks, bayStackEl),
+	const islesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__isles"),
+		measureStacksBlockHeight,
+	);
+	const frontIslesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__bay-stack-tail"),
+		measureStacksBlockHeight,
 	);
 
 	const { total, sections } = sumBaySectionHeights([
@@ -554,6 +592,7 @@ function measureBayContentHeightRaw(bayStackEl) {
 		islesHeight,
 		measureStacksBlockHeight(after, bayStackEl),
 		measureStacksBlockHeight(front, bayStackEl),
+		frontIslesHeight,
 	]);
 	if (!sections) return 0;
 
@@ -830,8 +869,13 @@ function expandFillStacksToFreeSpace(bayStackEl) {
 	const inner = Math.max(0, bayStackEl.clientHeight - top - bottom);
 
 	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
+	const frontIslesRow = bayStackEl.querySelector(":scope > .shed__bay-stack-tail");
 	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
+	const frontIsleHasStacks = Boolean(frontIslesRow?.querySelector(".hay-stack"));
 	const isleBlock = isleHasStacks ? (islesRow?.getBoundingClientRect().height || 0) : 0;
+	const frontIsleBlock = frontIsleHasStacks
+		? (frontIslesRow?.getBoundingClientRect().height || 0)
+		: 0;
 
 	const directStacks = getDirectStacks(bayStackEl);
 	const directNonFill = directStacks.filter((stack) => !isStackFill(stack));
@@ -839,29 +883,35 @@ function expandFillStacksToFreeSpace(bayStackEl) {
 
 	let used = getVerticalStackGaps(directStacks.length);
 	if (isleHasStacks && directStacks.length) used += LAYOUT.stackGap;
+	if (frontIsleHasStacks && (directStacks.length || isleHasStacks)) used += LAYOUT.stackGap;
 	directNonFill.forEach((stack) => {
 		used += stack.offsetHeight || parseFloat(stack.style.height) || 0;
 	});
 	used += isleBlock;
+	used += frontIsleBlock;
 
 	["1", "2"].forEach((isleNum) => {
-		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
-		if (!isleEl) return;
-		const isleFills = getDirectStacks(isleEl).filter(isStackFill);
-		if (!isleFills.length) return;
+		[
+			getMainIsleContainer(bayStackEl, isleNum),
+			frontIslesRow?.querySelector(`:scope > .shed__isle--${isleNum}`),
+		].forEach((isleEl) => {
+			if (!isleEl) return;
+			const isleFills = getDirectStacks(isleEl).filter(isStackFill);
+			if (!isleFills.length) return;
 
-		const isleStacks = getDirectStacks(isleEl);
-		const isleNonFill = isleStacks.filter((stack) => !isStackFill(stack));
-		let isleUsed = getVerticalStackGaps(isleStacks.length);
-		isleNonFill.forEach((stack) => {
-			isleUsed += stack.offsetHeight || parseFloat(stack.style.height) || 0;
-		});
-		const isleInner = Math.max(0, isleEl.clientHeight || 0);
-		const isleRemaining = Math.max(MIN_FIT_STACK_PX, isleInner - isleUsed);
-		const eachIsle = Math.floor(isleRemaining / isleFills.length);
-		isleFills.forEach((stack) => {
-			applyStackBoxHeight(stack, eachIsle);
-			stack.style.marginTop = "0";
+			const isleStacks = getDirectStacks(isleEl);
+			const isleNonFill = isleStacks.filter((stack) => !isStackFill(stack));
+			let isleUsed = getVerticalStackGaps(isleStacks.length);
+			isleNonFill.forEach((stack) => {
+				isleUsed += stack.offsetHeight || parseFloat(stack.style.height) || 0;
+			});
+			const isleInner = Math.max(0, isleEl.clientHeight || 0);
+			const isleRemaining = Math.max(MIN_FIT_STACK_PX, isleInner - isleUsed);
+			const eachIsle = Math.floor(isleRemaining / isleFills.length);
+			isleFills.forEach((stack) => {
+				applyStackBoxHeight(stack, eachIsle);
+				stack.style.marginTop = "0";
+			});
 		});
 	});
 
@@ -952,11 +1002,15 @@ export function measureBayStackContent(bayStackEl) {
 	if (!bayStackEl) return 0;
 
 	const { before, after, front } = splitBayDirectStacks(bayStackEl);
-	const isle1Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--1"));
-	const isle2Stacks = getDirectStacks(bayStackEl.querySelector(".shed__isle--2"));
-	const islesHeight = Math.max(
-		measureStacksBlockHeight(isle1Stacks, bayStackEl),
-		measureStacksBlockHeight(isle2Stacks, bayStackEl),
+	const islesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__isles"),
+		measureStacksBlockHeight,
+	);
+	const frontIslesHeight = measureIslePairHeight(
+		bayStackEl,
+		bayStackEl.querySelector(":scope > .shed__bay-stack-tail"),
+		measureStacksBlockHeight,
 	);
 
 	const { total, sections } = sumBaySectionHeights([
@@ -964,6 +1018,7 @@ export function measureBayStackContent(bayStackEl) {
 		islesHeight,
 		measureStacksBlockHeight(after, bayStackEl),
 		measureStacksBlockHeight(front, bayStackEl),
+		frontIslesHeight,
 	]);
 
 	if (!sections) return 0;
@@ -1184,8 +1239,39 @@ export function setStackHeight(stackEl, baleCount, maxBales) {
 	stackEl.style.minHeight = `${locked}px`;
 }
 
+function ensureFrontIslesRow(bayStackEl) {
+	if (!bayStackEl) return null;
+
+	let tail = bayStackEl.querySelector(":scope > .shed__bay-stack-tail");
+	if (!tail) {
+		tail = document.createElement("div");
+		tail.className = "shed__bay-stack-tail";
+		bayStackEl.appendChild(tail);
+	}
+
+	["1", "2"].forEach((isleNum) => {
+		if (tail.querySelector(`:scope > .shed__isle--${isleNum}`)) return;
+		const isleEl = document.createElement("div");
+		isleEl.className = `shed__isle shed__isle--${isleNum}`;
+		isleEl.dataset.isle = isleNum;
+		tail.appendChild(isleEl);
+	});
+
+	return tail;
+}
+
+function getMainIsleContainer(bayStackEl, isle) {
+	return bayStackEl?.querySelector(`:scope > .shed__isles > .shed__isle--${isle}`) || null;
+}
+
+function getFrontIsleContainer(bayStackEl, isle) {
+	const tail = ensureFrontIslesRow(bayStackEl);
+	return tail?.querySelector(`:scope > .shed__isle--${isle}`) || null;
+}
+
 function placeBothStackInBay(stackEl, bayStackEl) {
-	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
+	const tail = ensureFrontIslesRow(bayStackEl);
 	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
 
 	if (!isleHasStacks) {
@@ -1198,24 +1284,33 @@ function placeBothStackInBay(stackEl, bayStackEl) {
 	);
 	if (firstFront) {
 		bayStackEl.insertBefore(stackEl, firstFront);
+	} else if (tail) {
+		bayStackEl.insertBefore(stackEl, tail);
 	} else {
 		bayStackEl.appendChild(stackEl);
 	}
 }
 
-export function applyIsleLayout(stackEl, isle, bayStackEl) {
+export function applyIsleLayout(stackEl, isle, bayStackEl, { afterBoth = false } = {}) {
 	stackEl.dataset.isle = isle;
 	stackEl.classList.remove("hay-stack--full", "hay-stack--isle-1", "hay-stack--isle-2");
 
 	if (isle === "both") {
+		delete stackEl.dataset.afterBoth;
 		stackEl.classList.add("hay-stack--full");
 		placeBothStackInBay(stackEl, bayStackEl);
 		return;
 	}
 
 	stackEl.classList.add(`hay-stack--isle-${isle}`);
-	const isleEl = bayStackEl.querySelector(`.shed__isle--${isle}`);
-	isleEl?.appendChild(stackEl);
+	if (afterBoth) {
+		stackEl.dataset.afterBoth = "true";
+		getFrontIsleContainer(bayStackEl, isle)?.appendChild(stackEl);
+		return;
+	}
+
+	delete stackEl.dataset.afterBoth;
+	getMainIsleContainer(bayStackEl, isle)?.appendChild(stackEl);
 }
 
 function isStackBeforeIslesRow(stackEl, islesRow) {
@@ -1305,6 +1400,31 @@ export function placeFullFrontBehindIsles(stackEl, bayStackEl) {
 	return true;
 }
 
+export function placeIsleInFrontOfBoth(isleStack, bothStack, bayStackEl, clientY) {
+	if (!isleStack || !bothStack || !bayStackEl) return false;
+	if (!bayStackEl.contains(isleStack) || !bayStackEl.contains(bothStack)) return false;
+	if (getStackIsle(bothStack) !== "both") return false;
+	if (isleStack === bothStack) return false;
+
+	const isle = getStackIsle(isleStack);
+	if (isle === "both") return false;
+
+	const rect = bothStack.getBoundingClientRect();
+	const placeInFront = clientY == null || clientY >= rect.top + rect.height / 2;
+
+	if (placeInFront) {
+		if (bothStack.classList.contains("hay-stack--bay-front")) {
+			applyStackFront(bothStack, false);
+		}
+		applyIsleLayout(isleStack, isle, bayStackEl, { afterBoth: true });
+	} else {
+		applyIsleLayout(isleStack, isle, bayStackEl, { afterBoth: false });
+	}
+
+	repairBayLayout(bayStackEl);
+	return true;
+}
+
 function splitFullFrontsAroundIsles(fullFronts, isleFronts) {
 	if (!isleFronts.length) {
 		return { behind: [], ahead: [...fullFronts] };
@@ -1352,7 +1472,12 @@ function orderFrontStacksLast(container) {
 		.sort((a, b) => getFrontRank(a) - getFrontRank(b));
 
 	if (isBayStack) {
-		const islesRow = container.querySelector(".shed__isles");
+		const islesRow = container.querySelector(":scope > .shed__isles");
+		const tail = ensureFrontIslesRow(container);
+		const insertBeforeTail = (node) => {
+			if (tail) container.insertBefore(node, tail);
+			else container.appendChild(node);
+		};
 		const regularBefore = [];
 		const regularAfter = [];
 
@@ -1380,15 +1505,15 @@ function orderFrontStacksLast(container) {
 			const spacer = document.createElement("div");
 			spacer.className = "shed__stack-spacer";
 			spacer.setAttribute("aria-hidden", "true");
-			container.appendChild(spacer);
+			insertBeforeTail(spacer);
 		}
 
 		regularAfter.forEach((stack) => {
-			container.appendChild(stack);
+			insertBeforeTail(stack);
 		});
 
 		ahead.forEach((stack) => {
-			container.appendChild(stack);
+			insertBeforeTail(stack);
 		});
 
 		container.classList.toggle("shed__bay-stack--front-behind-isles", behind.length > 0);
@@ -1433,7 +1558,7 @@ function ensureBayStackFrontLayout(bayStackEl) {
 	const directStacks = getDirectStacks(bayStackEl);
 	const regular = directStacks.filter((stack) => !stack.classList.contains("hay-stack--bay-front"));
 	const front = directStacks.filter((stack) => stack.classList.contains("hay-stack--bay-front"));
-	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
 	const isleHasStacks = Boolean(islesRow?.querySelector(".hay-stack"));
 	const isleFronts = islesRow
 		? [...islesRow.querySelectorAll(".hay-stack--bay-front")]
@@ -1452,20 +1577,23 @@ function ensureBayStackFrontLayout(bayStackEl) {
 }
 
 export function repairBayLayout(bayStackEl) {
-	const islesRow = bayStackEl.querySelector(".shed__isles");
+	const islesRow = bayStackEl.querySelector(":scope > .shed__isles");
 	if (!islesRow) return;
+	const tail = ensureFrontIslesRow(bayStackEl);
 
 	const ordered = [...bayStackEl.querySelectorAll(".hay-stack")];
 	const bothBefore = [];
 	const bothAfter = [];
 	const groups = { "1": [], "2": [] };
+	const frontGroups = { "1": [], "2": [] };
 	let seenIsle = false;
 
 	ordered.forEach((stack) => {
 		const isle = getStackIsle(stack);
 		if (isle === "1" || isle === "2") {
 			seenIsle = true;
-			groups[isle].push(stack);
+			if (isStackAfterBoth(stack)) frontGroups[isle].push(stack);
+			else groups[isle].push(stack);
 			return;
 		}
 		if (seenIsle) bothAfter.push(stack);
@@ -1474,6 +1602,7 @@ export function repairBayLayout(bayStackEl) {
 
 	const markBoth = (stack) => {
 		stack.dataset.isle = "both";
+		delete stack.dataset.afterBoth;
 		stack.classList.remove("hay-stack--isle-1", "hay-stack--isle-2");
 		stack.classList.add("hay-stack--full");
 	};
@@ -1484,11 +1613,12 @@ export function repairBayLayout(bayStackEl) {
 	});
 
 	["1", "2"].forEach((isleNum) => {
-		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
+		const isleEl = getMainIsleContainer(bayStackEl, isleNum);
 		if (!isleEl) return;
 
 		groups[isleNum].forEach((stack) => {
 			stack.dataset.isle = isleNum;
+			delete stack.dataset.afterBoth;
 			stack.classList.remove("hay-stack--full", "hay-stack--isle-1", "hay-stack--isle-2");
 			stack.classList.add(`hay-stack--isle-${isleNum}`);
 			isleEl.appendChild(stack);
@@ -1497,17 +1627,33 @@ export function repairBayLayout(bayStackEl) {
 
 	bothAfter.forEach((stack) => {
 		markBoth(stack);
-		bayStackEl.appendChild(stack);
+		if (tail) bayStackEl.insertBefore(stack, tail);
+		else bayStackEl.appendChild(stack);
+	});
+
+	["1", "2"].forEach((isleNum) => {
+		const isleEl = getFrontIsleContainer(bayStackEl, isleNum);
+		if (!isleEl) return;
+
+		frontGroups[isleNum].forEach((stack) => {
+			stack.dataset.isle = isleNum;
+			stack.dataset.afterBoth = "true";
+			stack.classList.remove("hay-stack--full", "hay-stack--isle-1", "hay-stack--isle-2");
+			stack.classList.add(`hay-stack--isle-${isleNum}`);
+			isleEl.appendChild(stack);
+		});
 	});
 
 	orderFrontStacksLast(bayStackEl);
 	["1", "2"].forEach((isleNum) => {
-		orderFrontStacksLast(bayStackEl.querySelector(`.shed__isle--${isleNum}`));
+		orderFrontStacksLast(getMainIsleContainer(bayStackEl, isleNum));
+		orderFrontStacksLast(getFrontIsleContainer(bayStackEl, isleNum));
 	});
 
 	ensureBayStackFrontLayout(bayStackEl);
 	["1", "2"].forEach((isleNum) => {
-		ensureIsleFrontLayout(bayStackEl.querySelector(`.shed__isle--${isleNum}`));
+		ensureIsleFrontLayout(getMainIsleContainer(bayStackEl, isleNum));
+		ensureIsleFrontLayout(getFrontIsleContainer(bayStackEl, isleNum));
 	});
 
 	bayStackEl.classList.remove("shed__bay-stack--isle-front");
@@ -1778,11 +1924,14 @@ function syncFillLayoutClasses(bayStackEl) {
 	let isleHasFill = false;
 
 	["1", "2"].forEach((isleNum) => {
-		const isleEl = bayStackEl.querySelector(`.shed__isle--${isleNum}`);
-		if (!isleEl) return;
-		const hasFill = getDirectStacks(isleEl).some(isStackFill);
-		isleEl.classList.toggle("shed__isle--has-fill", hasFill);
-		if (hasFill) isleHasFill = true;
+		[getMainIsleContainer(bayStackEl, isleNum), getFrontIsleContainer(bayStackEl, isleNum)].forEach(
+			(isleEl) => {
+				if (!isleEl) return;
+				const hasFill = getDirectStacks(isleEl).some(isStackFill);
+				isleEl.classList.toggle("shed__isle--has-fill", hasFill);
+				if (hasFill) isleHasFill = true;
+			},
+		);
 	});
 
 	bayStackEl.classList.toggle("shed__bay-stack--has-fill", directFill);
@@ -1807,7 +1956,7 @@ export function createHayStack(
 	baleCount,
 	isle,
 	bayStackEl,
-	{ rejected = false, fill = false, front = false, comment = "", grade = "" } = {},
+	{ rejected = false, fill = false, front = false, comment = "", grade = "", afterBoth = false } = {},
 ) {
 	const tpl = document.getElementById("hayStackTemplate");
 	if (!tpl || !bayStackEl) return null;
@@ -1825,7 +1974,7 @@ export function createHayStack(
 	stack.dataset.fill = fill ? "true" : "false";
 	updateStackCountDisplay(stack, baleCount);
 	setStackHeight(stack, baleCount, getIsleMaxBales(isle, locationId));
-	applyIsleLayout(stack, isle, bayStackEl);
+	applyIsleLayout(stack, isle, bayStackEl, { afterBoth: !!afterBoth && isle !== "both" });
 	applyStackComment(stack, comment);
 	applyStackFront(stack, front || isBayFrontComment(comment));
 	return stack;
@@ -1856,7 +2005,7 @@ export function getBayStacks(bayStackEl) {
 
 export function getIsleContainer(bayStackEl, isle) {
 	if (isle === "both") return bayStackEl;
-	return bayStackEl.querySelector(`.shed__isle--${isle}`);
+	return getMainIsleContainer(bayStackEl, isle) || bayStackEl.querySelector(`.shed__isle--${isle}`);
 }
 
 export function listStacksInContainer(container) {
@@ -1899,6 +2048,7 @@ export function findMatchingStackInContainer(container, stackKey, snap = null) {
 		if (!!current.rejected === !!snap.rejected) points += 1;
 		if (!!current.fill === !!snap.fill) points += 1;
 		if (!!current.front === !!snap.front) points += 1;
+		if (!!current.afterBoth === !!snap.afterBoth) points += 2;
 		if (current.type === snap.type) points += 1;
 		return points;
 	};
@@ -2027,12 +2177,15 @@ export function restoreHayStack(stackData, bayStackEl) {
 	const comment = stripBayFrontCommentTokens(stackData.comment || "");
 	const grade = stackData.grade || "";
 
+	const afterBoth =
+		(stackData.afterBoth === true || stackData.afterBoth === "true") && isle !== "both";
 	const stack = createHayStack(type, contract, bales, isle, bayStackEl, {
 		rejected,
 		fill,
 		front,
 		comment,
 		grade,
+		afterBoth,
 	});
 	if (!stack) return null;
 

@@ -1730,7 +1730,10 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 	if (!bayStackEl) return false;
 
 	const container = getIsleContainer(bayStackEl, isle);
-	const existing = resolveUndoTargetStack(container, stackKey, before, after);
+	let existing = resolveUndoTargetStack(container, stackKey, before, after);
+	if (!existing && isle !== "both") {
+		existing = resolveUndoTargetStack(bayStackEl, stackKey, before, after);
+	}
 
 	if (!before) {
 		existing?.remove();
@@ -1740,6 +1743,7 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 
 	const { type, contract, bales, rejected, fill = false, front = false, grade, comment } = before;
 	const resolvedFront = front || resolveStackFrontFlag(before);
+	const afterBoth = before.afterBoth === true && isle !== "both";
 	if (existing) {
 		updateHayStack(existing, type, contract, bales);
 		applyStackRejected(existing, rejected);
@@ -1747,6 +1751,7 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 		applyStackFront(existing, resolvedFront);
 		applyStackComment(existing, comment);
 		applyStackGrade(existing, grade);
+		applyIsleLayout(existing, isle, bayStackEl, { afterBoth });
 	} else {
 		const stack = createHayStack(type, contract, bales, isle, bayStackEl, {
 			rejected,
@@ -1754,6 +1759,7 @@ function applyStackSnapshotAt(shedId, bayIndex, isle, stackKey, before, location
 			front: resolvedFront,
 			comment,
 			grade,
+			afterBoth,
 		});
 		if (!stack) return false;
 		makeStackDraggable(stack);
@@ -2704,6 +2710,7 @@ function collectAppState(locationId = getCurrentLocation()) {
 				if (isFront && stack.dataset.frontRank) {
 					data.frontRank = Number(stack.dataset.frontRank) || 1;
 				}
+				if (stack.dataset.afterBoth === "true") data.afterBoth = true;
 				return data;
 			});
 		}

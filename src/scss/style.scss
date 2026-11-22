@@ -771,6 +771,18 @@ body.page--dragging .shed__bay-exit {
 
 .shed__bay-stack-tail {
 	display: none;
+	flex: 0 0 auto;
+	flex-direction: row;
+	flex-wrap: nowrap;
+	width: 100%;
+	min-height: 0;
+	align-items: stretch;
+	align-self: stretch;
+	gap: 4px;
+}
+
+.shed__bay-stack-tail:has(.hay-stack) {
+	display: flex;
 }
 
 .shed__bay-stats {

@@ -1,4 +1,10 @@
-import { applyIsleLayout, placeStackInContainer, reorderFrontAgainst, placeFullFrontBehindIsles } from "./dom.js";
+import {
+	applyIsleLayout,
+	placeStackInContainer,
+	reorderFrontAgainst,
+	placeFullFrontBehindIsles,
+	placeIsleInFrontOfBoth,
+} from "./dom.js";
 
 const DRAG_THRESHOLD = 6;
 const TOUCH_CANCEL_THRESHOLD = 10;
@@ -42,60 +48,111 @@ function moveGhost(ghost, clientX, clientY, offsetX, offsetY) {
 	ghost.style.setProperty("--ghost-top", `${clientY - offsetY}px`);
 }
 
+function pointInRect(clientX, clientY, rect) {
+	return (
+		clientX >= rect.left
+		&& clientX <= rect.right
+		&& clientY >= rect.top
+		&& clientY <= rect.bottom
+	);
+}
+
+function findStackAtPoint(clientX, clientY, bayStack, excludeEl) {
+	let best = null;
+	let bestArea = Infinity;
+	[...bayStack.querySelectorAll(".hay-stack")].forEach((stack) => {
+		if (stack === excludeEl || stack.classList.contains("hay-stack--dragging")) return;
+		const rect = stack.getBoundingClientRect();
+		if (!pointInRect(clientX, clientY, rect)) return;
+		const area = Math.max(1, rect.width * rect.height);
+		if (area < bestArea) {
+			best = stack;
+			bestArea = area;
+		}
+	});
+	return best;
+}
+
+function findBothInFrontZone(clientX, clientY, bayStack, excludeEl) {
+	const bayRect = bayStack.getBoundingClientRect();
+	if (!pointInRect(clientX, clientY, bayRect)) return null;
+
+	const isleStacks = [...bayStack.querySelectorAll(":scope > .shed__isles .hay-stack")].filter(
+		(stack) => stack !== excludeEl && !stack.classList.contains("hay-stack--dragging"),
+	);
+	const lowestIsleBottom = isleStacks.reduce(
+		(max, stack) => Math.max(max, stack.getBoundingClientRect().bottom),
+		0,
+	);
+	if (isleStacks.length && clientY < lowestIsleBottom - 2) return null;
+
+	const bothStacks = [...bayStack.querySelectorAll(":scope > .hay-stack")].filter(
+		(stack) => stack !== excludeEl && !stack.classList.contains("hay-stack--dragging"),
+	);
+	if (!bothStacks.length) return null;
+
+	let best = null;
+	let bestDist = Infinity;
+	bothStacks.forEach((stack) => {
+		const rect = stack.getBoundingClientRect();
+		const cx = (rect.left + rect.right) / 2;
+		const cy = (rect.top + rect.bottom) / 2;
+		const dist = Math.abs(cy - clientY) + Math.abs(cx - clientX) * 0.2;
+		if (dist < bestDist) {
+			best = stack;
+			bestDist = dist;
+		}
+	});
+	return best;
+}
+
 function getDropTarget(clientX, clientY, dragContext, stackEl) {
-	const el = document.elementFromPoint(clientX, clientY);
-	if (!el || !dragContext) return null;
+	if (!dragContext) return null;
 
 	const { mode, bayStack } = dragContext;
 	const isFrontDrag = stackEl?.classList.contains("hay-stack--bay-front");
+	const geoStack =
+		findStackAtPoint(clientX, clientY, bayStack, stackEl)
+		|| (mode === "isle" ? findBothInFrontZone(clientX, clientY, bayStack, stackEl) : null);
 
 	if (mode === "isle") {
-		if (isFrontDrag) {
-			const frontTarget = el.closest(".hay-stack--bay-front");
-			if (
-				frontTarget
-				&& frontTarget !== stackEl
-				&& !frontTarget.classList.contains("hay-stack--dragging")
-				&& bayStack.contains(frontTarget)
-			) {
-				return { type: "front-order", el: frontTarget, container: bayStack };
-			}
+		if (geoStack && geoStack.parentElement === bayStack) {
+			return { type: "isle-before-both", el: geoStack, container: bayStack };
 		}
 
-		const targetIsle = el.closest(".shed__isle");
+		if (isFrontDrag && geoStack?.classList.contains("hay-stack--bay-front")) {
+			return { type: "front-order", el: geoStack, container: bayStack };
+		}
+
+		const el = document.elementFromPoint(clientX, clientY);
+		const targetIsle = geoStack?.closest(".shed__isle") || el?.closest(".shed__isle");
 		if (!targetIsle || !bayStack.contains(targetIsle)) return null;
 
-		const stack = el.closest(".hay-stack");
-		if (stack && !stack.classList.contains("hay-stack--dragging") && targetIsle.contains(stack)) {
-			return { type: "stack", el: stack, container: targetIsle };
+		if (geoStack && targetIsle.contains(geoStack)) {
+			return { type: "stack", el: geoStack, container: targetIsle };
 		}
 
 		return { type: "column", el: targetIsle, container: targetIsle };
 	}
 
 	if (isFrontDrag) {
-		const frontTarget = el.closest(".hay-stack--bay-front");
-		if (
-			frontTarget
-			&& frontTarget !== stackEl
-			&& !frontTarget.classList.contains("hay-stack--dragging")
-			&& bayStack.contains(frontTarget)
-		) {
-			return { type: "front-order", el: frontTarget, container: bayStack };
+		if (geoStack?.classList.contains("hay-stack--bay-front")) {
+			return { type: "front-order", el: geoStack, container: bayStack };
 		}
 
-		const targetIsle = el.closest(".shed__isle");
+		const el = document.elementFromPoint(clientX, clientY);
+		const targetIsle = el?.closest(".shed__isle");
 		if (targetIsle && bayStack.contains(targetIsle)) {
 			return { type: "front-behind-isles", el: targetIsle, container: bayStack };
 		}
 	}
 
-	const stack = el.closest(".hay-stack");
-	if (stack && !stack.classList.contains("hay-stack--dragging") && stack.parentElement === bayStack) {
-		return { type: "stack", el: stack, container: bayStack };
+	if (geoStack && geoStack.parentElement === bayStack) {
+		return { type: "stack", el: geoStack, container: bayStack };
 	}
 
-	const hitBayStack = el.closest(".shed__bay-stack");
+	const el = document.elementFromPoint(clientX, clientY);
+	const hitBayStack = el?.closest(".shed__bay-stack");
 	if (hitBayStack === bayStack && !el.closest(".shed__isle")) {
 		return { type: "column", el: bayStack, container: bayStack };
 	}
@@ -104,6 +161,10 @@ function getDropTarget(clientX, clientY, dragContext, stackEl) {
 }
 
 function performDrop(stackEl, target, clientY, dragContext) {
+	if (target.type === "isle-before-both") {
+		return placeIsleInFrontOfBoth(stackEl, target.el, dragContext.bayStack, clientY);
+	}
+
 	if (target.type === "front-order") {
 		const targetIsle = target.el.closest(".shed__isle");
 		const targetIsleId = targetIsle?.dataset?.isle;
@@ -252,7 +313,9 @@ export function bindStackDrag(stackEl, { canDrag, onReorder }) {
 		const target = getDropTarget(clientX, clientY, session.dragContext, stackEl);
 		if (!target?.el) return;
 		target.el.classList.add(
-			target.type === "stack" || target.type === "front-order"
+			target.type === "stack"
+				|| target.type === "front-order"
+				|| target.type === "isle-before-both"
 				? "hay-stack--drop-target"
 				: "shed__isle--drop-target",
 		);
