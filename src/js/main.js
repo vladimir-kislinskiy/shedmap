@@ -1366,9 +1366,11 @@ function handleHay() {
 			return;
 		}
 
-		const sourceContainer = getIsleContainer(sourceBayStackEl, sourceIsle);
-		const foundSource = findStackInContainer(sourceContainer, stackKey);
-		if (!foundSource || foundSource !== sourceStack) {
+		const foundSource =
+			sourceBayStackEl.contains(sourceStack) && sourceStack.dataset.stackKey === stackKey
+				? sourceStack
+				: null;
+		if (!foundSource) {
 			alert("Source stack not found. Reselect the stack to transfer.");
 			return;
 		}
